@@ -128,6 +128,10 @@ class DocumentChunk(Base, TimestampMixin):
     period_end: Mapped[date | None] = mapped_column(Date)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(_EMBEDDING_DIM))
     embedding_model: Mapped[str | None] = mapped_column(String(64))
+    embedding_dim: Mapped[int | None] = mapped_column(Integer)  # EMB-001: per-row, re-embed-safe
+    # Staging column for zero-downtime model migration (EMB-003, ADR-0013): a new model backfills
+    # here while `embedding` keeps serving reads, then an atomic swap promotes it. NULL otherwise.
+    embedding_new: Mapped[list[float] | None] = mapped_column(Vector(_EMBEDDING_DIM))
     parser_version: Mapped[str | None] = mapped_column(String(32))
     content_hash: Mapped[str | None] = mapped_column(String(64))
     tsv: Mapped[str | None] = mapped_column(

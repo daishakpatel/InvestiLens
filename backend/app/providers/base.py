@@ -112,6 +112,11 @@ class EmbeddingClient(ABC):
 
     @property
     @abstractmethod
+    def model_name(self) -> str:
+        """Model identifier stored on each chunk (`embedding_model`, EMB-001)."""
+
+    @property
+    @abstractmethod
     def dimension(self) -> int:
         """Embedding vector dimension (must match the DB `vector(N)` column)."""
 

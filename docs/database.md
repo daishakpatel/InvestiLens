@@ -111,3 +111,4 @@ Migrations are tested up and down, on empty and populated databases, in
 | `fd52b5f9aeae` | Initial schema (all 33 tables, pgvector, indexes). |
 | `d5095d7bd954` | Widen `financial_facts.concept_tag` to `VARCHAR(256)` — some real XBRL element names exceed 128 chars (Phase 1a ingestion). |
 | `7ce7bee338f7` | Make `financial_metrics.metric_value` nullable — a sector-inapplicable or uncomputable metric stores NULL + a reason in `quality_flags`, never a misleading zero (Phase 1c, DR-041/042). |
+| `8c58e66dbdbc` | Add `document_chunks.embedding_dim` (per-row dimension beside `embedding_model`, EMB-001) and a nullable `embedding_new vector(1024)` staging column for zero-downtime model migration (Phase 2b, EMB-003, ADR-0013). |

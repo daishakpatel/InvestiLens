@@ -52,4 +52,6 @@ def get_llm_client() -> LLMClient:
 def get_embedding_client() -> EmbeddingClient:
     if get_settings().provider_mode == "mock":
         return MockEmbeddingClient()
-    raise _live_unavailable("EmbeddingClient")
+    from app.providers.voyage import VoyageEmbeddingClient
+
+    return VoyageEmbeddingClient()

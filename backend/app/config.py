@@ -1,5 +1,6 @@
 """Application settings, loaded from the environment (see `.env.example`)."""
 
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -45,6 +46,17 @@ class Settings(BaseSettings):
     news_relevance_threshold: float = Field(default=0.3)  # min score shown by default
     news_dup_cosine_threshold: float = Field(default=0.9)  # near-duplicate clustering
     news_dup_window_days: int = Field(default=3)  # cluster only within this time window
+
+    # --- Embeddings: Voyage AI (Phase 2b, ADR-0010/0013) ---
+    voyage_api_key: str = Field(default="")  # required only when PROVIDER_MODE=live
+    embedding_model: str = Field(default="voyage-finance-2")  # ADR-0010
+    embedding_batch_size: int = Field(default=128)  # Voyage caps a request at 128 inputs (EMB-002)
+    embedding_rate_limit_per_sec: float = Field(default=3.0)  # Voyage free tier: 3 req/sec
+    # Blended $/1M tokens for cost logging (EMB-002). Voyage voyage-finance-2 list price; an
+    # estimate used only for the `llm_calls` cost column, never for financial output.
+    embedding_cost_per_1m_tokens: Decimal = Field(default=Decimal("0.12"))
+    # HNSW query-time breadth (EMB-004). Higher = better recall, slower. Tuned in docs/rag.md.
+    hnsw_ef_search: int = Field(default=100)
 
 
 @lru_cache

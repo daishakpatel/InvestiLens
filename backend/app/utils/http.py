@@ -12,6 +12,7 @@ import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -104,13 +105,34 @@ class HardenedHttpClient:
             raise HttpClientError(f"host not allowed (SSRF guard): {host!r}")
 
     def get_bytes(self, url: str, *, sleep: Callable[[float], None] = time.sleep) -> bytes:
+        """GET `url`, returning the raw body (retries + circuit breaker + SSRF guard)."""
+        return self._request("GET", url, sleep=sleep)
+
+    def post_bytes(
+        self, url: str, *, json: Any, sleep: Callable[[float], None] = time.sleep
+    ) -> bytes:
+        """POST a JSON body to `url`, returning the raw response body.
+
+        Shares the GET path's hardening (rate limit, retry+backoff, breaker, SSRF allowlist); used
+        by providers whose API is request/response rather than fetch (e.g. Voyage embeddings).
+        """
+        return self._request("POST", url, json=json, sleep=sleep)
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        json: Any = None,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> bytes:
         self._check_host(url)  # SEC-015
         self._breaker.before_request()
         last_exc: Exception | None = None
         for attempt in range(self._max_retries + 1):
             self._limiter.acquire(sleep=sleep)
             try:
-                response = self._client.get(url)
+                response = self._client.request(method, url, json=json)
                 if response.status_code in RETRYABLE_STATUS:
                     raise httpx.HTTPStatusError(
                         f"retryable status {response.status_code}",
@@ -130,11 +152,12 @@ class HardenedHttpClient:
                         logging.WARNING,
                         "http.retry",
                         url=url,
+                        method=method,
                         attempt=attempt + 1,
                         backoff=round(backoff, 3),
                     )
                     sleep(backoff)
-        raise HttpClientError(f"request failed after retries: {url}") from last_exc
+        raise HttpClientError(f"request failed after retries: {method} {url}") from last_exc
 
     def close(self) -> None:
         self._client.close()
