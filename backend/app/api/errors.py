@@ -1,0 +1,95 @@
+"""RFC 7807 error handling (API-001).
+
+A single set of exception handlers guarantees every error — raised `ProblemException`, plain
+`HTTPException`, or request-validation failure — is returned as `application/problem+json` with
+the correlating `request_id` (API-007). Never fail silently (P6).
+"""
+
+from __future__ import annotations
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.schemas.common import FieldError, Problem
+
+PROBLEM_MEDIA_TYPE = "application/problem+json"
+
+
+class ProblemException(Exception):
+    """Raise to return an RFC 7807 problem response."""
+
+    def __init__(
+        self,
+        status_code: int,
+        title: str,
+        detail: str | None = None,
+        *,
+        type: str = "about:blank",
+        errors: list[FieldError] | None = None,
+    ) -> None:
+        self.status_code = status_code
+        self.title = title
+        self.detail = detail
+        self.type = type
+        self.errors = errors
+        super().__init__(title)
+
+
+def _request_id(request: Request) -> str | None:
+    return getattr(request.state, "request_id", None)
+
+
+def _problem_response(request: Request, problem: Problem) -> JSONResponse:
+    return JSONResponse(
+        status_code=problem.status,
+        media_type=PROBLEM_MEDIA_TYPE,
+        content=problem.model_dump(exclude_none=True),
+    )
+
+
+def not_implemented(detail: str = "Not implemented in this phase") -> ProblemException:
+    """Stub helper for endpoints whose logic lands in a later phase."""
+    return ProblemException(501, "Not Implemented", detail)
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(ProblemException)
+    async def _handle_problem(request: Request, exc: ProblemException) -> JSONResponse:
+        problem = Problem(
+            type=exc.type,
+            title=exc.title,
+            status=exc.status_code,
+            detail=exc.detail,
+            instance=str(request.url),
+            request_id=_request_id(request),
+            errors=exc.errors,
+        )
+        return _problem_response(request, problem)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _handle_http(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        problem = Problem(
+            title=str(exc.detail),
+            status=exc.status_code,
+            instance=str(request.url),
+            request_id=_request_id(request),
+        )
+        return _problem_response(request, problem)
+
+    @app.exception_handler(RequestValidationError)
+    async def _handle_validation(request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = [
+            FieldError(field=".".join(str(p) for p in e["loc"]), message=e["msg"])
+            for e in exc.errors()
+        ]
+        problem = Problem(
+            title="Validation Error",
+            status=422,
+            detail="One or more fields failed validation.",
+            instance=str(request.url),
+            request_id=_request_id(request),
+            errors=errors,
+        )
+        return _problem_response(request, problem)

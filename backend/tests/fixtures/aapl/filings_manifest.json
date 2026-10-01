@@ -1,0 +1,33 @@
+{
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "filings": [
+    {
+      "form": "10-Q",
+      "accession_number": "0000320193-26-000020",
+      "primary_document": "aapl-20260627.htm",
+      "filing_date": "2026-07-31",
+      "report_date": "2026-06-27",
+      "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000020/aapl-20260627.htm",
+      "local_file": "10q.htm"
+    },
+    {
+      "form": "8-K",
+      "accession_number": "0000320193-26-000018",
+      "primary_document": "aapl-20260730.htm",
+      "filing_date": "2026-07-30",
+      "report_date": "2026-07-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm",
+      "local_file": "8k.htm"
+    },
+    {
+      "form": "10-K",
+      "accession_number": "0000320193-25-000079",
+      "primary_document": "aapl-20250927.htm",
+      "filing_date": "2025-10-31",
+      "report_date": "2025-09-27",
+      "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "local_file": "10k.htm"
+    }
+  ]
+}

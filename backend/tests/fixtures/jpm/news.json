@@ -1,0 +1,125 @@
+{
+  "_comment": "SYNTHETIC news fixtures for JPM (Phase 0d). Not real articles.",
+  "items": [
+    {
+      "news_id": "news_jpm_00",
+      "title": "JPM beats quarterly revenue estimates",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/00",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-25T12:00:00Z",
+      "category": "earnings",
+      "relevance_score": 0.57
+    },
+    {
+      "news_id": "news_jpm_01",
+      "title": "JPM announces new product line",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/01",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-25T04:00:00Z",
+      "category": "product",
+      "relevance_score": 0.52
+    },
+    {
+      "news_id": "news_jpm_02",
+      "title": "Analysts raise price target on JPM",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/02",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-24T20:00:00Z",
+      "category": "analyst",
+      "relevance_score": 0.72
+    },
+    {
+      "news_id": "news_jpm_03",
+      "title": "JPM expands data center partnerships",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/03",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-24T12:00:00Z",
+      "category": "business",
+      "relevance_score": 0.85
+    },
+    {
+      "news_id": "news_jpm_04",
+      "title": "Regulators review JPM market practices",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/04",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-24T04:00:00Z",
+      "category": "regulatory",
+      "relevance_score": 0.71
+    },
+    {
+      "news_id": "news_jpm_05",
+      "title": "JPM increases share buyback program",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/05",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-23T20:00:00Z",
+      "category": "capital_allocation",
+      "relevance_score": 0.89
+    },
+    {
+      "news_id": "news_jpm_06",
+      "title": "Supply chain update from JPM",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/06",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-23T12:00:00Z",
+      "category": "supply_chain",
+      "relevance_score": 0.77
+    },
+    {
+      "news_id": "news_jpm_07",
+      "title": "JPM reports strong demand outlook",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/07",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-23T04:00:00Z",
+      "category": "guidance",
+      "relevance_score": 0.55
+    },
+    {
+      "news_id": "news_jpm_08",
+      "title": "Insider activity noted at JPM",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/08",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-22T20:00:00Z",
+      "category": "ownership",
+      "relevance_score": 0.96
+    },
+    {
+      "news_id": "news_jpm_09",
+      "title": "JPM to present at industry conference",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/09",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-22T12:00:00Z",
+      "category": "event",
+      "relevance_score": 0.62
+    },
+    {
+      "news_id": "news_jpm_10",
+      "title": "JPM margins in focus ahead of earnings",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/10",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-22T04:00:00Z",
+      "category": "earnings",
+      "relevance_score": 0.92
+    },
+    {
+      "news_id": "news_jpm_11",
+      "title": "Market reacts to JPM guidance",
+      "description": "Synthetic fixture summary for JPM. Not real news.",
+      "url": "https://news.example/jpm/11",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-21T20:00:00Z",
+      "category": "guidance",
+      "relevance_score": 0.8
+    }
+  ]
+}

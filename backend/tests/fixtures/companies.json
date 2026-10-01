@@ -1,0 +1,14 @@
+{
+  "_comment": "Seed company reference data for the mock FilingsProvider (Phase 0d).",
+  "companies": [
+    {"ticker": "NVDA", "cik": "0001045810", "name": "NVIDIA Corporation",
+     "exchange": "NASDAQ", "sector": "Technology", "industry": "Semiconductors",
+     "fiscal_year_end": "01-26"},
+    {"ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.",
+     "exchange": "NASDAQ", "sector": "Technology", "industry": "Consumer Electronics",
+     "fiscal_year_end": "09-27"},
+    {"ticker": "JPM", "cik": "0000019617", "name": "JPMorgan Chase & Co.",
+     "exchange": "NYSE", "sector": "Financial Services", "industry": "Banks",
+     "fiscal_year_end": "12-31"}
+  ]
+}

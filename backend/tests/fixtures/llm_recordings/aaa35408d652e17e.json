@@ -1,0 +1,6 @@
+{
+  "kind": "text",
+  "model": "claude-haiku-4-5",
+  "prompt_summary": "NVDA FY2025 revenue Q&A (illustrative Phase 0d recording)",
+  "response": "NVIDIA's FY2025 revenue was $130.5B [SOURCE:xbrl_nvda_revenue_FY2025]."
+}

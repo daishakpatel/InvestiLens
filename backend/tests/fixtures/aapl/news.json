@@ -1,0 +1,125 @@
+{
+  "_comment": "SYNTHETIC news fixtures for AAPL (Phase 0d). Not real articles.",
+  "items": [
+    {
+      "news_id": "news_aapl_00",
+      "title": "AAPL beats quarterly revenue estimates",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/00",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-25T12:00:00Z",
+      "category": "earnings",
+      "relevance_score": 0.69
+    },
+    {
+      "news_id": "news_aapl_01",
+      "title": "AAPL announces new product line",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/01",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-25T04:00:00Z",
+      "category": "product",
+      "relevance_score": 0.93
+    },
+    {
+      "news_id": "news_aapl_02",
+      "title": "Analysts raise price target on AAPL",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/02",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-24T20:00:00Z",
+      "category": "analyst",
+      "relevance_score": 0.93
+    },
+    {
+      "news_id": "news_aapl_03",
+      "title": "AAPL expands data center partnerships",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/03",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-24T12:00:00Z",
+      "category": "business",
+      "relevance_score": 0.44
+    },
+    {
+      "news_id": "news_aapl_04",
+      "title": "Regulators review AAPL market practices",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/04",
+      "publisher": "Market Times",
+      "published_at": "2026-09-24T04:00:00Z",
+      "category": "regulatory",
+      "relevance_score": 0.47
+    },
+    {
+      "news_id": "news_aapl_05",
+      "title": "AAPL increases share buyback program",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/05",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-23T20:00:00Z",
+      "category": "capital_allocation",
+      "relevance_score": 0.57
+    },
+    {
+      "news_id": "news_aapl_06",
+      "title": "Supply chain update from AAPL",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/06",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-23T12:00:00Z",
+      "category": "supply_chain",
+      "relevance_score": 0.54
+    },
+    {
+      "news_id": "news_aapl_07",
+      "title": "AAPL reports strong demand outlook",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/07",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-23T04:00:00Z",
+      "category": "guidance",
+      "relevance_score": 0.69
+    },
+    {
+      "news_id": "news_aapl_08",
+      "title": "Insider activity noted at AAPL",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/08",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-22T20:00:00Z",
+      "category": "ownership",
+      "relevance_score": 0.75
+    },
+    {
+      "news_id": "news_aapl_09",
+      "title": "AAPL to present at industry conference",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/09",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-22T12:00:00Z",
+      "category": "event",
+      "relevance_score": 0.87
+    },
+    {
+      "news_id": "news_aapl_10",
+      "title": "AAPL margins in focus ahead of earnings",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/10",
+      "publisher": "Market Times",
+      "published_at": "2026-09-22T04:00:00Z",
+      "category": "earnings",
+      "relevance_score": 0.62
+    },
+    {
+      "news_id": "news_aapl_11",
+      "title": "Market reacts to AAPL guidance",
+      "description": "Synthetic fixture summary for AAPL. Not real news.",
+      "url": "https://news.example/aapl/11",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-21T20:00:00Z",
+      "category": "guidance",
+      "relevance_score": 0.82
+    }
+  ]
+}

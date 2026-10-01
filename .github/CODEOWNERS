@@ -1,0 +1,26 @@
+# Who approves changes to each area. Single maintainer today; owning "agent" roles (spec §33)
+# are noted so a path can be reassigned to a person as contributors join.
+# Later matching rules take precedence.
+
+*                               @daishakpatel
+
+# Contracts — Integration Lead (Agent 0). Breaking changes need an ADR.
+/docs/                          @daishakpatel
+/backend/app/schemas/           @daishakpatel
+/infrastructure/migrations/     @daishakpatel
+
+# Deterministic finance layer — highest correctness bar (DR-*, NFR-009)
+/backend/app/finance/           @daishakpatel
+
+# Data pipeline, retrieval, citations, AI generation
+/backend/app/providers/         @daishakpatel
+/backend/app/ingestion/         @daishakpatel
+/backend/app/rag/               @daishakpatel
+/backend/app/citation/          @daishakpatel
+
+# Frontend
+/frontend/                      @daishakpatel
+
+# CI / infrastructure
+/.github/                       @daishakpatel
+/infrastructure/                @daishakpatel

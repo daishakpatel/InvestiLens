@@ -1,0 +1,33 @@
+{
+  "ticker": "JPM",
+  "cik": "0000019617",
+  "filings": [
+    {
+      "form": "10-Q",
+      "accession_number": "0001628280-26-054343",
+      "primary_document": "jpm-20260630.htm",
+      "filing_date": "2026-08-06",
+      "report_date": "2026-06-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/19617/000162828026054343/jpm-20260630.htm",
+      "local_file": "10q.htm"
+    },
+    {
+      "form": "8-K",
+      "accession_number": "0001193125-26-314128",
+      "primary_document": "d103985d8k.htm",
+      "filing_date": "2026-07-23",
+      "report_date": "2026-07-23",
+      "url": "https://www.sec.gov/Archives/edgar/data/19617/000119312526314128/d103985d8k.htm",
+      "local_file": "8k.htm"
+    },
+    {
+      "form": "10-K",
+      "accession_number": "0001628280-26-008131",
+      "primary_document": "jpm-20251231.htm",
+      "filing_date": "2026-02-13",
+      "report_date": "2025-12-31",
+      "url": "https://www.sec.gov/Archives/edgar/data/19617/000162828026008131/jpm-20251231.htm",
+      "local_file": "10k.htm"
+    }
+  ]
+}

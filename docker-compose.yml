@@ -1,0 +1,41 @@
+# Local infrastructure only. API and worker services are added in Phase 4a / 5d.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16  # Postgres 16 + pgvector (ADR-0002)
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-investilens}
+      POSTGRES_USER: ${POSTGRES_USER:-investilens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-investilens}"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+
+  # Object storage for raw filings (ADR-0012). Enabled in Phase 5d; MVP uses filesystem storage.
+  # minio:
+  #   image: minio/minio:latest
+  #   command: server /data --console-address ":9001"
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-investilens}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+  #   ports:
+  #     - "127.0.0.1:9000:9000"
+  #     - "127.0.0.1:9001:9001"
+  #   volumes:
+  #     - miniodata:/data

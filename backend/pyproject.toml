@@ -1,0 +1,45 @@
+[project]
+name = "investilens-backend"
+version = "0.1.0"
+description = "InvestiLens API, workers, and data pipeline"
+requires-python = ">=3.12,<3.13"
+# Runtime dependencies are added by the phase that first needs them (see docs/decisions/).
+dependencies = [
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.2",       # psycopg 3 driver (DATABASE_URL uses postgresql+psycopg)
+    "pgvector>=0.3.6",            # Vector column type + operators (ADR-0002, ADR-0010)
+    "pydantic[email]>=2.9",       # [email] adds EmailStr validation at the input boundary
+    "pydantic-settings>=2.6",     # typed env config (spec §20 mandates Pydantic v2)
+    "fastapi>=0.115",             # API framework + OpenAPI 3.1 generation (spec §24)
+    "httpx>=0.27",                # SEC EDGAR client with timeouts (spec §20); also TestClient
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # asserts are the point of tests
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["app", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

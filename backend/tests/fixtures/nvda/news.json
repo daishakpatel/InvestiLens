@@ -1,0 +1,125 @@
+{
+  "_comment": "SYNTHETIC news fixtures for NVDA (Phase 0d). Not real articles.",
+  "items": [
+    {
+      "news_id": "news_nvda_00",
+      "title": "NVDA beats quarterly revenue estimates",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/00",
+      "publisher": "Market Times",
+      "published_at": "2026-09-25T12:00:00Z",
+      "category": "earnings",
+      "relevance_score": 0.63
+    },
+    {
+      "news_id": "news_nvda_01",
+      "title": "NVDA announces new product line",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/01",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-25T04:00:00Z",
+      "category": "product",
+      "relevance_score": 0.71
+    },
+    {
+      "news_id": "news_nvda_02",
+      "title": "Analysts raise price target on NVDA",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/02",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-24T20:00:00Z",
+      "category": "analyst",
+      "relevance_score": 0.4
+    },
+    {
+      "news_id": "news_nvda_03",
+      "title": "NVDA expands data center partnerships",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/03",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-24T12:00:00Z",
+      "category": "business",
+      "relevance_score": 0.47
+    },
+    {
+      "news_id": "news_nvda_04",
+      "title": "Regulators review NVDA market practices",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/04",
+      "publisher": "Market Times",
+      "published_at": "2026-09-24T04:00:00Z",
+      "category": "regulatory",
+      "relevance_score": 0.53
+    },
+    {
+      "news_id": "news_nvda_05",
+      "title": "NVDA increases share buyback program",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/05",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-23T20:00:00Z",
+      "category": "capital_allocation",
+      "relevance_score": 0.52
+    },
+    {
+      "news_id": "news_nvda_06",
+      "title": "Supply chain update from NVDA",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/06",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-23T12:00:00Z",
+      "category": "supply_chain",
+      "relevance_score": 0.4
+    },
+    {
+      "news_id": "news_nvda_07",
+      "title": "NVDA reports strong demand outlook",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/07",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-23T04:00:00Z",
+      "category": "guidance",
+      "relevance_score": 0.71
+    },
+    {
+      "news_id": "news_nvda_08",
+      "title": "Insider activity noted at NVDA",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/08",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-22T20:00:00Z",
+      "category": "ownership",
+      "relevance_score": 0.97
+    },
+    {
+      "news_id": "news_nvda_09",
+      "title": "NVDA to present at industry conference",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/09",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-22T12:00:00Z",
+      "category": "event",
+      "relevance_score": 0.75
+    },
+    {
+      "news_id": "news_nvda_10",
+      "title": "NVDA margins in focus ahead of earnings",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/10",
+      "publisher": "Example Wire",
+      "published_at": "2026-09-22T04:00:00Z",
+      "category": "earnings",
+      "relevance_score": 0.71
+    },
+    {
+      "news_id": "news_nvda_11",
+      "title": "Market reacts to NVDA guidance",
+      "description": "Synthetic fixture summary for NVDA. Not real news.",
+      "url": "https://news.example/nvda/11",
+      "publisher": "Finance Daily",
+      "published_at": "2026-09-21T20:00:00Z",
+      "category": "guidance",
+      "relevance_score": 0.57
+    }
+  ]
+}
