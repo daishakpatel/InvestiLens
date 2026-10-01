@@ -83,7 +83,9 @@ class FinancialMetric(Base, TimestampMixin):
     period_end: Mapped[date | None] = mapped_column(Date)
     period_type: Mapped[str] = mapped_column(String(8))  # FY|Q|TTM
     metric_name: Mapped[str] = mapped_column(String(64))
-    metric_value: Mapped[Quantity] = mapped_column()
+    # Nullable: a sector-inapplicable or uncomputable metric stores NULL + a reason in
+    # `quality_flags` (DR-041/042), never a misleading zero. See migration 0003.
+    metric_value: Mapped[Quantity | None] = mapped_column()
     unit: Mapped[str] = mapped_column(String(16))  # USD|shares|ratio
     basis: Mapped[str] = mapped_column(String(16), default="gaap")  # gaap|non_gaap
     is_derived: Mapped[bool] = mapped_column(Boolean, default=False)

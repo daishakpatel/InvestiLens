@@ -22,3 +22,12 @@ def replace_company_facts(session: Session, *, company_id: int, facts: list[dict
     if facts:
         session.bulk_insert_mappings(FinancialFact, facts)
     return len(facts)
+
+
+def facts_for_company(session: Session, company_id: int) -> list[FinancialFact]:
+    """Return all stored XBRL facts for a company (input to the concept-map builder)."""
+    from sqlalchemy import select
+
+    return list(
+        session.scalars(select(FinancialFact).where(FinancialFact.company_id == company_id))
+    )

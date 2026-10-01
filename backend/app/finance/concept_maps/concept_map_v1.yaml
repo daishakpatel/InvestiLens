@@ -1,0 +1,75 @@
+# Canonical metric -> ordered list of XBRL tags (first available wins; record source_tag).
+# Source: spec Appendix B (DR-020). Versioned: changing selections bumps to concept_map_v2.
+# `kind` tells the selector how to match a period: `flow` = duration fact; `stock` = instant.
+version: v1
+
+flow_metrics:
+  revenue:
+    - us-gaap:Revenues
+    - us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax
+    - us-gaap:RevenueFromContractWithCustomerIncludingAssessedTax
+    - us-gaap:SalesRevenueNet
+  cost_of_revenue:
+    - us-gaap:CostOfRevenue
+    - us-gaap:CostOfGoodsAndServicesSold
+  gross_profit:
+    - us-gaap:GrossProfit
+  operating_income:
+    - us-gaap:OperatingIncomeLoss
+  net_income:
+    - us-gaap:NetIncomeLoss
+    - us-gaap:ProfitLoss
+  operating_cash_flow:
+    - us-gaap:NetCashProvidedByUsedInOperatingActivities
+  capex:
+    - us-gaap:PaymentsToAcquirePropertyPlantAndEquipment
+    - us-gaap:PaymentsToAcquireProductiveAssets
+  depreciation_amortization:
+    - us-gaap:DepreciationDepletionAndAmortization
+    - us-gaap:DepreciationAndAmortization
+  stock_based_compensation:
+    - us-gaap:ShareBasedCompensation
+  eps_diluted:
+    - us-gaap:EarningsPerShareDiluted
+  shares_diluted_weighted:
+    - us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding
+
+stock_metrics:
+  shares_outstanding:
+    - dei:EntityCommonStockSharesOutstanding
+  cash_and_equivalents:
+    - us-gaap:CashAndCashEquivalentsAtCarryingValue
+    - us-gaap:CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents
+  short_term_investments:
+    - us-gaap:MarketableSecuritiesCurrent
+    - us-gaap:ShortTermInvestments
+  total_assets:
+    - us-gaap:Assets
+  current_assets:
+    - us-gaap:AssetsCurrent
+  current_liabilities:
+    - us-gaap:LiabilitiesCurrent
+  total_liabilities:
+    - us-gaap:Liabilities
+  shareholders_equity:
+    - us-gaap:StockholdersEquity
+    - us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest
+  long_term_debt:
+    - us-gaap:LongTermDebtNoncurrent
+    - us-gaap:LongTermDebt
+  short_term_debt:
+    - us-gaap:ShortTermBorrowings
+    - us-gaap:LongTermDebtCurrent
+  receivables:
+    - us-gaap:AccountsReceivableNetCurrent
+  inventory:
+    - us-gaap:InventoryNet
+  payables:
+    - us-gaap:AccountsPayableCurrent
+
+# Expected unit family per metric for the unit-consistency check (DR-024).
+units:
+  eps_diluted: per_share           # USD/shares
+  shares_diluted_weighted: shares
+  shares_outstanding: shares
+  # everything else defaults to `currency` (USD)

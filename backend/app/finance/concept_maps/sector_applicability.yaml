@@ -1,0 +1,38 @@
+# Which metrics apply to which sector (DR-042). Data, not code branches. Source: Appendix C.
+# `false` means "Not applicable for this sector" (render as N/A, never zero/blank; DR-001).
+sectors:
+  standard:
+    gross_margin: true
+    current_ratio: true
+    ev_ebitda: true
+    piotroski: true
+    altman: true
+    pe: true
+    ps: true
+    net_interest_margin: false
+  bank:
+    gross_margin: false
+    current_ratio: false
+    ev_ebitda: false
+    piotroski: false
+    altman: false
+    pe: true
+    ps: true
+    net_interest_margin: true   # [P2]
+  reit:
+    gross_margin: false
+    current_ratio: false
+    ev_ebitda: true
+    piotroski: true
+    altman: true
+    pe: true
+    ps: true
+    net_interest_margin: false
+
+# Map a company sector string (from `companies.sector`) to a sector key above.
+sector_aliases:
+  "Financial Services": bank
+  "Banks": bank
+  "Technology": standard
+  "Consumer Electronics": standard
+  "Real Estate": reit

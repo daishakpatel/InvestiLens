@@ -1,0 +1,19 @@
+# Company-level concept overrides for JPMorgan (CIK 0000019617), a bank (DR-020 overrides).
+# Banks don't report gross profit / cost of revenue; "revenue" is total net revenue. We pin
+# revenue to us-gaap:Revenues (already first in the default map, pinned here for clarity) and
+# declare the company's sector so sector-applicability (no gross margin, etc.) is applied.
+# Naming: file is per-company; resolved by ticker or CIK (spec §11.1 uses {cik}.yaml).
+cik: "0000019617"
+ticker: JPM
+sector: bank
+
+flow_metrics:
+  revenue:
+    - us-gaap:Revenues
+    - us-gaap:RevenuesNetOfInterestExpense
+    - us-gaap:InterestAndDividendIncomeOperating
+
+# Pin the share-count tag for the bank explicitly (also exercises stock-metric overrides).
+stock_metrics:
+  shares_outstanding:
+    - dei:EntityCommonStockSharesOutstanding
