@@ -1,0 +1,58 @@
+"""News persistence (Phase 1e). Idempotent by (company_id, content_hash)."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from decimal import Decimal
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models import News
+
+
+def upsert_news(
+    session: Session,
+    *,
+    company_id: int,
+    document_id: int,
+    content_hash: str,
+    title: str,
+    description: str,
+    url: str,
+    publisher: str,
+    published_at: datetime,
+    category: str,
+    relevance_score: Decimal,
+    event_cluster_id: str,
+) -> bool:
+    """Insert a news row, or update the mutable fields if it already exists. Returns True if new.
+
+    Full article `content` is never stored (LGL-004, ADR-0008).
+    """
+    existing = session.scalar(
+        select(News).where(News.company_id == company_id, News.content_hash == content_hash)
+    )
+    if existing is None:
+        session.add(
+            News(
+                company_id=company_id,
+                document_id=document_id,
+                content_hash=content_hash,
+                title=title,
+                description=description,
+                url=url,
+                publisher=publisher,
+                published_at=published_at,
+                category=category,
+                relevance_score=relevance_score,
+                event_cluster_id=event_cluster_id,
+                content=None,
+            )
+        )
+        return True
+    existing.description = description
+    existing.category = category
+    existing.relevance_score = relevance_score
+    existing.event_cluster_id = event_cluster_id
+    return False

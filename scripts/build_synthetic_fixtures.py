@@ -18,10 +18,14 @@ from pathlib import Path
 
 FIXTURES = Path(__file__).resolve().parents[1] / "backend" / "tests" / "fixtures"
 
-# (ticker, approximate 2026 base price)
-COMPANIES = [("nvda", 180.0), ("aapl", 230.0), ("jpm", 250.0)]
-TRADING_DAYS = 10  # ~2 weeks of weekdays
-START = date(2026, 9, 14)
+# (ticker, approximate current post-split price, quarterly dividend per share)
+COMPANIES = [("nvda", 180.0, 0.01), ("aapl", 230.0, 0.25), ("jpm", 250.0, 1.15)]
+PRICE_START = date(2021, 1, 4)  # ~5+ years of daily history (DR for valuation bands)
+PRICE_END = date(2026, 9, 30)
+# NVIDIA's real 10-for-1 split (June 2024). Pre-split raw prices are ~10x; adj_close is
+# back-adjusted so the adjusted series is continuous across the split (DR-025/DR-026).
+NVDA_SPLIT_DATE = date(2024, 6, 10)
+NVDA_SPLIT_FACTOR = 10
 
 _HEADLINE_TEMPLATES = [
     ("{T} beats quarterly revenue estimates", "earnings"),
@@ -39,26 +43,48 @@ _HEADLINE_TEMPLATES = [
 ]
 
 
-def _weekdays(start: date, count: int) -> list[date]:
+def _weekdays(start: date, end: date) -> list[date]:
     days: list[date] = []
     current = start
-    while len(days) < count:
+    while current <= end:
         if current.weekday() < 5:  # Mon-Fri
             days.append(current)
         current += timedelta(days=1)
     return days
 
 
-def _write_prices(ticker: str, base: float) -> None:
+def _write_prices(ticker: str, base: float, dividend: float) -> None:
+    """Write ~5 years of daily bars. `adj_close` is split/dividend-adjusted (continuous);
+    `close` is raw. NVDA carries the 2024 10:1 split so raw drops 10x on the ex-date."""
     rng = random.Random(f"prices-{ticker}")  # noqa: S311  (synthetic fixtures, not crypto)
-    rows = [["date", "open", "high", "low", "close", "adj_close", "volume"]]
-    price = base
-    for day in _weekdays(START, TRADING_DAYS):
-        open_ = price
-        close = round(open_ * (1 + rng.uniform(-0.02, 0.02)), 2)
+    is_nvda = ticker == "nvda"
+    header = [
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "adj_close",
+        "volume",
+        "div_cash",
+        "split_factor",
+    ]
+    rows = [header]
+    adj = base  # the adjusted (continuous) price path, in post-split terms
+    days = _weekdays(PRICE_START, PRICE_END)
+    for day in days:
+        adj_open = adj
+        adj_close = round(adj_open * (1 + rng.uniform(-0.02, 0.02)), 4)
+        # Raw price = adjusted x 10 before an NVDA split, else equal to adjusted.
+        raw_mult = NVDA_SPLIT_FACTOR if (is_nvda and day < NVDA_SPLIT_DATE) else 1
+        close = round(adj_close * raw_mult, 2)
+        open_ = round(adj_open * raw_mult, 2)
         high = round(max(open_, close) * (1 + rng.uniform(0, 0.01)), 2)
         low = round(min(open_, close) * (1 - rng.uniform(0, 0.01)), 2)
         volume = rng.randint(20_000_000, 80_000_000)
+        split_factor = NVDA_SPLIT_FACTOR if (is_nvda and day == NVDA_SPLIT_DATE) else 1
+        # One dividend per calendar quarter (first trading day of Jan/Apr/Jul/Oct).
+        div = dividend if (day.month in (1, 4, 7, 10) and day.day <= 3) else 0.0
         rows.append(
             [
                 day.isoformat(),
@@ -66,11 +92,13 @@ def _write_prices(ticker: str, base: float) -> None:
                 f"{high:.2f}",
                 f"{low:.2f}",
                 f"{close:.2f}",
-                f"{close:.2f}",
+                f"{adj_close:.4f}",
                 str(volume),
+                f"{div:.4f}",
+                str(split_factor),
             ]
         )
-        price = close
+        adj = adj_close
     with (FIXTURES / ticker / "prices.csv").open("w", newline="") as fh:
         csv.writer(fh).writerows(rows)
 
@@ -101,11 +129,11 @@ def _write_news(ticker: str) -> None:
 
 
 def main() -> None:
-    for ticker, base in COMPANIES:
+    for ticker, base, dividend in COMPANIES:
         (FIXTURES / ticker).mkdir(parents=True, exist_ok=True)
-        _write_prices(ticker, base)
+        _write_prices(ticker, base, dividend)
         _write_news(ticker)
-        print(f"[{ticker}] wrote prices.csv ({TRADING_DAYS} days) + news.json (12 items)")
+        print(f"[{ticker}] wrote prices.csv (~5y daily) + news.json (12 items)")
 
 
 if __name__ == "__main__":

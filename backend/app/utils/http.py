@@ -83,14 +83,17 @@ class HardenedHttpClient:
         rate_per_sec: float,
         timeout: float = 20.0,
         max_retries: int = 3,
+        default_headers: dict[str, str] | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         self._allowed_hosts = allowed_hosts
         self._limiter = RateLimiter(rate_per_sec)
         self._breaker = CircuitBreaker()
         self._max_retries = max_retries
+        # Auth headers (e.g. a provider token) are kept out of the URL so they never hit logs.
+        headers = {"User-Agent": user_agent, **(default_headers or {})}
         self._client = client or httpx.Client(
-            headers={"User-Agent": user_agent},
+            headers=headers,
             timeout=timeout,
             follow_redirects=False,  # SEC-015: don't follow redirects to arbitrary hosts
         )

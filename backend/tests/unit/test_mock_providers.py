@@ -45,11 +45,11 @@ def test_unknown_company_returns_none() -> None:
     assert asyncio.run(get_filings_provider().resolve_company("ZZZZ")) is None
 
 
-def test_price_mock_returns_two_weeks() -> None:
+def test_price_mock_returns_multi_year_daily() -> None:
     points = asyncio.run(get_price_provider().get_prices("NVDA"))
-    assert len(points) == 10  # ~2 weeks of trading days
+    assert len(points) > 1000  # ~5 years of daily bars (Phase 1d fixture)
     assert all(isinstance(p, PricePoint) for p in points)
-    assert points[0].close is not None
+    assert points[0].close is not None and points[0].adj_close is not None
 
 
 def test_news_mock_returns_items() -> None:

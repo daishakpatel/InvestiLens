@@ -33,6 +33,19 @@ class Settings(BaseSettings):
     backfill_10q_quarters: int = Field(default=12)
     backfill_8k_months: int = Field(default=24)
 
+    # --- Prices: Tiingo (Phase 1d, ADR-0007) ---
+    tiingo_api_key: str = Field(default="")  # required only when PROVIDER_MODE=live
+    price_rate_limit_per_sec: float = Field(default=2.0)  # hourly cap handled by low volume+cache
+    backfill_price_years: int = Field(default=5)  # 5y daily history for valuation bands
+
+    # --- News: Finnhub (Phase 1e, ADR-0008) ---
+    finnhub_api_key: str = Field(default="")  # required only when PROVIDER_MODE=live
+    news_rate_limit_per_sec: float = Field(default=1.0)  # Finnhub free: 60/min
+    news_backfill_days: int = Field(default=30)  # recent window; free tier has 1y history
+    news_relevance_threshold: float = Field(default=0.3)  # min score shown by default
+    news_dup_cosine_threshold: float = Field(default=0.9)  # near-duplicate clustering
+    news_dup_window_days: int = Field(default=3)  # cluster only within this time window
+
 
 @lru_cache
 def get_settings() -> Settings:
