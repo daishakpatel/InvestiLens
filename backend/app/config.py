@@ -58,6 +58,23 @@ class Settings(BaseSettings):
     # HNSW query-time breadth (EMB-004). Higher = better recall, slower. Tuned in docs/rag.md.
     hnsw_ef_search: int = Field(default=100)
 
+    # --- RAG retrieval pipeline (Phase 2c, §16, ADR-0003/0014) ---
+    rag_candidate_top_n: int = Field(default=40)  # candidates per index before fusion (RAG-010)
+    rag_rerank_top_k: int = Field(default=10)  # final evidence count after rerank (RAG-012)
+    rag_rrf_k: int = Field(default=60)  # Reciprocal Rank Fusion constant (RAG-011)
+    rag_rerank_enabled: bool = Field(default=True)  # off = fusion order only, for latency tests
+    # Minimum top reranker score to proceed; below this the pipeline abstains (RAG-018). Tuned to
+    # the LexicalReranker scale (ADR-0014): zero query-term overlap floors near 0.35, so 0.4
+    # abstains on irrelevant hits while any real term overlap clears it. Re-tune per reranker.
+    rag_sufficiency_min_score: float = Field(default=0.4)
+    rag_max_chunks_per_document: int = Field(default=3)  # diversity cap (RAG-017)
+    rag_context_token_budget: int = Field(default=6000)  # context-assembly budget (RAG-020)
+    rag_max_tool_calls: int = Field(default=6)  # tool-call budget per question (RAG-031)
+    rag_tool_timeout_s: float = Field(default=10.0)  # per-tool wall-clock timeout (RAG-031)
+    # Model routing (RAG-050): cheap for classify/rewrite, strong reserved for Phase 3 synthesis.
+    llm_model_cheap: str = Field(default="claude-haiku-4-5-20251001")
+    llm_model_strong: str = Field(default="claude-sonnet-5-5")
+
 
 @lru_cache
 def get_settings() -> Settings:

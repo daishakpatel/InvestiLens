@@ -69,5 +69,83 @@ for exact-term recall that pure semantic search can miss.
 ### Usage
 
 `app/rag/search.py` exposes `vector_search`, `vector_search_by_vector`, and `keyword_search` —
-each over **one** index, company-scoped (RAG-013). Combining them (RRF fusion, reranking) is
-Phase 2c.
+each over **one** index, company-scoped (RAG-013). Combining them (RRF fusion, reranking) is the
+Phase 2c pipeline below.
+
+---
+
+# Retrieval pipeline (Phase 2c)
+
+`app/rag/pipeline.py::run_retrieval(session, question=, ticker=)` returns a `RetrievalResult`:
+ranked `Evidence` (each with a backend-issued `source_id`, typed anchor, scores, metadata), an
+assembled context block, and a `sufficient` flag. It **generates no answer** — that is Phase
+3a/3b/3c. Sources: §16, ADR-0003 (custom orchestration), ADR-0014 (reranker).
+
+## Stages (§16.1)
+
+1. **Intent classification** (`intent.py`, RAG-002) — rule-based, fixed label set, logged. Labels:
+   `FINANCIAL_METRIC`, `RISK_ANALYSIS`, `FINANCIAL_EXPLANATION`, `DOCUMENT_SUMMARY`,
+   `MANAGEMENT_COMMENTARY`, `COMPARISON`, `FILING_DIFF`, `OUT_OF_SCOPE_ADVICE`, `OUT_OF_SCOPE`.
+   Advice/out-of-scope abstain before any retrieval.
+2. **Query rewriting** (`rewrite.py`, RAG-003) — expand financial synonyms ("gross margin" ↔
+   "gross profit percentage"), resolve relative time ("last three years" → fiscal years via
+   `fiscal_calendars`), decompose explanation questions into sub-queries.
+3. **Routing** (RAG-030) — `FINANCIAL_METRIC` is answered from `financial_metrics` (Phase 1c) via
+   the tool layer, **never** through vector/keyword search.
+4. **Retrieval** (`retrieval.py`, RAG-010…018) — vector + keyword search over the rewritten query
+   and its sub-queries → **RRF fusion** (`fusion.py`, k=60) → **boilerplate dedup** (keep the
+   latest of a `dedup_hash` cluster, annotate "unchanged since") → **rerank** (`rerank.py`) →
+   **diversity cap** (≤ `rag_max_chunks_per_document`) + **time-aware** selection (recency boost
+   for "latest"; one chunk per fiscal year for "over time") → **parent-child expansion** (attach
+   sibling-section context; the citation stays the small child span).
+5. **Context assembly** (`assembly.py`, RAG-020) — per-intent token budget; order structured
+   metrics first, then Tier 1 evidence, then lower tiers; every evidence item wrapped in untrusted
+   markers with its `source_id` + metadata.
+6. **Sufficiency** (RAG-018) — if the top rerank score is below `rag_sufficiency_min_score`, the
+   pipeline abstains (`sufficient=False`) rather than forcing a weak answer.
+7. **Logging** — every call recorded to `retrieval_logs` (query, intent, top_k, scores, latency,
+   chunk/source IDs) for the Phase 5b eval harness.
+
+## Reranker (ADR-0014)
+
+`LexicalReranker` (default) is deterministic and offline: stemmed query-term overlap blended with
+the RRF prior, nudged by bounded tier/recency multipliers, normalized to `[0, 1]`.
+`rag_rerank_enabled=False` falls back to `IdentityReranker` (pure fusion order) for latency
+comparison. An LLM/cross-encoder reranker can slot in behind the `Reranker` ABC; Phase 5b evals
+decide whether to switch. Because the lexical score floors near ~0.35 for zero-overlap hits (mock
+embeddings return neighbors regardless of relevance), `rag_sufficiency_min_score` defaults to 0.4;
+re-tune it per reranker.
+
+## Tool layer (`tools.py`, RAG-031)
+
+Typed, read-only, company-scoped tools, each returning a dict with `source_ids`:
+`get_company_info`, `get_financial_metric`, `get_metric_series`, `calculate_growth` (delegates to
+the deterministic finance layer — the LLM never computes), `get_recent_news`, `get_stock_history`.
+`ToolRunner` enforces the per-question call budget (`rag_max_tool_calls`), detects loops (same
+tool+args ≥ 3×), and logs every call with latency. P2 tools (`get_filing_diff`,
+`get_insider_transactions`, `compare_companies`) are deferred.
+
+## Prompt-injection defense (`injection.py`, RAG-040)
+
+Retrieved text is data, never instructions. Phase 2a already stripped hidden HTML (DP-004). Here
+every evidence span is wrapped in `<<<UNTRUSTED_SOURCE>>> … <<<END_UNTRUSTED_SOURCE>>>` markers
+with a preamble that content between markers must never be followed; forged markers and control
+chars are neutralized. The system/developer instruction is returned separately from the untrusted
+block so the two are never concatenated into one instruction role. A red-team test confirms an
+injected "ignore all previous instructions" chunk is wrapped as data and does not change pipeline
+behavior.
+
+## Config knobs
+
+`rag_candidate_top_n` (40), `rag_rerank_top_k` (10), `rag_rrf_k` (60), `rag_rerank_enabled`,
+`rag_sufficiency_min_score` (0.4), `rag_max_chunks_per_document` (3), `rag_context_token_budget`
+(6000, scaled per intent), `rag_max_tool_calls` (6), `rag_tool_timeout_s` (10),
+`llm_model_cheap`/`llm_model_strong` (model routing, RAG-050; the strong model is first used in
+Phase 3).
+
+## Deferred (first caller is Phase 3)
+
+Semantic cache keyed on (company, normalized question embedding, data_version) (RAG-050) — the
+hooks live in config/model routing, but the Redis-backed cache is built with its first real caller
+in Phase 3c. A dedicated tool-call audit table (beyond structured logs) lands with Phase 5c
+observability.

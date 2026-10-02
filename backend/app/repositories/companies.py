@@ -9,6 +9,11 @@ from sqlalchemy.orm import Session
 from app.models import Company, CompanyIdentifier
 
 
+def get_by_ticker(session: Session, ticker: str) -> Company | None:
+    """Look up a company by ticker (case-insensitive), company-scoped reads for the tool layer."""
+    return session.scalar(select(Company).where(Company.ticker == ticker.upper()))
+
+
 def upsert_company(
     session: Session,
     *,

@@ -10,11 +10,47 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.models import FinancialMetric
+
+
+def get_latest_metric(
+    session: Session, *, company_id: int, metric_name: str, period: str
+) -> FinancialMetric | None:
+    """One canonical metric for a period (latest, non-restated). Read for the tool layer."""
+    return session.scalar(
+        select(FinancialMetric).where(
+            FinancialMetric.company_id == company_id,
+            FinancialMetric.metric_name == metric_name,
+            FinancialMetric.period == period,
+            FinancialMetric.is_latest.is_(True),
+        )
+    )
+
+
+def get_metric_series(
+    session: Session,
+    *,
+    company_id: int,
+    metric_name: str,
+    period_type: str = "FY",
+) -> list[FinancialMetric]:
+    """A metric's time series (latest rows), oldest first, for one period type (RAG-031)."""
+    return list(
+        session.scalars(
+            select(FinancialMetric)
+            .where(
+                FinancialMetric.company_id == company_id,
+                FinancialMetric.metric_name == metric_name,
+                FinancialMetric.period_type == period_type,
+                FinancialMetric.is_latest.is_(True),
+            )
+            .order_by(FinancialMetric.fiscal_year, FinancialMetric.fiscal_quarter)
+        )
+    )
 
 
 def clear_company_metrics(session: Session, company_id: int) -> None:

@@ -11,11 +11,28 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.models import CorporateAction, PriceHistory
+
+
+def get_price_history(
+    session: Session, *, company_id: int, start: date, end: date
+) -> list[PriceHistory]:
+    """Daily bars in [start, end], oldest first, for the stock-history tool (RAG-031)."""
+    return list(
+        session.scalars(
+            select(PriceHistory)
+            .where(
+                PriceHistory.company_id == company_id,
+                PriceHistory.date >= start,
+                PriceHistory.date <= end,
+            )
+            .order_by(PriceHistory.date)
+        )
+    )
 
 
 def upsert_price_bars(session: Session, company_id: int, bars: list[dict[str, Any]]) -> int:

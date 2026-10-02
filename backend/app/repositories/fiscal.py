@@ -4,10 +4,25 @@ from __future__ import annotations
 
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.models import FiscalCalendar
+
+
+def get_fiscal_years(session: Session, *, company_id: int) -> list[int]:
+    """Distinct full-year fiscal years for a company, ascending (time-range resolution, RAG-003)."""
+    return list(
+        session.scalars(
+            select(FiscalCalendar.fiscal_year)
+            .where(
+                FiscalCalendar.company_id == company_id,
+                FiscalCalendar.period_type == "FY",
+            )
+            .order_by(FiscalCalendar.fiscal_year)
+        )
+    )
 
 
 def upsert_fiscal_period(
