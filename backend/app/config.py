@@ -75,6 +75,25 @@ class Settings(BaseSettings):
     llm_model_cheap: str = Field(default="claude-haiku-4-5-20251001")
     llm_model_strong: str = Field(default="claude-sonnet-5-5")
 
+    # --- Citation & verification (Phase 3a, §13/§14, ADR-0015) ---
+    # Rounding tolerance for the deterministic numeric-match layer (CIT-005 L2): a cited number
+    # matches a source value within this relative tolerance after unit normalization.
+    citation_numeric_rel_tolerance: float = Field(default=0.01)
+    # Lexical-entailment overlap thresholds (CIT-005 L3): ≥ supported, ≥ partial, else unsupported.
+    citation_entail_supported_overlap: float = Field(default=0.6)
+    citation_entail_partial_overlap: float = Field(default=0.3)
+    # Policy for a "partially" entailed claim: "soften" (downgrade confidence) or "reject".
+    citation_partial_policy: str = Field(default="soften")
+    # Confidence weights (HAL-002); sum need not be 1 (score is clamped to [0,1]).
+    citation_w_tier: float = Field(default=0.25)
+    citation_w_sources: float = Field(default=0.2)
+    citation_w_retrieval: float = Field(default=0.15)
+    citation_w_entailment: float = Field(default=0.3)
+    citation_w_agreement: float = Field(default=0.1)
+    # Label thresholds (HAL-002): ≥ strong → "strongly_supported"; ≥ supported → "supported".
+    citation_label_strong: float = Field(default=0.8)
+    citation_label_supported: float = Field(default=0.55)
+
 
 @lru_cache
 def get_settings() -> Settings:

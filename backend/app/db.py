@@ -37,3 +37,12 @@ def session_scope() -> Iterator[Session]:
         raise
     finally:
         session.close()
+
+
+def get_db() -> Iterator[Session]:
+    """FastAPI dependency: a read session that always closes (overridable in tests)."""
+    session = _session_factory()()
+    try:
+        yield session
+    finally:
+        session.close()

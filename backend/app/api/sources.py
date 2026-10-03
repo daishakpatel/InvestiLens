@@ -1,29 +1,27 @@
 """Source-record endpoint powering the citation modal (spec §13, §24.2).
 
-Returns the backend-issued source record (with anchor fields and deep link) so the UI can
-highlight the exact supporting span (CIT-006).
+Resolves a backend-issued source_id to its full record, the text with the supporting span marked,
+and a deep link where available (CIT-006). For a derived metric it also returns the lineage inputs
+that drive the "How this was calculated" panel (CIT-003).
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from app.schemas.sources import SourceRecord, TextChunkSource
+from app.citation.resolver import resolve_source
+from app.db import get_db
+from app.schemas.citations import SourceDetail
 
 router = APIRouter(prefix="/sources", tags=["Sources"])
 
+_DB = Depends(get_db)  # module-level so it is not a call in the argument default (ruff B008)
 
-@router.get("/{source_id}", response_model=SourceRecord)
-async def get_source(source_id: str) -> SourceRecord:
-    return TextChunkSource(
-        source_id=source_id,
-        tier=1,
-        document_id="nvda_10k_2025",
-        section_path=["Item 7", "Results of Operations", "Revenue"],
-        paragraph_id="p_217",
-        char_start=10432,
-        char_end=10981,
-        page=None,
-        url="https://www.sec.gov/Archives/edgar/data/1045810/...#p_217",
-        text="Revenue for fiscal year 2025 was ...",
-    )
+
+@router.get("/{source_id}", response_model=SourceDetail)
+async def get_source(source_id: str, db: Session = _DB) -> SourceDetail:
+    detail = resolve_source(db, source_id)
+    if detail is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="source not found")
+    return detail

@@ -2271,6 +2271,106 @@
         "title": "Risk",
         "type": "object"
       },
+      "SourceDetail": {
+        "description": "GET /sources/{source_id} payload: the record + marked span + deep link (CIT-006).",
+        "properties": {
+          "deep_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Link"
+          },
+          "highlight_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highlight End"
+          },
+          "highlight_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highlight Start"
+          },
+          "lineage": {
+            "default": [],
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Lineage",
+            "type": "array"
+          },
+          "source": {
+            "discriminator": {
+              "mapping": {
+                "derived_metric": "#/components/schemas/DerivedMetricSource",
+                "earnings_release": "#/components/schemas/EarningsReleaseSource",
+                "news_item": "#/components/schemas/NewsItemSource",
+                "table_chunk": "#/components/schemas/TableChunkSource",
+                "text_chunk": "#/components/schemas/TextChunkSource",
+                "transcript": "#/components/schemas/EarningsReleaseSource",
+                "xbrl_fact": "#/components/schemas/XbrlFactSource"
+              },
+              "propertyName": "source_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TextChunkSource"
+              },
+              {
+                "$ref": "#/components/schemas/TableChunkSource"
+              },
+              {
+                "$ref": "#/components/schemas/XbrlFactSource"
+              },
+              {
+                "$ref": "#/components/schemas/DerivedMetricSource"
+              },
+              {
+                "$ref": "#/components/schemas/NewsItemSource"
+              },
+              {
+                "$ref": "#/components/schemas/EarningsReleaseSource"
+              }
+            ],
+            "title": "Source"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "SourceDetail",
+        "type": "object"
+      },
       "TableChunkSource": {
         "properties": {
           "cell_refs": {
@@ -4543,39 +4643,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "discriminator": {
-                    "mapping": {
-                      "derived_metric": "#/components/schemas/DerivedMetricSource",
-                      "earnings_release": "#/components/schemas/EarningsReleaseSource",
-                      "news_item": "#/components/schemas/NewsItemSource",
-                      "table_chunk": "#/components/schemas/TableChunkSource",
-                      "text_chunk": "#/components/schemas/TextChunkSource",
-                      "transcript": "#/components/schemas/EarningsReleaseSource",
-                      "xbrl_fact": "#/components/schemas/XbrlFactSource"
-                    },
-                    "propertyName": "source_type"
-                  },
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/TextChunkSource"
-                    },
-                    {
-                      "$ref": "#/components/schemas/TableChunkSource"
-                    },
-                    {
-                      "$ref": "#/components/schemas/XbrlFactSource"
-                    },
-                    {
-                      "$ref": "#/components/schemas/DerivedMetricSource"
-                    },
-                    {
-                      "$ref": "#/components/schemas/NewsItemSource"
-                    },
-                    {
-                      "$ref": "#/components/schemas/EarningsReleaseSource"
-                    }
-                  ],
-                  "title": "Response Get Source Api V1 Sources  Source Id  Get"
+                  "$ref": "#/components/schemas/SourceDetail"
                 }
               }
             },

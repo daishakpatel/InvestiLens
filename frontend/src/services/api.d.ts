@@ -1495,6 +1495,29 @@ export interface components {
             /** Source Ids */
             source_ids: string[];
         };
+        /**
+         * SourceDetail
+         * @description GET /sources/{source_id} payload: the record + marked span + deep link (CIT-006).
+         */
+        SourceDetail: {
+            /** Deep Link */
+            deep_link?: string | null;
+            /** Highlight End */
+            highlight_end?: number | null;
+            /** Highlight Start */
+            highlight_start?: number | null;
+            /**
+             * Lineage
+             * @default []
+             */
+            lineage: {
+                [key: string]: string;
+            }[];
+            /** Source */
+            source: components["schemas"]["TextChunkSource"] | components["schemas"]["TableChunkSource"] | components["schemas"]["XbrlFactSource"] | components["schemas"]["DerivedMetricSource"] | components["schemas"]["NewsItemSource"] | components["schemas"]["EarningsReleaseSource"];
+            /** Text */
+            text?: string | null;
+        };
         /** TableChunkSource */
         TableChunkSource: {
             /**
@@ -2884,7 +2907,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TextChunkSource"] | components["schemas"]["TableChunkSource"] | components["schemas"]["XbrlFactSource"] | components["schemas"]["DerivedMetricSource"] | components["schemas"]["NewsItemSource"] | components["schemas"]["EarningsReleaseSource"];
+                    "application/json": components["schemas"]["SourceDetail"];
                 };
             };
             /** @description Validation Error */
