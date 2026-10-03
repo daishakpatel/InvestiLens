@@ -8,7 +8,17 @@ from decimal import Decimal
 from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
-from app.models import News
+from app.models import Document, News
+
+
+def publisher_tiers(session: Session, document_ids: list[int]) -> dict[int, int]:
+    """Map document_id → source_tier for a batch of news docs (publisher tier, §15), no N+1."""
+    if not document_ids:
+        return {}
+    rows = session.execute(
+        select(Document.id, Document.source_tier).where(Document.id.in_(document_ids))
+    ).all()
+    return {doc_id: tier for doc_id, tier in rows}
 
 
 def list_news(

@@ -27,6 +27,7 @@ dev = [
     "hypothesis>=6.100",          # property-based tests for the metric formulas
     "ruff>=0.6",
     "types-pyyaml>=6.0.12.20260906",
+    "uvicorn[standard]>=0.30",
 ]
 
 [tool.uv]

@@ -305,6 +305,8 @@ async def list_company_news(
     has_more = len(rows) > page_size
     rows = rows[:page_size]
     next_cursor = encode_cursor(rows[-1].id) if has_more and rows else None
+    doc_ids = [n.document_id for n in rows if n.document_id is not None]
+    tiers = news_repo.publisher_tiers(db, doc_ids)
     return NewsResponse(
         ticker=company.ticker,
         items=[
@@ -317,6 +319,8 @@ async def list_company_news(
                 published_at=n.published_at.isoformat() if n.published_at else None,
                 category=n.category,
                 relevance_score=float(n.relevance_score) if n.relevance_score is not None else None,
+                tier=tiers.get(n.document_id) if n.document_id is not None else None,
+                cluster_id=n.event_cluster_id,
             )
             for n in rows
         ],

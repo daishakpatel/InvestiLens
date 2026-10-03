@@ -7,20 +7,18 @@ import OverviewTab from "./pages/tabs/OverviewTab";
 import ValuationTab from "./pages/tabs/ValuationTab";
 import FilingsTab from "./pages/tabs/FilingsTab";
 import NewsTab from "./pages/tabs/NewsTab";
-import {
-  ChatTab,
-  ManagementTab,
-  OwnershipTab,
-  ResearchTab,
-  RisksTab,
-} from "./pages/tabs/PlaceholderTab";
+import { OwnershipTab } from "./pages/tabs/PlaceholderTab";
 
-// Route-level code splitting (UI-004). The Financials tab is split on its own so Recharts stays
-// out of the initial bundle.
+// Route-level code splitting (UI-004). Recharts (Financials) and the report/chat views each get
+// their own chunk, out of the initial bundle.
 const HomePage = lazy(() => import("./pages/HomePage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const CompanyDashboard = lazy(() => import("./pages/CompanyDashboard"));
 const FinancialsTab = lazy(() => import("./pages/tabs/FinancialsTab"));
+const ResearchTab = lazy(() => import("./pages/tabs/ResearchTab"));
+const RisksTab = lazy(() => import("./pages/tabs/RisksTab"));
+const ManagementTab = lazy(() => import("./pages/tabs/ManagementTab"));
+const ChatTab = lazy(() => import("./pages/tabs/ChatTab"));
 
 function NotFound() {
   return (

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Outlet, useParams } from "react-router-dom";
 
+import { CitationProvider } from "../components/citations/CitationContext";
 import { MetricTile } from "../components/MetricTile";
 import type { MetricMeta } from "../components/MetricTile";
 import { FreshnessBadge } from "../components/Panel";
@@ -141,16 +142,18 @@ export default function CompanyDashboard() {
   const base = `/company/${ticker}`;
 
   return (
-    <div className="space-y-4 py-4">
-      <CompanyHeader ticker={ticker} />
-      <div className="rounded-xl border border-border bg-surface shadow-sm">
-        <Tabs base={base} tabs={TABS} />
-        <div className="p-4">
-          <Suspense fallback={<LoadingState />}>
-            <Outlet />
-          </Suspense>
+    <CitationProvider>
+      <div className="space-y-4 py-4">
+        <CompanyHeader ticker={ticker} />
+        <div className="rounded-xl border border-border bg-surface shadow-sm">
+          <Tabs base={base} tabs={TABS} />
+          <div className="p-4">
+            <Suspense fallback={<LoadingState />}>
+              <Outlet />
+            </Suspense>
+          </div>
         </div>
       </div>
-    </div>
+    </CitationProvider>
   );
 }

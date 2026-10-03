@@ -38,6 +38,19 @@ export function Badge({
   );
 }
 
+const EVIDENCE: Record<string, { tone: BadgeTone; label: string }> = {
+  strongly_supported: { tone: "positive", label: "Strongly supported" },
+  supported: { tone: "data", label: "Supported" },
+  limited_evidence: { tone: "warning", label: "Limited evidence" },
+};
+
+/** Evidence-strength label for a verified claim (HAL-002; never a raw score). */
+export function EvidenceBadge({ label }: { label: string | null | undefined }) {
+  if (!label) return null;
+  const e = EVIDENCE[label] ?? { tone: "neutral" as BadgeTone, label };
+  return <Badge tone={e.tone}>{e.label}</Badge>;
+}
+
 export function LoadingState({ label }: { label?: string }) {
   return (
     <div className="flex items-center gap-2 p-6 text-sm text-muted">

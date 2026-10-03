@@ -35,5 +35,6 @@ async def sse_events(turn: ChatTurn) -> AsyncIterator[bytes]:
             "session_id": turn.session_id,
             "message_id": turn.message_id,
             "suggested_questions": turn.suggested_questions,
+            "tool_trace": [t.model_dump() for t in turn.tool_trace],
         },
     )

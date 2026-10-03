@@ -1,7 +1,7 @@
 // React Query hooks over the typed API client. Each query validates its payload with Zod
 // (schemas.ts) before it reaches a component, so a malformed response fails fast and visibly.
-import { useQuery } from "@tanstack/react-query";
-import type { UseQueryResult } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { apiRequest } from "./apiClient";
 import { parse } from "./schemas";
@@ -9,11 +9,16 @@ import type {
   CompanyResponse,
   CompanySearchResult,
   DataFreshnessResponse,
+  FilingSectionsResponse,
   FilingSummary,
   FinancialsResponse,
+  JobState,
   MetricResult,
   NewsResponse,
   PricesResponse,
+  ResearchAccepted,
+  ResearchReportEnvelope,
+  SourceDetail,
   ValuationResponse,
 } from "../types";
 
@@ -119,6 +124,84 @@ export function useDataFreshness(ticker: string): UseQueryResult<DataFreshnessRe
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/meta/data-freshness/${ticker}`, { signal });
       return parse.dataFreshness(data);
+    },
+  });
+}
+
+export function useSource(sourceId: string | null): UseQueryResult<SourceDetail> {
+  return useQuery({
+    queryKey: ["source", sourceId],
+    enabled: sourceId !== null,
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/sources/${encodeURIComponent(sourceId ?? "")}`, {
+        signal,
+      });
+      return parse.sourceDetail(data);
+    },
+  });
+}
+
+export function useLatestResearch(ticker: string): UseQueryResult<ResearchReportEnvelope> {
+  return useQuery({
+    queryKey: ["research-latest", ticker],
+    retry: false, // a 404 ("no report yet") is an expected state, not a transient error
+    staleTime: MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/research/latest`, { signal });
+      return parse.researchEnvelope(data);
+    },
+  });
+}
+
+export function useResearchReport(researchId: string | null): UseQueryResult<ResearchReportEnvelope> {
+  return useQuery({
+    queryKey: ["research", researchId],
+    enabled: researchId !== null,
+    staleTime: MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/research/${researchId}`, { signal });
+      return parse.researchEnvelope(data);
+    },
+  });
+}
+
+export function useFilingSections(filingId: string | null): UseQueryResult<FilingSectionsResponse> {
+  return useQuery({
+    queryKey: ["filing-sections", filingId],
+    enabled: filingId !== null,
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/filings/${filingId}/sections`, { signal });
+      return parse.filingSections(data);
+    },
+  });
+}
+
+export function useStartResearch(): UseMutationResult<ResearchAccepted, Error, string> {
+  return useMutation({
+    mutationFn: async (ticker: string) => {
+      const { data } = await apiRequest<unknown>("/research", {
+        method: "POST",
+        body: { ticker },
+      });
+      return parse.researchAccepted(data);
+    },
+  });
+}
+
+export function useJob(jobId: string | null): UseQueryResult<JobState> {
+  return useQuery({
+    queryKey: ["job", jobId],
+    enabled: jobId !== null,
+    // Poll while the job is still running; stop once terminal.
+    refetchInterval: (query) => {
+      const status = (query.state.data as JobState | undefined)?.status;
+      return status === "done" || status === "failed" ? false : 2000;
+    },
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/research/jobs/${jobId}`, { signal });
+      return parse.jobState(data);
     },
   });
 }

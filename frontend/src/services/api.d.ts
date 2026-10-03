@@ -1346,6 +1346,8 @@ export interface components {
         NewsItem: {
             /** Category */
             category?: string | null;
+            /** Cluster Id */
+            cluster_id?: string | null;
             /** Description */
             description?: string | null;
             /** News Id */
@@ -1356,6 +1358,8 @@ export interface components {
             publisher?: string | null;
             /** Relevance Score */
             relevance_score?: number | null;
+            /** Tier */
+            tier?: number | null;
             /** Title */
             title: string;
             /** Url */

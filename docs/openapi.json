@@ -1507,6 +1507,17 @@
             ],
             "title": "Category"
           },
+          "cluster_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Id"
+          },
           "description": {
             "anyOf": [
               {
@@ -1556,6 +1567,17 @@
               }
             ],
             "title": "Relevance Score"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
           },
           "title": {
             "title": "Title",

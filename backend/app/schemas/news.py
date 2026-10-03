@@ -19,6 +19,8 @@ class NewsItem(BaseModel):
     published_at: str | None = None  # ISO-8601 UTC
     category: str | None = None
     relevance_score: float | None = Field(default=None, ge=0, le=1)
+    tier: int | None = None  # source-quality tier of the publisher (§15)
+    cluster_id: str | None = None  # same-event grouping across outlets ("N sources")
 
 
 class NewsResponse(BaseModel):

@@ -75,12 +75,16 @@ export function toCsv(headers: string[], rows: (string | number | null | undefin
   return [headers, ...rows].map((row) => row.map(escape).join(",")).join("\n");
 }
 
-export function downloadCsv(filename: string, csv: string): void {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+export function downloadText(filename: string, text: string, mime = "text/plain;charset=utf-8;"): void {
+  const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadCsv(filename: string, csv: string): void {
+  downloadText(filename, csv, "text/csv;charset=utf-8;");
 }
