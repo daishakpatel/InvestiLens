@@ -28,3 +28,22 @@ class UserProfile(BaseModel):
     email: EmailStr
     role: str
     email_verified: bool = False
+
+
+class EmailVerifyConfirm(BaseModel):
+    token: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(min_length=12, description="Argon2id-hashed server-side (AUTH-001)")
+
+
+class AuthMessage(BaseModel):
+    """A neutral acknowledgement (used where revealing specifics would enable enumeration)."""
+
+    detail: str

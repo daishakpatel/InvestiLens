@@ -22,8 +22,26 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 | API-007 | `X-Request-ID` is accepted, echoed on the response, and included in error bodies. |
 | API-008 | Data endpoints return freshness (`as_of`, `source`, `freshness_status`). |
 
-> **Phase 0c status:** handlers return schema-shaped examples or `501 Not Implemented`. No real
-> business logic yet — that arrives in Phase 4a (endpoints), 4b (auth), 3b/3c (research/chat).
+> **Phase 4a status:** endpoints are wired to their real backing stores (companies/financials →
+> Phase 1, filings/news → 1a/1e, research/sources → Phase 3, chat → 3c). Features whose data is
+> not yet ingested return a clear empty/`404`/`501` (insiders/ownership P2, filing & research diff
+> Phase 6, export Phase 4d) rather than faked data. Auth is implemented in Phase 4b (see below).
+
+### Cross-cutting (Phase 4a)
+
+- **Pagination (API-002, ADR-0016):** list endpoints accept `?limit=` (default 50, max 200) and an
+  opaque `?cursor=`. `GET /companies/{ticker}/news` carries `next_cursor` in the body; the other
+  list endpoints (bare arrays, whose contract shape is frozen) return it in an `X-Next-Cursor`
+  response header. A malformed cursor is a 422 problem.
+- **Idempotency (API-003, ADR-0017):** `POST /research` single-flights — a repeat with the same
+  `Idempotency-Key`, or any in-flight job for the same company, attaches to the existing job
+  instead of starting a second one. The job is enqueued (`queued`); the Phase 5d worker runs it.
+- **Freshness (API-008):** data endpoints read `data_freshness` for their source (`sec`/`price`/
+  `news`) and report `as_of`/`source`/`freshness_status` (`stale` when never ingested).
+- **Rate limiting (ADR-0018):** a `RateLimitMiddleware` seam exists; it is disabled by default and
+  configured with real limits + Redis in Phase 5c.
+- **Auth seam (ADR-0006):** chat, watchlists, and alerts require a user via `X-User-Id` (→ JWT in
+  Phase 4b); admin endpoints additionally require `role=admin`.
 
 ## Endpoints (§24.2)
 
@@ -93,15 +111,24 @@ call sites. The answer is retrieval-routed (structured metrics vs documents), ci
 (Phase 3a), and returns `evidence_label`, `abstained`/`refused`, `tool_trace`, `suggested_questions`,
 and `message_id` (for feedback).
 
-### Auth (Phase 4b)
-| Method | Path |
-|--------|------|
-| POST | `/auth/register` |
-| POST | `/auth/login` |
-| POST | `/auth/refresh` |
-| POST | `/auth/logout` |
-| GET | `/auth/me` |
-| DELETE | `/auth/me` (account + data deletion, LGL-007) |
+### Auth (Phase 4b — implemented, ADR-0005/0006)
+| Method | Path | Notes |
+|--------|------|-------|
+| POST | `/auth/register` | Argon2id hash, password policy (AUTH-001); 201 → profile |
+| POST | `/auth/login` | Access JWT in body + rotating refresh token in httpOnly/Secure/SameSite cookie; rate-limited (AUTH-006) |
+| POST | `/auth/refresh` | Rotates the refresh cookie; reuse of a revoked token revokes the family (AUTH-002) |
+| POST | `/auth/logout` | Revokes the token family and clears the cookie |
+| GET | `/auth/me` | Current profile (Bearer access token) |
+| DELETE | `/auth/me` | Soft-deletes the account + revokes sessions; hard-delete via a retention job (LGL-007) |
+| POST | `/auth/verify-email/request` · `/auth/verify-email/confirm` | Single-use email-verification token (AUTH-003) |
+| POST | `/auth/password-reset/request` · `/auth/password-reset/confirm` | Single-use reset token; neutral ack (no user enumeration) |
+
+Access tokens are HS256 JWTs (15 min, claims `sub`/`exp`/`iat`/`jti`) sent as `Authorization:
+Bearer`; the frontend holds them in memory. Protected routes resolve the user from the verified
+token (`get_current_user`), replacing Phase 3c/4a's interim `X-User-Id` seam with no call-site
+change. Object-level authorization (SEC-007/AUTH-004) scopes every user-owned resource to the
+caller. Per ADR-0006, anonymous users may browse company data and view already-generated reports,
+but **may not** generate reports, use chat, or touch user-owned data (anonymous AI quota 0).
 
 ### Watchlist, alerts & feedback
 | Method | Path |

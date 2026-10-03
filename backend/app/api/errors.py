@@ -12,6 +12,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.auth.passwords import WeakPasswordError
+from app.auth.service import AuthError
 from app.schemas.common import FieldError, Problem
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
@@ -65,6 +67,28 @@ def register_error_handlers(app: FastAPI) -> None:
             instance=str(request.url),
             request_id=_request_id(request),
             errors=exc.errors,
+        )
+        return _problem_response(request, problem)
+
+    @app.exception_handler(AuthError)
+    async def _handle_auth(request: Request, exc: AuthError) -> JSONResponse:
+        problem = Problem(
+            title="Authentication Error",
+            status=exc.status_code,
+            detail=exc.message,
+            instance=str(request.url),
+            request_id=_request_id(request),
+        )
+        return _problem_response(request, problem)
+
+    @app.exception_handler(WeakPasswordError)
+    async def _handle_weak_password(request: Request, exc: WeakPasswordError) -> JSONResponse:
+        problem = Problem(
+            title="Validation Error",
+            status=422,
+            detail=str(exc),
+            instance=str(request.url),
+            request_id=_request_id(request),
         )
         return _problem_response(request, problem)
 

@@ -53,6 +53,60 @@ def get_metric_series(
     )
 
 
+def get_series_multi(
+    session: Session,
+    *,
+    company_id: int,
+    metric_names: list[str],
+    period_type: str = "FY",
+    from_year: int | None = None,
+    to_year: int | None = None,
+) -> list[FinancialMetric]:
+    """Latest rows for several metrics over a fiscal-year window, oldest first (financials API)."""
+    conditions = [
+        FinancialMetric.company_id == company_id,
+        FinancialMetric.metric_name.in_(metric_names),
+        FinancialMetric.period_type == period_type,
+        FinancialMetric.is_latest.is_(True),
+    ]
+    if from_year is not None:
+        conditions.append(FinancialMetric.fiscal_year >= from_year)
+    if to_year is not None:
+        conditions.append(FinancialMetric.fiscal_year <= to_year)
+    return list(
+        session.scalars(
+            select(FinancialMetric)
+            .where(*conditions)
+            .order_by(
+                FinancialMetric.metric_name,
+                FinancialMetric.fiscal_year,
+                FinancialMetric.fiscal_quarter,
+            )
+        )
+    )
+
+
+def get_latest_metrics(
+    session: Session, *, company_id: int, metric_names: list[str]
+) -> list[FinancialMetric]:
+    """The single most recent (by fiscal year) latest row per named metric, for valuation (§12)."""
+    rows = list(
+        session.scalars(
+            select(FinancialMetric)
+            .where(
+                FinancialMetric.company_id == company_id,
+                FinancialMetric.metric_name.in_(metric_names),
+                FinancialMetric.is_latest.is_(True),
+            )
+            .order_by(FinancialMetric.fiscal_year.desc(), FinancialMetric.fiscal_quarter.desc())
+        )
+    )
+    seen: dict[str, FinancialMetric] = {}
+    for row in rows:
+        seen.setdefault(row.metric_name, row)
+    return [seen[name] for name in metric_names if name in seen]
+
+
 def clear_company_metrics(session: Session, company_id: int) -> None:
     """Remove a company's metrics so a rebuild is idempotent."""
     session.execute(delete(FinancialMetric).where(FinancialMetric.company_id == company_id))

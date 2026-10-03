@@ -35,7 +35,7 @@ from app.models import (
     User,
 )
 from app.providers.mocks.embeddings import MockEmbeddingClient
-from tests.fakes import FakeLLM
+from tests.fakes import FakeLLM, auth_headers
 
 _CHUNKS = [
     "Gross margin expanded due to a richer mix of data-center products during the year.",
@@ -299,13 +299,13 @@ def test_stream_and_auth_and_feedback_endpoints(
     app.dependency_overrides[get_db] = lambda: session
     try:
         client = TestClient(app)
-        # Auth required (ADR-0006): no X-User-Id → 401.
+        # Auth required (ADR-0006): no bearer token → 401.
         assert (
             client.post("/api/v1/chat", json={"company": "TST", "question": "hi"}).status_code
             == 401
         )
 
-        headers = {"X-User-Id": str(user_id)}
+        headers = auth_headers(user_id)
         stream = client.post(
             "/api/v1/chat/stream",
             json={"company": "TST", "question": "What was revenue in FY2025?"},

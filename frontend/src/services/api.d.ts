@@ -13,7 +13,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Refresh Company */
+        /**
+         * Refresh Company
+         * @description Enqueue a full re-ingest for a company; the Phase 5d worker runs it (ADR-0017).
+         */
         post: operations["refresh_company_api_v1_admin_companies__ticker__refresh_post"];
         delete?: never;
         options?: never;
@@ -137,9 +140,43 @@ export interface paths {
         post?: never;
         /**
          * Delete Me
-         * @description Account + data deletion (LGL-007).
+         * @description Account + data deletion (LGL-007): soft-delete now, hard-delete via the retention job.
          */
         delete: operations["delete_me_api_v1_auth_me_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Password Reset */
+        post: operations["confirm_password_reset_api_v1_auth_password_reset_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Password Reset */
+        post: operations["request_password_reset_api_v1_auth_password_reset_request_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -173,6 +210,40 @@ export interface paths {
         put?: never;
         /** Register */
         post: operations["register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Email Verification */
+        post: operations["confirm_email_verification_api_v1_auth_verify_email_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Email Verification */
+        post: operations["request_email_verification_api_v1_auth_verify_email_request_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -330,7 +401,7 @@ export interface paths {
         };
         /**
          * Get Insiders
-         * @description Form 4 insider transactions (P2).
+         * @description Form 4 insider transactions. Not yet ingested (Appendix F #10, P2) → empty.
          */
         get: operations["get_insiders_api_v1_companies__ticker__insiders_get"];
         put?: never;
@@ -387,7 +458,7 @@ export interface paths {
         };
         /**
          * Get Ownership
-         * @description 13F institutional holdings (P2).
+         * @description 13F institutional holdings. Not yet ingested (Appendix F #10, P2) → empty.
          */
         get: operations["get_ownership_api_v1_companies__ticker__ownership_get"];
         put?: never;
@@ -458,7 +529,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Report Feedback */
+        /**
+         * Report Feedback
+         * @description Report-level feedback. Persisting it needs a report_id the v1 contract does not carry;
+         *     stored feedback lands with the report UI (Phase 4d). Accepted as a no-op meanwhile.
+         */
         post: operations["report_feedback_api_v1_feedback_report_post"];
         delete?: never;
         options?: never;
@@ -492,7 +567,7 @@ export interface paths {
         };
         /**
          * Diff Filings
-         * @description Filing-to-filing diff (P2).
+         * @description Filing-to-filing diff (Phase 6b). Not yet available.
          */
         get: operations["diff_filings_api_v1_filings__filing_id__diff_get"];
         put?: never;
@@ -566,7 +641,7 @@ export interface paths {
         };
         /**
          * Ready
-         * @description Readiness probe (db, redis, queue). Real checks land in Phase 4a/5d.
+         * @description Readiness probe (db, redis, queue). Full redis/queue checks land in Phase 5d.
          */
         get: operations["ready_api_v1_ready_get"];
         put?: never;
@@ -620,7 +695,7 @@ export interface paths {
         };
         /**
          * Job Events
-         * @description SSE stream of job progress (API-004). Stub emits one event then closes.
+         * @description SSE stream of job progress (API-004). Emits the current state, then closes.
          */
         get: operations["job_events_api_v1_research_jobs__job_id__events_get"];
         put?: never;
@@ -776,6 +851,14 @@ export interface components {
             channel: "email" | "in_app";
             /** Ticker */
             ticker: string;
+        };
+        /**
+         * AuthMessage
+         * @description A neutral acknowledgement (used where revealing specifics would enable enumeration).
+         */
+        AuthMessage: {
+            /** Detail */
+            detail: string;
         };
         /** ChatMessage */
         ChatMessage: {
@@ -976,6 +1059,11 @@ export interface components {
             tier: number;
             /** Url */
             url?: string | null;
+        };
+        /** EmailVerifyConfirm */
+        EmailVerifyConfirm: {
+            /** Token */
+            token: string;
         };
         /** EvalRunSummary */
         EvalRunSummary: {
@@ -1331,6 +1419,24 @@ export interface components {
             shares?: number | null;
             /** Value */
             value?: string | null;
+        };
+        /** PasswordResetConfirm */
+        PasswordResetConfirm: {
+            /**
+             * New Password
+             * @description Argon2id-hashed server-side (AUTH-001)
+             */
+            new_password: string;
+            /** Token */
+            token: string;
+        };
+        /** PasswordResetRequest */
+        PasswordResetRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
         };
         /** PricePoint */
         PricePoint: {
@@ -1724,7 +1830,9 @@ export interface operations {
     refresh_company_api_v1_admin_companies__ticker__refresh_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 ticker: string;
             };
@@ -1754,8 +1862,13 @@ export interface operations {
     };
     list_eval_runs_api_v1_admin_eval_runs_get: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                limit?: number | null;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1770,12 +1883,26 @@ export interface operations {
                     "application/json": components["schemas"]["EvalRunSummary"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     list_ingestion_runs_api_v1_admin_ingestion_runs_get: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                limit?: number | null;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1790,12 +1917,23 @@ export interface operations {
                     "application/json": components["schemas"]["IngestionRunSummary"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     list_alerts_api_v1_alerts_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1810,12 +1948,23 @@ export interface operations {
                     "application/json": components["schemas"]["Alert"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     create_alert_api_v1_alerts_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1848,9 +1997,11 @@ export interface operations {
     delete_alert_api_v1_alerts__alert_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                alert_id: string;
+                alert_id: number;
             };
             cookie?: never;
         };
@@ -1928,7 +2079,9 @@ export interface operations {
     me_api_v1_auth_me_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1943,12 +2096,23 @@ export interface operations {
                     "application/json": components["schemas"]["UserProfile"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     delete_me_api_v1_auth_me_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1960,6 +2124,79 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_password_reset_api_v1_auth_password_reset_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_password_reset_api_v1_auth_password_reset_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMessage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -2016,12 +2253,76 @@ export interface operations {
             };
         };
     };
+    confirm_email_verification_api_v1_auth_verify_email_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerifyConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_email_verification_api_v1_auth_verify_email_request_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMessage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     chat_api_v1_chat_post: {
         parameters: {
             query?: never;
             header?: {
                 "Idempotency-Key"?: string | null;
-                "x-user-id"?: number | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2056,7 +2357,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "x-user-id"?: number | null;
+                authorization?: string | null;
             };
             path: {
                 message_id: number;
@@ -2091,7 +2392,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "x-user-id"?: number | null;
+                authorization?: string | null;
             };
             path: {
                 session_id: number;
@@ -2124,7 +2425,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "x-user-id"?: number | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2159,6 +2460,7 @@ export interface operations {
         parameters: {
             query: {
                 q: string;
+                limit?: number | null;
             };
             header?: never;
             path?: never;
@@ -2221,7 +2523,7 @@ export interface operations {
         parameters: {
             query?: {
                 type?: string | null;
-                limit?: number;
+                limit?: number | null;
                 cursor?: string | null;
             };
             header?: never;
@@ -2361,6 +2663,8 @@ export interface operations {
                 to?: string | null;
                 source?: string | null;
                 min_relevance?: number | null;
+                limit?: number | null;
+                cursor?: string | null;
             };
             header?: never;
             path: {
@@ -2720,6 +3024,7 @@ export interface operations {
             query?: never;
             header?: {
                 "Idempotency-Key"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2755,7 +3060,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                job_id: number;
             };
             cookie?: never;
         };
@@ -2786,7 +3091,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                job_id: number;
             };
             cookie?: never;
         };
@@ -2817,7 +3122,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                research_id: string;
+                research_id: number;
             };
             cookie?: never;
         };
@@ -2943,7 +3248,9 @@ export interface operations {
     list_watchlists_api_v1_watchlists_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2958,12 +3265,23 @@ export interface operations {
                     "application/json": components["schemas"]["Watchlist"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     create_watchlist_api_v1_watchlists_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2996,9 +3314,11 @@ export interface operations {
     delete_watchlist_api_v1_watchlists__watchlist_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                watchlist_id: string;
+                watchlist_id: number;
             };
             cookie?: never;
         };

@@ -28,6 +28,7 @@ from app.models.ops import (
 from app.models.research import ClaimVerification, ResearchReport, ResearchSource
 from app.models.user import (
     Alert,
+    AuthToken,
     ChatMessage,
     ChatSession,
     RefreshToken,
@@ -39,6 +40,7 @@ from app.models.user import (
 
 __all__ = [
     "Alert",
+    "AuthToken",
     "Base",
     "ChatMessage",
     "ChatSession",

@@ -14,6 +14,27 @@ def get_by_ticker(session: Session, ticker: str) -> Company | None:
     return session.scalar(select(Company).where(Company.ticker == ticker.upper()))
 
 
+def search(session: Session, q: str, *, limit: int) -> list[Company]:
+    """Fuzzy company search by ticker or name (FR-001), case-insensitive, name-ordered.
+
+    A ticker match (exact or prefix) ranks ahead of a name substring match so typing a ticker
+    surfaces the company first; the caller turns this ordering into a relevance score.
+    """
+    like = f"%{q}%"
+    ticker_prefix = f"{q.upper()}%"
+    return list(
+        session.scalars(
+            select(Company)
+            .where(Company.ticker.ilike(like) | Company.name.ilike(like))
+            .order_by(
+                Company.ticker.ilike(ticker_prefix).desc(),  # ticker hits first
+                Company.name,
+            )
+            .limit(limit)
+        )
+    )
+
+
 def upsert_company(
     session: Session,
     *,

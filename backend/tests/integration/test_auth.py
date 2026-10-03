@@ -1,0 +1,202 @@
+"""Auth & user-feature integration tests (Phase 4b DoD). Real Postgres; skips offline.
+
+Covers the full lifecycle (register → login → refresh → logout), hashed refresh tokens with
+family-revoke on reuse, IDOR protection, the ADR-0006 anonymous policy, login throttling, account
+deletion, and user-scoped CRUD.
+
+Refs: §26, AUTH-001…006, SEC-007, ADR-0005/0006, LGL-007.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+
+import pytest
+from alembic import command
+from alembic.config import Config
+from fastapi.testclient import TestClient
+from sqlalchemy import Engine, select
+from sqlalchemy.orm import Session
+
+from app.auth import passwords, service
+from app.auth.ratelimit import LoginThrottle
+from app.config import get_settings
+from app.db import get_db
+from app.main import app
+from app.models import ChatSession, Company, RefreshToken, User
+
+_P = "/api/v1"
+_PW = "correct horse battery staple"
+
+
+@pytest.fixture(scope="module")
+def _migrated(test_db_url: str) -> None:
+    from tests.integration.conftest import _MIGRATIONS_DIR
+
+    cfg = Config()
+    cfg.set_main_option("script_location", _MIGRATIONS_DIR)
+    cfg.set_main_option("sqlalchemy.url", test_db_url)
+    command.upgrade(cfg, "head")
+
+
+@pytest.fixture
+def session(_migrated: None, test_engine: Engine) -> Iterator[Session]:
+    with Session(test_engine) as s:
+        yield s
+        s.rollback()
+
+
+@pytest.fixture
+def client(session: Session, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    # Endpoints commit; keep writes inside this test's transaction (flush) so rollback cleans up.
+    monkeypatch.setattr(session, "commit", session.flush)
+    # A fresh throttle per test so lockouts never leak across tests (the service uses a singleton).
+    monkeypatch.setattr(service, "login_throttle", LoginThrottle())
+    # TestClient talks http://, so the Secure refresh cookie would never be sent back; relax it.
+    monkeypatch.setattr(get_settings(), "refresh_cookie_secure", False)
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def _register_and_login(client: TestClient, email: str) -> str:
+    assert (
+        client.post(f"{_P}/auth/register", json={"email": email, "password": _PW}).status_code
+        == 201
+    )
+    resp = client.post(f"{_P}/auth/login", json={"email": email, "password": _PW})
+    assert resp.status_code == 200
+    return str(resp.json()["access_token"])
+
+
+def test_full_lifecycle(client: TestClient, session: Session) -> None:
+    access = _register_and_login(client, "flow@example.com")
+    headers = {"Authorization": f"Bearer {access}"}
+    me = client.get(f"{_P}/auth/me", headers=headers)
+    assert me.status_code == 200 and me.json()["email"] == "flow@example.com"
+
+    refreshed = client.post(f"{_P}/auth/refresh")  # refresh cookie travels with the client
+    assert refreshed.status_code == 200 and refreshed.json()["access_token"]
+
+    assert client.post(f"{_P}/auth/logout").status_code == 204
+    # After logout the family is revoked, so a further refresh fails (AUTH-002).
+    assert client.post(f"{_P}/auth/refresh").status_code == 401
+
+
+def test_password_and_refresh_tokens_are_hashed(client: TestClient, session: Session) -> None:
+    _register_and_login(client, "hash@example.com")
+    user = session.scalar(select(User).where(User.email == "hash@example.com"))
+    assert user is not None and user.password_hash.startswith("$argon2id$")  # AUTH-001
+    token = session.scalar(select(RefreshToken).where(RefreshToken.user_id == user.id))
+    assert token is not None and len(token.token_hash) == 64 and _PW not in token.token_hash
+
+
+def test_refresh_reuse_revokes_family(client: TestClient, session: Session) -> None:
+    """A rotated-then-reused refresh token revokes the whole family (theft detection, AUTH-002)."""
+    user = service.register(session, email="reuse@example.com", password=_PW)
+    _, issued = service.login(
+        session, email="reuse@example.com", password=_PW, user_agent=None, ip=None
+    )
+    stolen = issued.refresh_raw
+    # Legitimate rotation: `stolen` is now revoked, a new token is live.
+    _, rotated = service.refresh(session, raw_refresh=stolen, user_agent=None, ip=None)
+    # Replaying the old (revoked) token is reuse → the family is revoked.
+    with pytest.raises(service.InvalidToken):
+        service.refresh(session, raw_refresh=stolen, user_agent=None, ip=None)
+    # ...which also kills the legitimately-rotated token.
+    with pytest.raises(service.InvalidToken):
+        service.refresh(session, raw_refresh=rotated.refresh_raw, user_agent=None, ip=None)
+    active = session.scalars(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None)
+        )
+    ).all()
+    assert active == []
+
+
+def test_idor_watchlist_and_chat_session(client: TestClient, session: Session) -> None:
+    a_access = _register_and_login(client, "alice@example.com")
+    a = session.scalar(select(User).where(User.email == "alice@example.com"))
+    assert a is not None
+    company = Company(ticker="TST", cik="0000000011", name="Test Corp")
+    session.add(company)
+    session.flush()
+    a_headers = {"Authorization": f"Bearer {a_access}"}
+    wl = client.post(f"{_P}/watchlists", json={"name": "Alice list"}, headers=a_headers)
+    wl_id = wl.json()["id"]
+    a_chat = ChatSession(user_id=a.id, company_id=company.id)
+    session.add(a_chat)
+    session.flush()
+
+    b_access = _register_and_login(client, "bob@example.com")
+    b_headers = {"Authorization": f"Bearer {b_access}"}
+    # Bob sees none of Alice's data and cannot reach it by id (SEC-007 / AUTH-004 IDOR).
+    assert client.get(f"{_P}/watchlists", headers=b_headers).json() == []
+    assert client.delete(f"{_P}/watchlists/{wl_id}", headers=b_headers).status_code == 404
+    assert client.get(f"{_P}/chat/sessions/{a_chat.id}", headers=b_headers).status_code == 404
+    # Alice still owns her session.
+    assert client.get(f"{_P}/chat/sessions/{a_chat.id}", headers=a_headers).status_code == 200
+
+
+def test_anonymous_policy_adr0006(client: TestClient, session: Session) -> None:
+    session.add(Company(ticker="TST", cik="0000000011", name="Test Corp"))
+    session.flush()
+    # Read-only browsing is allowed anonymously...
+    assert client.get(f"{_P}/companies/TST").status_code == 200
+    # ...but AI generation, chat, and user-owned data are not (anonymous AI quota = 0).
+    assert client.post(f"{_P}/research", json={"ticker": "TST"}).status_code == 401
+    assert client.post(f"{_P}/chat", json={"company": "TST", "question": "hi"}).status_code == 401
+    assert client.get(f"{_P}/watchlists").status_code == 401
+
+
+def test_login_is_throttled(client: TestClient, session: Session) -> None:
+    client.post(f"{_P}/auth/register", json={"email": "lock@example.com", "password": _PW})
+    for _ in range(get_settings().auth_login_max_attempts):
+        bad = client.post(
+            f"{_P}/auth/login", json={"email": "lock@example.com", "password": "nope-nope-nope"}
+        )
+        assert bad.status_code == 401
+    # Further attempts are locked out, even with the correct password (AUTH-006).
+    locked = client.post(f"{_P}/auth/login", json={"email": "lock@example.com", "password": _PW})
+    assert locked.status_code == 429
+
+
+def test_delete_me_soft_deletes(client: TestClient, session: Session) -> None:
+    access = _register_and_login(client, "gone@example.com")
+    headers = {"Authorization": f"Bearer {access}"}
+    assert client.delete(f"{_P}/auth/me", headers=headers).status_code == 204
+    user = session.scalar(select(User).where(User.email == "gone@example.com"))
+    assert user is not None and user.deleted_at is not None and not user.is_active  # LGL-007
+    # The access token no longer resolves to an active user, and login is refused.
+    assert client.get(f"{_P}/auth/me", headers=headers).status_code == 401
+    assert (
+        client.post(
+            f"{_P}/auth/login", json={"email": "gone@example.com", "password": _PW}
+        ).status_code
+        == 401
+    )
+
+
+def test_email_verification_and_password_reset(client: TestClient, session: Session) -> None:
+    user = service.register(session, email="verify@example.com", password=_PW)
+    raw = service.request_email_verification(session, user)
+    verified = service.confirm_email_verification(session, raw=raw)
+    assert verified.email_verified_at is not None  # AUTH-003
+    # Single use: the same token cannot be replayed.
+    with pytest.raises(service.InvalidToken):
+        service.confirm_email_verification(session, raw=raw)
+
+    reset_raw = service.request_password_reset(session, email="verify@example.com")
+    assert reset_raw is not None
+    service.confirm_password_reset(
+        session,
+        raw=reset_raw,
+        new_password="a brand new password 1",  # noqa: S106  # test fixture
+    )
+    refreshed = session.scalar(select(User).where(User.email == "verify@example.com"))
+    assert refreshed is not None
+    assert passwords.verify_password("a brand new password 1", refreshed.password_hash)
+    # No account → neutral None (no user enumeration).
+    assert service.request_password_reset(session, email="nobody@example.com") is None

@@ -24,6 +24,8 @@ from app.api import (
     watchlist,
 )
 from app.api.errors import register_error_handlers
+from app.api.middleware import RateLimitMiddleware
+from app.utils.logging import bind_request_id
 
 API_V1_PREFIX = "/api/v1"
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -37,14 +39,23 @@ def create_app() -> FastAPI:
         openapi_url=f"{API_V1_PREFIX}/openapi.json",
     )
 
+    # Rate-limit seam (ADR-0018). Added before the request-id middleware so the latter is the
+    # outermost layer and a 429 problem still carries the correlating request id.
+    app.add_middleware(RateLimitMiddleware)
+
     @app.middleware("http")
     async def request_id_middleware(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        # Reuse an inbound request ID (API-007) or mint one; echo it on the response.
+        # Reuse an inbound request ID (API-007) or mint one; echo it on the response and bind it
+        # to the logging context so every log line for this request correlates (NFR-015).
         request_id = request.headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
         request.state.request_id = request_id
-        response = await call_next(request)
+        bind_request_id(request_id)
+        try:
+            response = await call_next(request)
+        finally:
+            bind_request_id(None)
         response.headers[REQUEST_ID_HEADER] = request_id
         return response
 

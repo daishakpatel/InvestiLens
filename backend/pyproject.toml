@@ -15,6 +15,8 @@ dependencies = [
     "httpx>=0.27",                # SEC EDGAR client with timeouts (spec §20); also TestClient
     "pyyaml>=6.0",                # concept maps / sector applicability are YAML config (DR-020)
     "selectolax>=0.3.21",         # fast lexbor HTML parsing for multi-MB SEC filings (spec 20)
+    "argon2-cffi>=23.1",          # Argon2id password hashing (AUTH-001, ADR-0005)
+    "pyjwt>=2.9",                 # HS256 access-token JWTs (AUTH-002, ADR-0005; not python-jose)
 ]
 
 [dependency-groups]

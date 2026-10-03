@@ -32,7 +32,26 @@ class User(Base, TimestampMixin):
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     role: Mapped[str] = mapped_column(String(16), default="user")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Soft-delete marker (LGL-007): set on DELETE /auth/me; a hard-delete job later purges the row.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ai_budget_month_usd: Mapped[Money | None] = mapped_column()
+
+
+class AuthToken(Base, TimestampMixin):
+    """A single-use, hashed email-verification or password-reset token (AUTH-003).
+
+    Only the SHA-256 hash is stored; the raw token is delivered to the user (by email in Phase 5d)
+    and never persisted. `used_at` enforces single use; `expires_at` bounds the window.
+    """
+
+    __tablename__ = "auth_tokens"
+
+    id: Mapped[intpk]
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(32))  # email_verify|password_reset
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # sha-256 hex
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RefreshToken(Base):

@@ -98,6 +98,32 @@ class Settings(BaseSettings):
     # Bounded multi-turn memory window: how many prior messages inform a follow-up.
     chat_context_window_messages: int = Field(default=6)
 
+    # --- Authentication & users (Phase 4b, §26.1, ADR-0005) ---
+    # HS256 signing secret. Dev-only default; MUST be overridden via env in any shared/prod
+    # deployment (SEC-001). Never logged.
+    jwt_secret: str = Field(default="dev-only-insecure-change-me-32-bytes-minimum-secret")
+    jwt_algorithm: str = Field(default="HS256")
+    access_token_ttl_seconds: int = Field(default=900)  # 15 min access token (AUTH-002)
+    refresh_token_ttl_days: int = Field(default=14)  # rotating refresh token (AUTH-002)
+    password_min_length: int = Field(default=12)  # basic policy (AUTH-001)
+    email_token_ttl_hours: int = Field(default=24)  # verify/reset tokens (AUTH-003)
+    # Login throttle (AUTH-006): max failed attempts per (account|IP) within the window, then a
+    # lockout. In-process like the rate-limit seam (ADR-0018); Phase 5c moves it to Redis.
+    auth_login_max_attempts: int = Field(default=5)
+    auth_login_window_seconds: int = Field(default=300)
+    auth_login_lockout_seconds: int = Field(default=300)
+    # Refresh cookie (AUTH-002): httpOnly/Secure/SameSite, scoped to the auth path.
+    refresh_cookie_name: str = Field(default="refresh_token")
+    refresh_cookie_path: str = Field(default="/api/v1/auth")
+    refresh_cookie_secure: bool = Field(default=True)  # relaxed to False only for local http dev
+
+    # --- API endpoints (Phase 4a, §24.1) ---
+    api_default_page_size: int = Field(default=50)  # cursor pagination default (API-002, ADR-0016)
+    api_max_page_size: int = Field(default=200)  # hard cap on ?limit=
+    # Rate-limit seam (ADR-0018). Off by default; Phase 5c (§25.4) configures real limits + Redis.
+    rate_limit_enabled: bool = Field(default=False)
+    rate_limit_per_minute: int = Field(default=120)
+
 
 @lru_cache
 def get_settings() -> Settings:

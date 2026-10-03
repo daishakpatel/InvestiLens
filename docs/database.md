@@ -16,7 +16,7 @@ file in the same PR (DB-001).
 - **Constraint/index names** follow a fixed naming convention (see `app/models/base.py`) so
   migrations stay deterministic and reviewable.
 
-## Tables by domain (33 tables)
+## Tables by domain (34 tables)
 
 ```text
 Reference        companies ──< company_identifiers
@@ -39,6 +39,7 @@ AI output        companies ──< research_reports ──< research_sources
                  research_reports (supersedes_report_id ─┐ self-ref)
 
 Users            users ──< refresh_tokens (replaced_by_id ─┐ self-ref, rotation chain)
+                 users ──< auth_tokens (single-use email-verify / password-reset)
                  users ──< watchlists ──< watchlist_items >── companies
                  users ──< alerts >── companies
                  users ──< chat_sessions ──< chat_messages
@@ -71,6 +72,7 @@ exact facts it came from without mutating source data.
 | `price_history` | unique `(company_id, date)` | One bar per day; makes daily upserts idempotent (NFR-014) |
 | `news` | btree `published_at` | Recent-news ordering on the request path (FR/NFR-006) |
 | `refresh_tokens` | btree `family_id`, unique `token_hash` | Rotation/reuse detection and O(1) token lookup (ADR-0005) |
+| `auth_tokens` | unique `token_hash`, btree `user_id` | O(1) single-use token lookup; per-user rate limit on issuance (AUTH-003) |
 | FKs | btree on every foreign key column | Avoids sequential scans on joins and on cascade deletes |
 
 ### Uniqueness / idempotency constraints
@@ -112,3 +114,4 @@ Migrations are tested up and down, on empty and populated databases, in
 | `d5095d7bd954` | Widen `financial_facts.concept_tag` to `VARCHAR(256)` — some real XBRL element names exceed 128 chars (Phase 1a ingestion). |
 | `7ce7bee338f7` | Make `financial_metrics.metric_value` nullable — a sector-inapplicable or uncomputable metric stores NULL + a reason in `quality_flags`, never a misleading zero (Phase 1c, DR-041/042). |
 | `8c58e66dbdbc` | Add `document_chunks.embedding_dim` (per-row dimension beside `embedding_model`, EMB-001) and a nullable `embedding_new vector(1024)` staging column for zero-downtime model migration (Phase 2b, EMB-003, ADR-0013). |
+| `723724f0d34e` | Add the `auth_tokens` table (single-use, hashed email-verify / password-reset tokens, AUTH-003) and `users.deleted_at` (soft-delete marker set by `DELETE /auth/me`; hard-delete via a retention job, LGL-007). Phase 4b. |

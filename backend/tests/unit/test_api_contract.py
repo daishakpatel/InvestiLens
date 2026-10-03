@@ -77,7 +77,7 @@ def test_search_resolves_before_ticker(client: TestClient) -> None:
 
 
 def test_error_uses_rfc7807_shape(client: TestClient) -> None:
-    resp = client.get(f"{API_V1_PREFIX}/auth/me")  # stubbed → 501 problem
+    resp = client.get(f"{API_V1_PREFIX}/research/1/diff", params={"against": "2"})  # 501 stub
     assert resp.status_code == 501
     assert resp.headers["content-type"] == "application/problem+json"
     body = resp.json()

@@ -5,10 +5,41 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from app.models import News
+
+
+def list_news(
+    session: Session,
+    *,
+    company_id: int,
+    category: str | None = None,
+    publisher: str | None = None,
+    from_dt: datetime | None = None,
+    to_dt: datetime | None = None,
+    min_relevance: Decimal | None = None,
+    limit: int,
+    after_id: int | None = None,
+) -> list[News]:
+    """Filtered company news, newest first, keyset-paginated by descending id (LGL-004, §24.2)."""
+    conditions: list[ColumnElement[bool]] = [News.company_id == company_id]
+    if category is not None:
+        conditions.append(News.category == category)
+    if publisher is not None:
+        conditions.append(News.publisher == publisher)
+    if from_dt is not None:
+        conditions.append(News.published_at >= from_dt)
+    if to_dt is not None:
+        conditions.append(News.published_at <= to_dt)
+    if min_relevance is not None:
+        conditions.append(News.relevance_score >= min_relevance)
+    if after_id is not None:
+        conditions.append(News.id < after_id)
+    return list(
+        session.scalars(select(News).where(*conditions).order_by(News.id.desc()).limit(limit))
+    )
 
 
 def get_recent_news(

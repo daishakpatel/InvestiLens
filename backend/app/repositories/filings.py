@@ -9,7 +9,41 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.models import Document, Filing
+from app.models import Document, DocumentChunk, Filing
+
+
+def list_filings(
+    session: Session,
+    *,
+    company_id: int,
+    filing_type: str | None,
+    limit: int,
+    after_id: int | None,
+) -> list[Filing]:
+    """A company's filings, newest first, keyset-paginated by descending id (API-002)."""
+    conditions = [Filing.company_id == company_id]
+    if filing_type is not None:
+        conditions.append(Filing.filing_type == filing_type)
+    if after_id is not None:
+        conditions.append(Filing.id < after_id)
+    return list(
+        session.scalars(select(Filing).where(*conditions).order_by(Filing.id.desc()).limit(limit))
+    )
+
+
+def get_filing(session: Session, filing_id: int) -> Filing | None:
+    return session.get(Filing, filing_id)
+
+
+def get_filing_sections(session: Session, *, document_id: int) -> list[DocumentChunk]:
+    """Distinct section chunks for a filing's document, in document order (for the outline)."""
+    return list(
+        session.scalars(
+            select(DocumentChunk)
+            .where(DocumentChunk.document_id == document_id)
+            .order_by(DocumentChunk.chunk_index)
+        )
+    )
 
 
 def get_or_create_document(

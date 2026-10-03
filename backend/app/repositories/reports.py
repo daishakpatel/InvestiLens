@@ -10,10 +10,27 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import ResearchReport, ResearchSource
 from app.schemas.citations import Citation
+
+
+def get_report(session: Session, report_id: int) -> ResearchReport | None:
+    return session.get(ResearchReport, report_id)
+
+
+def get_latest_complete(session: Session, *, company_id: int) -> ResearchReport | None:
+    """The newest completed report for a company (for `/research/latest`, §24.2)."""
+    return session.scalar(
+        select(ResearchReport)
+        .where(
+            ResearchReport.company_id == company_id,
+            ResearchReport.status == "complete",
+        )
+        .order_by(ResearchReport.generated_at.desc(), ResearchReport.id.desc())
+    )
 
 
 def create_report(
@@ -24,10 +41,12 @@ def create_report(
     prompt_version: str,
     data_version: str,
     status: str = "running",
+    user_id: int | None = None,
     supersedes_report_id: int | None = None,
 ) -> ResearchReport:
     report = ResearchReport(
         company_id=company_id,
+        user_id=user_id,
         model=model,
         prompt_version=prompt_version,
         data_version=data_version,

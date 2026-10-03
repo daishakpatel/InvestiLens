@@ -11,9 +11,16 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
+from app.auth.tokens import create_access_token
 from app.providers.base import LLMClient, LLMMessage
 
 _ID = re.compile(r"source_id=([^\]]+)\]")
+
+
+def auth_headers(user_id: int) -> dict[str, str]:
+    """Bearer header for a seeded user id (Phase 4b replaced the X-User-Id seam with JWT)."""
+    token, _ = create_access_token(user_id)
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _label(system: str) -> str:

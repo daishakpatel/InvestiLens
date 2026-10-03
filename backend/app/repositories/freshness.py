@@ -10,6 +10,26 @@ from sqlalchemy.orm import Session
 from app.models import DataFreshness
 
 
+def get_freshness(session: Session, *, company_id: int, source: str) -> DataFreshness | None:
+    """The (company, source) freshness row, or None if the source was never ingested (FR-006)."""
+    return session.scalar(
+        select(DataFreshness).where(
+            DataFreshness.company_id == company_id, DataFreshness.source == source
+        )
+    )
+
+
+def list_for_company(session: Session, *, company_id: int) -> list[DataFreshness]:
+    """All per-source freshness rows for a company (the data-freshness meta endpoint, FR-006)."""
+    return list(
+        session.scalars(
+            select(DataFreshness)
+            .where(DataFreshness.company_id == company_id)
+            .order_by(DataFreshness.source)
+        )
+    )
+
+
 def record_freshness(
     session: Session,
     *,
