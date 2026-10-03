@@ -241,7 +241,7 @@ export interface paths {
         put?: never;
         /**
          * Chat Stream
-         * @description SSE token stream (API-004). Stub emits one token then closes.
+         * @description SSE token stream over a verified answer (API-004).
          */
         post: operations["chat_stream_api_v1_chat_stream_post"];
         delete?: never;
@@ -819,8 +819,20 @@ export interface components {
             citations: components["schemas"]["Citation"][];
             /** Evidence Label */
             evidence_label?: ("strongly_supported" | "supported" | "limited_evidence") | null;
+            /** Message Id */
+            message_id?: string | null;
+            /**
+             * Refused
+             * @default false
+             */
+            refused: boolean;
             /** Session Id */
             session_id?: string | null;
+            /**
+             * Suggested Questions
+             * @default []
+             */
+            suggested_questions: string[];
             /**
              * Tool Trace
              * @default []
@@ -2009,6 +2021,7 @@ export interface operations {
             query?: never;
             header?: {
                 "Idempotency-Key"?: string | null;
+                "x-user-id"?: number | null;
             };
             path?: never;
             cookie?: never;
@@ -2042,9 +2055,11 @@ export interface operations {
     message_feedback_api_v1_chat_messages__message_id__feedback_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "x-user-id"?: number | null;
+            };
             path: {
-                message_id: string;
+                message_id: number;
             };
             cookie?: never;
         };
@@ -2075,9 +2090,11 @@ export interface operations {
     get_session_api_v1_chat_sessions__session_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "x-user-id"?: number | null;
+            };
             path: {
-                session_id: string;
+                session_id: number;
             };
             cookie?: never;
         };
@@ -2106,7 +2123,9 @@ export interface operations {
     chat_stream_api_v1_chat_stream_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "x-user-id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };

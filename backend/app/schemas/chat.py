@@ -36,8 +36,11 @@ class ChatResponse(BaseModel):
     citations: list[Citation] = []
     evidence_label: EvidenceLabel | None = None
     abstained: bool = False
+    refused: bool = False  # out-of-scope / advice refusal (distinct from abstention)
     tool_trace: list[ToolTraceEntry] = []
+    suggested_questions: list[str] = []
     session_id: str | None = None
+    message_id: str | None = None  # for POST /chat/messages/{id}/feedback
 
 
 class ChatMessage(BaseModel):

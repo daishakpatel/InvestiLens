@@ -55,23 +55,36 @@ def _xbrl(row: FinancialFact) -> SourceDetail:
     )
 
 
-def _derived(row: FinancialMetric) -> SourceDetail:
-    flags = row.quality_flags or {}
-    inputs = [dict(i) for i in flags.get("inputs", [])]
-    source = DerivedMetricSource(
-        source_id=row.source_id or f"derived:{row.formula_id}:{row.period}",
+def _metric(row: FinancialMetric) -> SourceDetail:
+    """A canonical metric → derived_metric (with lineage, CIT-003) or xbrl_fact for a base value."""
+    text = f"{row.metric_name} {row.period} = {row.metric_value} {row.unit}".strip()
+    sid = row.source_id or f"metric:{row.metric_name}:{row.period}"
+    if row.is_derived:
+        flags = row.quality_flags or {}
+        inputs = [dict(i) for i in flags.get("inputs", [])]
+        derived = DerivedMetricSource(
+            source_id=sid,
+            tier=1,
+            formula_id=row.formula_id or row.metric_name,
+            formula_version=str(flags.get("formula_version") or ""),
+            input_source_ids=[str(i.get("source_id")) for i in inputs if i.get("source_id")],
+            value=row.metric_value,
+            period=row.period,
+        )
+        return SourceDetail(
+            source=derived,
+            text=text,
+            lineage=[{k: str(v) for k, v in i.items()} for i in inputs],
+        )
+    fact = XbrlFactSource(
+        source_id=sid,
         tier=1,
-        formula_id=row.formula_id or row.metric_name,
-        formula_version=str(flags.get("formula_version") or ""),
-        input_source_ids=[str(i.get("source_id")) for i in inputs if i.get("source_id")],
+        accession_number=row.as_reported_accession or sid,
+        concept_tag=row.metric_name,
+        unit=row.unit,
         value=row.metric_value,
-        period=row.period,
     )
-    return SourceDetail(
-        source=source,
-        text=f"{row.metric_name} {row.period} = {row.metric_value} {row.unit}".strip(),
-        lineage=[{k: str(v) for k, v in i.items()} for i in inputs],
-    )
+    return SourceDetail(source=fact, text=text)
 
 
 def _chunk(session: Session, row: DocumentChunk) -> SourceDetail:
@@ -126,16 +139,18 @@ def resolve_source(session: Session, source_id: str) -> SourceDetail | None:
     if source_id.startswith("news:"):
         row = session.get(News, _as_int(source_id.split(":", 1)[1]))
         return _news(row) if row else None
-    if source_id.startswith("xbrl:"):
-        fact = session.get(FinancialFact, _as_int(source_id.split(":", 1)[1]))
-        return _xbrl(fact) if fact else None
+    # A canonical metric's own source_id (base or derived) resolves first — its scheme may itself
+    # start with "xbrl:"/"derived:", so this precedes the raw-fact prefix branch below.
     metric = session.scalar(
         select(FinancialMetric).where(
-            FinancialMetric.source_id == source_id, FinancialMetric.is_derived.is_(True)
+            FinancialMetric.source_id == source_id, FinancialMetric.is_latest.is_(True)
         )
     )
     if metric is not None:
-        return _derived(metric)
+        return _metric(metric)
+    if source_id.startswith("xbrl:"):
+        fact = session.get(FinancialFact, _as_int(source_id.split(":", 1)[1]))
+        return _xbrl(fact) if fact else None
     chunk = session.scalar(select(DocumentChunk).where(DocumentChunk.paragraph_id == source_id))
     return _chunk(session, chunk) if chunk else None
 

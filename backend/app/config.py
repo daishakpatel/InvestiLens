@@ -94,6 +94,10 @@ class Settings(BaseSettings):
     citation_label_strong: float = Field(default=0.8)
     citation_label_supported: float = Field(default=0.55)
 
+    # --- Chat / Q&A (Phase 3c, §10.14, §16.8) ---
+    # Bounded multi-turn memory window: how many prior messages inform a follow-up.
+    chat_context_window_messages: int = Field(default=6)
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -87,3 +87,5 @@ class RetrievalResult:
     assembled_context: str = ""
     sufficient: bool = True
     abstain_reason: str | None = None
+    # Which tools ran, for the chat tool-trace panel (RAG-031 logging): {"tool", "latency_ms"}.
+    tool_trace: list[dict[str, object]] = field(default_factory=list)

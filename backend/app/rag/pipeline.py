@@ -48,11 +48,11 @@ def _extract_metric(question: str) -> str | None:
 
 def _structured_answer(
     session: Session, *, ticker: str, metric: str | None, years: list[int]
-) -> tuple[list[str], list[str]]:
-    """Answer a pure metric question from `financial_metrics` (RAG-030) → (blocks, source_ids)."""
+) -> tuple[list[str], list[str], list[dict[str, object]]]:
+    """Answer a pure metric question from `financial_metrics` → (blocks, ids, tool_trace)."""
     if metric is None or not years:
         # No resolvable metric or period → caller abstains rather than guessing (RAG-018).
-        return [], []
+        return [], [], []
     runner = ToolRunner(session)
     blocks: list[str] = []
     source_ids: list[str] = []
@@ -64,7 +64,8 @@ def _structured_answer(
                 f"(source_id={result['source_ids'][0] if result['source_ids'] else 'n/a'})"
             )
             source_ids.extend(result["source_ids"])
-    return blocks, source_ids
+    trace = [{"tool": c.name, "latency_ms": c.latency_ms} for c in runner.log]
+    return blocks, source_ids, trace
 
 
 def run_retrieval(
@@ -138,7 +139,7 @@ def run_retrieval(
     if intent == Intent.FINANCIAL_METRIC:
         # Default a metric lookup with no explicit period to the latest fiscal year.
         years = rewritten.fiscal_years or ([max(fiscal_years)] if fiscal_years else [])
-        blocks, source_ids = _structured_answer(
+        blocks, source_ids, trace = _structured_answer(
             session, ticker=ticker, metric=_extract_metric(question), years=years
         )
         assembled = assemble_context(intent=intent, evidence=[], structured_blocks=blocks)
@@ -152,6 +153,7 @@ def run_retrieval(
             assembled_context=assembled.context_block,
             sufficient=sufficient,
             abstain_reason=None if sufficient else "no_structured_metric",
+            tool_trace=trace,
         )
         return _log(result, 1.0 if sufficient else 0.0)
 
@@ -169,5 +171,6 @@ def run_retrieval(
         assembled_context=assembled.context_block,
         sufficient=outcome.sufficient,
         abstain_reason=None if outcome.sufficient else "insufficient_evidence",
+        tool_trace=[{"tool": "search_company_documents", "latency_ms": None}],
     )
     return _log(result, outcome.top_score)

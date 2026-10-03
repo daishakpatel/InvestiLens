@@ -36,7 +36,13 @@ class FakeLLM(LLMClient):
         self._broken = broken or set()
 
     async def complete(self, messages: Sequence[LLMMessage], *, model: str, max_tokens: int) -> str:
-        return "unused"
+        # Chat synthesis: cite the first evidence id with text overlapping it (passes Phase 3a).
+        user = messages[-1].content
+        ids = _ID.findall(user)
+        if not ids:
+            return "I could not find supporting evidence."
+        sid = ids[0]
+        return f"The company reported that {_snippet(user, sid)} [SOURCE:{sid}]."
 
     async def complete_json(
         self, messages: Sequence[LLMMessage], *, model: str, schema: dict[str, Any], max_tokens: int

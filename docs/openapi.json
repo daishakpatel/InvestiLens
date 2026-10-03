@@ -178,6 +178,22 @@
             ],
             "title": "Evidence Label"
           },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "refused": {
+            "default": false,
+            "title": "Refused",
+            "type": "boolean"
+          },
           "session_id": {
             "anyOf": [
               {
@@ -188,6 +204,14 @@
               }
             ],
             "title": "Session Id"
+          },
+          "suggested_questions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggested Questions",
+            "type": "array"
           },
           "tool_trace": {
             "default": [],
@@ -3195,6 +3219,22 @@
               ],
               "title": "Idempotency-Key"
             }
+          },
+          {
+            "in": "header",
+            "name": "x-user-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
           }
         ],
         "requestBody": {
@@ -3245,7 +3285,23 @@
             "required": true,
             "schema": {
               "title": "Message Id",
-              "type": "string"
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-user-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
             }
           }
         ],
@@ -3290,7 +3346,23 @@
             "required": true,
             "schema": {
               "title": "Session Id",
-              "type": "string"
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-user-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
             }
           }
         ],
@@ -3324,8 +3396,26 @@
     },
     "/api/v1/chat/stream": {
       "post": {
-        "description": "SSE token stream (API-004). Stub emits one token then closes.",
+        "description": "SSE token stream over a verified answer (API-004).",
         "operationId": "chat_stream_api_v1_chat_stream_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-user-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
