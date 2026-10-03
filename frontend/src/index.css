@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: `.dark` is toggled on <html> (UI-007). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic design tokens. Light values here; dark overrides below. Charts use the Okabe–Ito
+   palette, which is colorblind-safe (UI-003). */
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #1d4ed8;
+  --primary-contrast: #ffffff;
+  --positive: #047857;
+  --negative: #b91c1c;
+  --warning: #b45309;
+  --ai: #7c3aed;
+
+  --chart-1: #0072b2; /* blue */
+  --chart-2: #e69f00; /* orange */
+  --chart-3: #009e73; /* bluish green */
+  --chart-4: #cc79a7; /* reddish purple */
+  --chart-5: #56b4e9; /* sky blue */
+  --chart-6: #d55e00; /* vermillion */
+}
+
+:where(.dark) {
+  --bg: #0b1120;
+  --surface: #0f172a;
+  --surface-2: #1e293b;
+  --border: #243043;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --primary: #60a5fa;
+  --primary-contrast: #0b1120;
+  --positive: #34d399;
+  --negative: #f87171;
+  --warning: #fbbf24;
+  --ai: #c4b5fd;
+
+  --chart-1: #56b4e9;
+  --chart-2: #e69f00;
+  --chart-3: #34d399;
+  --chart-4: #f0a6cf;
+  --chart-5: #93c5fd;
+  --chart-6: #fb923c;
+}
+
+/* Expose tokens to Tailwind utilities (bg-surface, text-muted, border-border, …). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-primary-contrast: var(--primary-contrast);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-ai: var(--ai);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Visible focus ring for keyboard users everywhere (UI-003). */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
