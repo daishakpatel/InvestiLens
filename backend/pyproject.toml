@@ -51,3 +51,16 @@ packages = ["app", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+
+# Coverage is NOT wired into the default `pytest` run (keeps `make check` fast); the gate is
+# enforced by `make coverage` and the CI backend job (DoD, NFR-013). See ADR-0019.
+[tool.coverage.run]
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",  # Protocol/ABC stubs
+]

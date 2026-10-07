@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck test check up down openapi
+.PHONY: install lint typecheck test check coverage up down openapi
 
 install:
 	cd backend && uv sync
@@ -14,8 +14,17 @@ typecheck:
 
 test:
 	cd backend && uv run pytest
+	cd frontend && npm run test
 
 check: lint typecheck test
+
+# Coverage gate (DoD / NFR-013, ADR-0019): one measured run, two hard thresholds —
+# >=80% overall and 100% on the finance + citation modules. Needs Postgres for the
+# integration tests (finance/builder.py + citation/resolver.py are DB-backed).
+coverage:
+	cd backend && uv run pytest --cov=app --cov-report=term-missing
+	cd backend && uv run coverage report --fail-under=80
+	cd backend && uv run coverage report --include="app/finance/*,app/citation/*" --fail-under=100
 
 # Regenerate the API contract: OpenAPI spec + TypeScript client. Run after changing routes/schemas.
 openapi:

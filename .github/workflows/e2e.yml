@@ -1,0 +1,66 @@
+name: E2E
+
+# Tier-2 suite (ADR-0019): the §30.3 happy path + axe accessibility scan against a running,
+# seeded stack. Manual/on-demand so the per-PR gate stays fast and never flakes on browser infra.
+# Report generation + chat need an LLM; set LLM_API_KEY (or run with the Fake LLM seed) in repo
+# secrets for a full run. Without it, the report/chat steps of the happy path will not complete.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: investilens
+          POSTGRES_USER: investilens
+          POSTGRES_PASSWORD: investilens
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U investilens"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://investilens:investilens@localhost:5432/investilens
+      PROVIDER_MODE: mock
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install backend + migrate + seed
+        working-directory: backend
+        run: |
+          uv sync --locked
+          uv run alembic upgrade head
+          uv run python ../scripts/seed.py
+
+      - name: Start API
+        working-directory: backend
+        run: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+
+      - name: Build + preview frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npx vite preview --host 0.0.0.0 --port 5173 &
+
+      - name: Run Playwright + axe
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:5173
+        run: |
+          npm install
+          npm run install-browsers
+          npm test

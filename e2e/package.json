@@ -1,0 +1,15 @@
+{
+  "name": "investilens-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Playwright end-to-end + accessibility tests (spec §30.3, §30 a11y). Tier-2 suite: runs against a running, seeded stack — not part of the per-PR `make check`. See docs/testing.md.",
+  "scripts": {
+    "test": "playwright test",
+    "install-browsers": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.50.0"
+  }
+}
