@@ -17,24 +17,28 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, select, update
 from sqlalchemy.orm import Session
 
+from app.billing.budget import BudgetExceededError
 from app.chat.service import answer_question
 from app.db import get_db
 from app.embeddings.pipeline import embed_pending
 from app.main import app
 from app.models import (
     ChatMessage,
+    ClaimVerification,
     Company,
     Document,
     DocumentChunk,
     FinancialMetric,
     FiscalCalendar,
+    LlmCall,
     News,
     User,
 )
 from app.providers.mocks.embeddings import MockEmbeddingClient
+from app.repositories import chat as chat_repo
 from tests.fakes import FakeLLM, auth_headers
 
 _CHUNKS = [
@@ -160,6 +164,89 @@ def test_qualitative_question_cited(session: Session, seed: tuple[int, Company])
     )
     assert not turn.abstained and turn.citations
     assert "[1]" in turn.answer and turn.evidence_label is not None
+
+
+def test_qualitative_question_logs_claim_verifications(
+    session: Session, seed: tuple[int, Company]
+) -> None:
+    """Observability audit (OBS-002): chat's verified claims must reach `claim_verifications`
+    like report generation's do — this was the gap the Phase 5c audit found (chat called
+    `verify_text` but never `persist`, so the citation-rejection-rate dashboard never saw chat)."""
+    user_id, _ = seed
+    turn = answer_question(
+        session,
+        company="TST",
+        question="Why did gross margin change?",
+        user_id=user_id,
+        llm=FakeLLM(),
+    )
+    assert turn.message_id is not None
+    rows = session.scalars(
+        select(ClaimVerification).where(ClaimVerification.chat_message_id == turn.message_id)
+    ).all()
+    assert rows, "expected the turn's verified claims to be logged to claim_verifications"
+
+
+# --- NFR-008/ADR-0022: a qualitative (LLM-cost-incurring) question is blocked over budget ---
+
+
+def test_qualitative_question_blocked_over_ai_budget(
+    session: Session, seed: tuple[int, Company]
+) -> None:
+    user_id, _ = seed
+    user = session.get(User, user_id)
+    assert user is not None
+    user.ai_budget_month_usd = Decimal("1.00")
+    session.add(
+        LlmCall(
+            user_id=user_id,
+            purpose="chat",
+            model="claude-sonnet-5-5",
+            input_tokens=1,
+            cost_usd=Decimal("1.00"),
+            latency_ms=1,
+            status="success",
+        )
+    )
+    session.flush()
+
+    with pytest.raises(BudgetExceededError):
+        answer_question(
+            session,
+            company="TST",
+            question="Why did gross margin change?",
+            user_id=user_id,
+            llm=FakeLLM(),
+        )
+
+
+def test_metric_question_not_blocked_by_budget(session: Session, seed: tuple[int, Company]) -> None:
+    """The deterministic metric path is free — it must never be blocked by the AI budget."""
+    user_id, _ = seed
+    user = session.get(User, user_id)
+    assert user is not None
+    user.ai_budget_month_usd = Decimal("1.00")
+    session.add(
+        LlmCall(
+            user_id=user_id,
+            purpose="chat",
+            model="claude-sonnet-5-5",
+            input_tokens=1,
+            cost_usd=Decimal("1.00"),
+            latency_ms=1,
+            status="success",
+        )
+    )
+    session.flush()
+
+    turn = answer_question(
+        session,
+        company="TST",
+        question="What was revenue in FY2025?",
+        user_id=user_id,
+        llm=FakeLLM(),
+    )
+    assert not turn.abstained and not turn.refused
 
 
 # --- DoD: follow-up uses prior conversation context ---
@@ -327,3 +414,34 @@ def test_stream_and_auth_and_feedback_endpoints(
         assert session.get(ChatMessage, int(mid)).feedback == "down"  # type: ignore[union-attr]
     finally:
         app.dependency_overrides.clear()
+
+
+# --- SEC-014: chat message retention has a real limit, not indefinite storage ---
+
+
+def test_purge_messages_before_removes_only_old_rows(
+    session: Session, seed: tuple[int, Company]
+) -> None:
+    from datetime import timedelta
+
+    from app.repositories.chat import purge_messages_before
+
+    user_id, company = seed
+    chat_session = chat_repo.create_session(session, user_id=user_id, company_id=company.id)
+    old = chat_repo.add_message(session, session_id=chat_session.id, role="user", content="old")
+    session.flush()
+    session.execute(
+        update(ChatMessage)
+        .where(ChatMessage.id == old.id)
+        .values(created_at=datetime.now(UTC) - timedelta(days=400))
+    )
+    recent = chat_repo.add_message(
+        session, session_id=chat_session.id, role="user", content="recent"
+    )
+    session.flush()
+
+    deleted = purge_messages_before(session, cutoff=datetime.now(UTC) - timedelta(days=365))
+
+    assert deleted == 1
+    assert session.scalar(select(ChatMessage).where(ChatMessage.id == old.id)) is None
+    assert session.scalar(select(ChatMessage).where(ChatMessage.id == recent.id)) is not None

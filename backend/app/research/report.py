@@ -20,6 +20,7 @@ from typing import Any, get_args
 
 from sqlalchemy.orm import Session
 
+from app.billing.budget import check_budget
 from app.citation.evidence import EvidenceItem
 from app.citation.pipeline import persist as persist_claims
 from app.config import Settings, get_settings
@@ -31,6 +32,7 @@ from app.rag.types import RewrittenQuery
 from app.repositories import companies as company_repo
 from app.repositories import news as news_repo
 from app.repositories import reports as report_repo
+from app.repositories import users as user_repo
 from app.research.evidence import from_rag
 from app.research.generator import SectionGeneration, accepted_by_index, generate_section
 from app.research.payloads import build_payload
@@ -132,11 +134,20 @@ def _run_section(
     payload: dict[str, Any],
     evidence: Sequence[EvidenceItem],
     settings: Settings,
+    *,
+    session: Session | None,
+    user_id: int | None,
 ) -> SectionGeneration:
     """Generate one section, never raising — a failure yields an empty (insufficient) section."""
     try:
         return generate_section(
-            llm, section=section, payload=payload, evidence=evidence, settings=settings
+            llm,
+            section=section,
+            payload=payload,
+            evidence=evidence,
+            settings=settings,
+            session=session,
+            user_id=user_id,
         )
     except Exception as exc:
         log_event(logger, logging.WARNING, "report.section.failed", section=section, error=str(exc))
@@ -150,11 +161,21 @@ def generate_report(
     llm: LLMClient | None = None,
     settings: Settings | None = None,
     supersedes_report_id: int | None = None,
+    user_id: int | None = None,
 ) -> ReportResult:
-    """Generate, verify, assemble, and persist a full report for one company (§10/§17)."""
+    """Generate, verify, assemble, and persist a full report for one company (§10/§17).
+
+    `user_id` attributes every section's LLM calls to the requesting user in `llm_calls`
+    (ADR-0022) — the POST /research endpoint already checks the budget before enqueueing; this is
+    the defense-in-depth check at the actual LLM-cost-incurring call site.
+    """
     settings = settings or get_settings()
     llm = llm or get_llm_client()
     started = time.monotonic()
+    if user_id is not None:
+        user = user_repo.get_active(session, user_id)
+        if user is not None:
+            check_budget(session, user, settings=settings)
 
     sections: dict[str, SectionGeneration] = {}
     evidence_ids: set[str] = set()
@@ -163,7 +184,9 @@ def generate_report(
 
     def record(section: str, evidence: Sequence[EvidenceItem], payload: dict[str, Any]) -> None:
         evidence_ids.update(item.source_id for item in evidence)
-        gen = _run_section(llm, section, payload, evidence, settings)
+        gen = _run_section(
+            llm, section, payload, evidence, settings, session=session, user_id=user_id
+        )
         sections[section] = gen
         if gen.insufficient:
             insufficient.append(section)
@@ -328,10 +351,10 @@ def _data_version(evidence_ids: set[str]) -> str:
 
 
 def generate_report_for_ticker(
-    session: Session, ticker: str, *, llm: LLMClient | None = None
+    session: Session, ticker: str, *, llm: LLMClient | None = None, user_id: int | None = None
 ) -> ReportResult | None:
     """Job-callable entry: resolve a ticker and generate its report (Celery plumbing is Phase 5)."""
     company = company_repo.get_by_ticker(session, ticker)
     if company is None:
         return None
-    return generate_report(session, company, llm=llm)
+    return generate_report(session, company, llm=llm, user_id=user_id)

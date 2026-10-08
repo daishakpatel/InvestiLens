@@ -24,6 +24,29 @@ services:
       interval: 5s
       retries: 10
 
+  # Observability stack (ADR-0021). Optional — the app works without it (console-exported traces,
+  # /metrics scrapeable directly). Bring up with `docker compose --profile observability up`.
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   profiles: ["observability"]
+  #   volumes:
+  #     - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - ./observability/alerts.rules.yml:/etc/prometheus/alerts.rules.yml:ro
+  #   ports:
+  #     - "127.0.0.1:9090:9090"
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   profiles: ["observability"]
+  #   environment:
+  #     GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+  #   volumes:
+  #     - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+  #     - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+  #   ports:
+  #     - "127.0.0.1:3001:3000"
+  #   depends_on:
+  #     - prometheus
+
 volumes:
   pgdata:
 

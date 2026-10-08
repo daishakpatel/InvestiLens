@@ -12,27 +12,33 @@ import asyncio
 import logging
 import re
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.billing.budget import check_budget
+from app.billing.cost import estimate_blended_cost
 from app.chat.suggestions import suggest
 from app.citation.evidence import EvidenceItem
 from app.citation.pipeline import verify_text
 from app.citation.resolver import resolve_source
 from app.config import Settings, get_settings
 from app.ingestion.documents.tokens import estimate_tokens
+from app.observability.tracing import span as otel_span
 from app.providers import get_llm_client
 from app.providers.base import LLMClient, LLMMessage
 from app.rag.injection import UNTRUSTED_PREAMBLE, wrap_untrusted
 from app.rag.pipeline import run_retrieval
 from app.rag.types import Intent, RetrievalResult
 from app.repositories import chat as chat_repo
+from app.repositories import claim_verifications as claim_verifications_repo
 from app.repositories import companies as company_repo
 from app.repositories import llm_calls as llm_repo
+from app.repositories import users as user_repo
 from app.research.evidence import from_rag
 from app.schemas.chat import Citation, ToolTraceEntry
+from app.schemas.citations import VerifiedClaim
 from app.schemas.research import EvidenceLabel
 from app.utils.logging import get_logger, log_event
 
@@ -107,7 +113,8 @@ def _synthesize(
         parts.append(f"[source_id={item.source_id}]\n{wrap_untrusted(item.searchable_text())}")
     user = "\n\n".join(parts)
     messages = [LLMMessage("system", _SYNTH_RULES), LLMMessage("user", user)]
-    answer = asyncio.run(llm.complete(messages, model=model, max_tokens=800))
+    with otel_span("chat.synthesize", tracer_name=__name__, attributes={"model": model}):
+        answer = asyncio.run(llm.complete(messages, model=model, max_tokens=800))
     return answer, estimate_tokens(user) + estimate_tokens(answer)
 
 
@@ -135,7 +142,34 @@ def answer_question(
     llm: LLMClient | None = None,
     settings: Settings | None = None,
 ) -> ChatTurn:
-    """Run one chat turn end to end and persist both messages. Never raises on thin evidence."""
+    """Run one chat turn end to end and persist both messages. Never raises on thin evidence.
+
+    Wrapped in an OTel span (OBS-001, ADR-0021) carrying `company`, so the full "life of a
+    question" — this span, `rag.run_retrieval`, `chat.synthesize`, and the citation validator —
+    is reconstructable from one `request_id` across logs and traces.
+    """
+    with otel_span("chat.answer_question", tracer_name=__name__, attributes={"company": company}):
+        return _answer_question(
+            session,
+            company=company,
+            question=question,
+            user_id=user_id,
+            session_id=session_id,
+            llm=llm,
+            settings=settings,
+        )
+
+
+def _answer_question(
+    session: Session,
+    *,
+    company: str,
+    question: str,
+    user_id: int,
+    session_id: int | None,
+    llm: LLMClient | None,
+    settings: Settings | None,
+) -> ChatTurn:
     settings = settings or get_settings()
     llm = llm or get_llm_client()
     started = time.monotonic()
@@ -186,6 +220,7 @@ def answer_question(
             abstained=False,
             refused=True,
             tool_trace=tool_trace,
+            user_id=user_id,
             company=company_row.ticker,
             intent=result.intent,
             started=started,
@@ -204,6 +239,7 @@ def answer_question(
             abstained=True,
             refused=False,
             tool_trace=tool_trace,
+            user_id=user_id,
             company=company_row.ticker,
             intent=result.intent,
             started=started,
@@ -216,6 +252,11 @@ def answer_question(
     if result.structured_source_ids:
         draft, tokens, model = _structured_answer_text(evidence), 0, settings.llm_model_cheap
     else:
+        # Only the LLM-cost-incurring path needs a budget check (NFR-008, ADR-0022); the
+        # deterministic metric path above is free.
+        user = user_repo.get_active(session, user_id)
+        if user is not None:
+            check_budget(session, user, settings=settings)
         draft, tokens = _synthesize(llm, effective, evidence, model=settings.llm_model_strong)
         model = settings.llm_model_strong
 
@@ -230,11 +271,13 @@ def answer_question(
             abstained=True,
             refused=False,
             tool_trace=tool_trace,
+            user_id=user_id,
             company=company_row.ticker,
             intent=result.intent,
             started=started,
             tokens=tokens,
             model=model,
+            verified_claims=verified.claims,
         )
 
     label = _label([c.confidence_label for c in verified.claims])
@@ -247,11 +290,13 @@ def answer_question(
         abstained=False,
         refused=False,
         tool_trace=tool_trace,
+        user_id=user_id,
         company=company_row.ticker,
         intent=result.intent,
         started=started,
         tokens=tokens,
         model=model,
+        verified_claims=verified.claims,
     )
 
 
@@ -265,11 +310,13 @@ def _finish(
     abstained: bool,
     refused: bool,
     tool_trace: list[ToolTraceEntry],
+    user_id: int,
     company: str,
     intent: Intent,
     started: float,
     tokens: int,
     model: str,
+    verified_claims: Sequence[VerifiedClaim] = (),
 ) -> ChatTurn:
     latency_ms = int((time.monotonic() - started) * 1000)
     message = chat_repo.add_message(
@@ -281,15 +328,22 @@ def _finish(
         tool_trace={"tools": [t.model_dump() for t in tool_trace]} if tool_trace else None,
         latency_ms=latency_ms,
     )
-    # Cost/latency logged like any other LLM call (mock cost = 0; real pricing in Phase 5).
+    if verified_claims:
+        # Closes a completeness gap found in the Phase 5c audit: chat verified claims (accepted
+        # AND rejected) never reached `claim_verifications`, so the citation-rejection-rate
+        # dashboard (OBS-002) only ever saw report-generation claims.
+        claim_verifications_repo.record_verifications(
+            session, verified_claims, chat_message_id=message.id
+        )
     llm_repo.record_call(
         session,
         purpose="chat",
         model=model,
         input_tokens=tokens,
         latency_ms=latency_ms,
-        cost_usd=Decimal("0"),
+        cost_usd=estimate_blended_cost(model=model, total_tokens=tokens),
         status="success",
+        user_id=user_id,
     )
     log_event(
         logger,

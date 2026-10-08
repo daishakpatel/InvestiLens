@@ -11,6 +11,8 @@ import uuid
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from app.api import (
     admin,
@@ -25,6 +27,9 @@ from app.api import (
 )
 from app.api.errors import register_error_handlers
 from app.api.middleware import RateLimitMiddleware
+from app.api.security_headers import security_headers_middleware
+from app.config import get_settings
+from app.observability import metrics as metrics_module
 from app.utils.logging import bind_request_id
 
 API_V1_PREFIX = "/api/v1"
@@ -39,9 +44,10 @@ def create_app() -> FastAPI:
         openapi_url=f"{API_V1_PREFIX}/openapi.json",
     )
 
-    # Rate-limit seam (ADR-0018). Added before the request-id middleware so the latter is the
-    # outermost layer and a 429 problem still carries the correlating request id.
-    app.add_middleware(RateLimitMiddleware)
+    # Middleware order matters: the LAST `add_middleware`/`@app.middleware` call is outermost
+    # (runs first on the way in, last on the way out), so a response gets every layer's headers
+    # and even a rate-limited/erroring request still gets a request id and CORS headers.
+    app.add_middleware(RateLimitMiddleware)  # ADR-0018/0022
 
     @app.middleware("http")
     async def request_id_middleware(
@@ -59,7 +65,21 @@ def create_app() -> FastAPI:
         response.headers[REQUEST_ID_HEADER] = request_id
         return response
 
+    app.middleware("http")(metrics_module.api_latency_middleware)  # OBS-002
+    app.middleware("http")(security_headers_middleware)  # SEC-004/012
+
+    settings = get_settings()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,  # SEC-005: explicit allowlist, never "*"
+        allow_credentials=True,  # the refresh-token cookie travels cross-origin in dev (Vite:5173)
+        allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
+        expose_headers=["X-Request-ID", "X-Next-Cursor"],
+    )
+
     register_error_handlers(app)
+    FastAPIInstrumentor.instrument_app(app)  # OBS-001: API-layer spans
 
     for module in (
         health,
@@ -73,6 +93,7 @@ def create_app() -> FastAPI:
         admin,
     ):
         app.include_router(module.router, prefix=API_V1_PREFIX)
+    app.include_router(metrics_module.router)  # root-level /metrics (Prometheus scrape convention)
 
     return app
 

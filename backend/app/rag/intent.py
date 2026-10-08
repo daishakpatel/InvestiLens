@@ -21,6 +21,12 @@ _ADVICE = re.compile(
     r"will .* (go up|go down|moon|crash)|worth buying|good investment)\b",
     re.IGNORECASE,
 )
+# Forward-looking prediction (OUT_OF_SCOPE, §16.2): we report what filings say, never forecast the
+# future. Narrow by design — "will ... next year/quarter" — so it does not catch a question about
+# management's *stated* outlook ("what did management say about the revenue outlook").
+_FORECAST = re.compile(
+    r"\bwill\b.*\b(next (fiscal )?year|next quarter|coming year)\b", re.IGNORECASE
+)
 # Obvious prompt-injection / off-domain (OUT_OF_SCOPE). Retrieved-text injection is handled in
 # app/rag/injection.py; this catches it in the *question* itself.
 _INJECTION = re.compile(
@@ -110,6 +116,8 @@ def classify_intent(question: str) -> IntentResult:
         return IntentResult(Intent.OUT_OF_SCOPE, 0.99, "injection")
     if _ADVICE.search(q):
         return IntentResult(Intent.OUT_OF_SCOPE_ADVICE, 0.95, "advice")
+    if _FORECAST.search(q):
+        return IntentResult(Intent.OUT_OF_SCOPE, 0.9, "forecast")
 
     # Pure metric lookup wins over the generic patterns, but never over a why/how explanation.
     if _METRIC_TERMS.search(q) and _METRIC_ASK.search(q) and not _WHY_HOW.search(q):

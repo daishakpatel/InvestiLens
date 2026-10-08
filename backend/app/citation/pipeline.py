@@ -17,6 +17,7 @@ from app.citation.extract import RawClaim, split_claims
 from app.citation.render import render
 from app.citation.verify import verify_claim
 from app.config import Settings, get_settings
+from app.observability.tracing import span as otel_span
 from app.repositories import claim_verifications as cv_repo
 from app.schemas.citations import VerifiedClaim, VerifiedOutput
 
@@ -28,7 +29,8 @@ def _verify_all(
     settings: Settings,
     entailer: Entailer,
 ) -> list[VerifiedClaim]:
-    return [verify_claim(c, evidence, settings=settings, entailer=entailer) for c in raw_claims]
+    with otel_span("citation.verify", tracer_name=__name__, attributes={"claims": len(raw_claims)}):
+        return [verify_claim(c, evidence, settings=settings, entailer=entailer) for c in raw_claims]
 
 
 def verify_text(
@@ -38,7 +40,11 @@ def verify_text(
     settings: Settings | None = None,
     entailer: Entailer | None = None,
 ) -> VerifiedOutput:
-    """Verify + render LLM prose containing `[SOURCE:id]` markers against the evidence set."""
+    """Verify + render LLM prose containing `[SOURCE:id]` markers against the evidence set.
+
+    `_verify_all` runs inside an OTel span (OBS-001) — the "citation validator" leg of the life
+    of a question, after retrieval and LLM synthesis.
+    """
     settings = settings or get_settings()
     entailer = entailer or get_entailer(settings)
     ev = evidence if isinstance(evidence, Mapping) else index_evidence(evidence)

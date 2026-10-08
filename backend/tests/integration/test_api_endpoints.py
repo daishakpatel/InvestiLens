@@ -300,6 +300,30 @@ def test_watchlist_and_alert_crud_requires_auth(client: TestClient, seed: dict[s
     assert len(client.get(f"{_P}/alerts", headers=headers).json()) == 1
 
 
+def test_alert_and_watchlist_lists_are_user_scoped(
+    client: TestClient, session: Session, seed: dict[str, int]
+) -> None:
+    """SEC-007/AUTH-004 IDOR: another user must never see this user's alerts or watchlists."""
+    headers = auth_headers(seed["user"])
+    assert (
+        client.post(
+            f"{_P}/alerts", json={"ticker": "TST", "alert_type": "new_10k"}, headers=headers
+        ).status_code
+        == 201
+    )
+    assert (
+        client.post(f"{_P}/watchlists", json={"name": "Mine"}, headers=headers).status_code == 201
+    )
+
+    bob = User(email="bob-idor@example.com", password_hash="x", role="user")  # noqa: S106
+    session.add(bob)
+    session.flush()
+    bob_headers = auth_headers(bob.id)
+
+    assert client.get(f"{_P}/alerts", headers=bob_headers).json() == []
+    assert client.get(f"{_P}/watchlists", headers=bob_headers).json() == []
+
+
 def test_admin_role_gated(client: TestClient, seed: dict[str, int]) -> None:
     user_h = auth_headers(seed["user"])
     admin_h = auth_headers(seed["admin"])

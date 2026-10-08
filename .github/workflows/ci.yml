@@ -32,8 +32,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine  # the real-Redis rate-limit test (ADR-0022); skips if absent
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql+psycopg://investilens:investilens@localhost:5432/investilens
+      REDIS_URL: redis://localhost:6379/0
       PROVIDER_MODE: mock  # no real network calls in the default test suite (DR-004)
     steps:
       - uses: actions/checkout@v5
@@ -49,6 +59,8 @@ jobs:
       - run: uv run pytest --cov=app --cov-report=term-missing
       - run: uv run coverage report --fail-under=80
       - run: uv run coverage report --include="app/finance/*,app/citation/*" --fail-under=100
+      # Dependency scanning (SEC-009): fails the build on an unaddressed known vulnerability.
+      - run: uv run pip-audit --strict
 
   frontend:
     runs-on: ubuntu-latest
@@ -67,3 +79,17 @@ jobs:
       - run: npm run typecheck
       - run: npm run test  # Vitest unit tests (pure modules: schemas, citations, format)
       - run: npm run build
+      # Dependency scanning (SEC-009): --omit=dev keeps dev-tooling CVEs (which ship to no one)
+      # from blocking a release build; `high` matches the backend pip-audit's default severity.
+      - run: npm audit --omit=dev --audit-level=high
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # gitleaks scans full history, not just the diff (SEC-001)
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

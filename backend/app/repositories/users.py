@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -31,8 +32,21 @@ def get_active(session: Session, user_id: int) -> User | None:
     return user
 
 
-def create_user(session: Session, *, email: str, password_hash: str, role: str = "user") -> User:
-    user = User(email=email.lower(), password_hash=password_hash, role=role, is_active=True)
+def create_user(
+    session: Session,
+    *,
+    email: str,
+    password_hash: str,
+    role: str = "user",
+    ai_budget_month_usd: Decimal | None = None,
+) -> User:
+    user = User(
+        email=email.lower(),
+        password_hash=password_hash,
+        role=role,
+        is_active=True,
+        ai_budget_month_usd=ai_budget_month_usd,
+    )
     session.add(user)
     session.flush()
     return user

@@ -38,10 +38,18 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
   instead of starting a second one. The job is enqueued (`queued`); the Phase 5d worker runs it.
 - **Freshness (API-008):** data endpoints read `data_freshness` for their source (`sec`/`price`/
   `news`) and report `as_of`/`source`/`freshness_status` (`stale` when never ingested).
-- **Rate limiting (ADR-0018):** a `RateLimitMiddleware` seam exists; it is disabled by default and
-  configured with real limits + Redis in Phase 5c.
-- **Auth seam (ADR-0006):** chat, watchlists, and alerts require a user via `X-User-Id` (→ JWT in
-  Phase 4b); admin endpoints additionally require `role=admin`.
+- **Rate limiting (ADR-0018/0022):** `RateLimitMiddleware` is disabled by default
+  (`rate_limit_enabled`); when on, a general `429` tier (default 100/min, spec §25.4) applies to
+  every route and a tighter AI tier (default 20/hour) applies to `/chat*` and `POST /research`,
+  keyed per-user when authenticated else per-IP. Backend is `"memory"` (default, in-process) or
+  `"redis"` (real cross-worker limiting via `REDIS_URL`). Responses carry `Retry-After`.
+- **AI budget (NFR-008, ADR-0022):** `POST /chat` (qualitative answers only) and `POST /research`
+  return `402` (`application/problem+json`) once a user's monthly AI spend reaches their
+  `ai_budget_month_usd` cap (set at registration; `default_ai_budget_month_usd` in config).
+- **Auth (ADR-0005/0006):** chat, watchlists, and alerts require a user via a Bearer JWT; admin
+  endpoints additionally require `role=admin`.
+- **Observability (ADR-0021):** `GET /metrics` (root-level, not under `/api/v1` — it's a scrape
+  endpoint, not a business API) exposes Prometheus metrics; see `docs/observability.md`.
 
 ## Endpoints (§24.2)
 

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api._support import freshness_from_row
+from app.config import get_settings
 from app.db import get_db
 from app.repositories import companies as company_repo
 from app.repositories import freshness as freshness_repo
@@ -22,10 +26,36 @@ async def health() -> Health:
     return Health()
 
 
+def _db_ok(db: Session) -> bool:
+    try:
+        db.execute(text("SELECT 1"))
+        return True
+    except Exception:  # a dead DB connection must never crash the readiness probe itself
+        return False
+
+
+def _redis_ok() -> bool:
+    """Only meaningful once something actually depends on Redis (rate_limit_backend="redis",
+    ADR-0022); otherwise it's not a readiness dependency and we don't manufacture a false one."""
+    settings = get_settings()
+    if settings.rate_limit_backend != "redis":
+        return True
+    try:
+        import redis
+
+        redis.from_url(settings.redis_url).ping()
+        return True
+    except Exception:
+        return False
+
+
 @router.get("/ready", response_model=Readiness)
-async def ready() -> Readiness:
-    """Readiness probe (db, redis, queue). Full redis/queue checks land in Phase 5d."""
-    return Readiness(status="ready", checks={"db": True, "redis": True, "queue": True})
+async def ready(db: Session = _DB) -> Readiness:
+    """Readiness probe: DB and (when in use) Redis are checked for real; `queue` stays a static
+    `True` until the Phase 5d worker exists to report its own health."""
+    checks = {"db": _db_ok(db), "redis": _redis_ok(), "queue": True}
+    readiness_status: Literal["ready", "degraded"] = "ready" if all(checks.values()) else "degraded"
+    return Readiness(status=readiness_status, checks=checks)
 
 
 @router.get("/meta/data-freshness/{ticker}", response_model=DataFreshnessResponse, tags=["Meta"])

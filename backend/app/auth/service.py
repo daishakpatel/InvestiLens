@@ -100,7 +100,10 @@ def register(
     if user_repo.get_by_email(session, email) is not None:
         raise EmailAlreadyRegistered("an account with this email already exists")
     user = user_repo.create_user(
-        session, email=email, password_hash=passwords.hash_password(password)
+        session,
+        email=email,
+        password_hash=passwords.hash_password(password),
+        ai_budget_month_usd=settings.default_ai_budget_month_usd,  # NFR-008, ADR-0022
     )
     # Issue a verification token so a row exists; delivery (email) is Phase 5d.
     request_email_verification(session, user, settings=settings)

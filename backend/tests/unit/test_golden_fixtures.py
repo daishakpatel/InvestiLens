@@ -39,10 +39,12 @@ def test_golden_questions_shape_and_coverage() -> None:
         for line in (_FIXTURES.parent / "eval" / "golden_v0.jsonl").read_text().splitlines()
         if line.strip()
     ]
-    assert len(rows) >= 10
+    assert len(rows) >= 100  # grown to 100+ in Phase 5b (was the 13-question seed)
     for row in rows:
         assert row.keys() >= REQUIRED_Q_FIELDS, f"missing fields in {row.get('id')}"
     intents = {r["intent"] for r in rows}
     assert "FINANCIAL_METRIC" in intents
-    assert "QUALITATIVE_EXPLANATION" in intents
-    assert any(r["must_abstain"] for r in rows)  # at least one abstain case
+    assert "FINANCIAL_EXPLANATION" in intents  # qualitative explanation category
+    tags = {t for r in rows for t in r["tags"]}
+    assert {"risk", "management", "injection", "advice", "multi_hop", "time_series"} <= tags
+    assert any(r["must_abstain"] for r in rows)  # abstain cases present

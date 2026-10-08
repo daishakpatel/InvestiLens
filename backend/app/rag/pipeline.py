@@ -14,6 +14,8 @@ import time
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
+from app.observability.metrics import record_retrieval_score
+from app.observability.tracing import span
 from app.rag.assembly import assemble_context
 from app.rag.intent import classify_intent
 from app.rag.retrieval import retrieve_evidence
@@ -76,7 +78,28 @@ def run_retrieval(
     request_id: str | None = None,
     settings: Settings | None = None,
 ) -> RetrievalResult:
-    """Run the full retrieval pipeline for one question against one company (§16.1)."""
+    """Run the full retrieval pipeline for one question against one company (§16.1).
+
+    Wrapped in an OTel span (OBS-001, ADR-0021) carrying `company`; `intent` is added once known
+    so the full "life of a question" (API → retrieval → LLM → citation validator) is traceable by
+    `request_id` even though intent classification happens inside the pipeline, not before it.
+    """
+    with span("rag.run_retrieval", tracer_name=__name__, attributes={"company": ticker}) as sp:
+        result = _run_retrieval(
+            session, question=question, ticker=ticker, request_id=request_id, settings=settings
+        )
+        sp.set_attribute("intent", result.intent.value)
+        return result
+
+
+def _run_retrieval(
+    session: Session,
+    *,
+    question: str,
+    ticker: str,
+    request_id: str | None,
+    settings: Settings | None,
+) -> RetrievalResult:
     settings = settings or get_settings()
     started = time.monotonic()
     intent_res = classify_intent(question)
@@ -101,6 +124,7 @@ def run_retrieval(
             chunk_ids=[e.source_id for e in result.evidence] + result.structured_source_ids,
             request_id=request_id,
         )
+        record_retrieval_score(intent=result.intent.value, top_score=top_score)
         return result
 
     # Out-of-scope / advice: abstain before any retrieval (RAG-040, §16.2).

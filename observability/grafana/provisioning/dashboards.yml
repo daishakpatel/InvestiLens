@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: investilens
+    folder: InvestiLens
+    type: file
+    options:
+      path: /etc/grafana/dashboards

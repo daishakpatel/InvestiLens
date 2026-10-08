@@ -1,0 +1,12 @@
+{
+  "_note": "Offline mock-mode SMOKE baseline (tests/eval/smoke.jsonl). Deterministic metrics (numeric_accuracy, abstention_accuracy, citation_accuracy, hallucination_rate) are meaningful; recall_at_5 and faithfulness are placeholders until a live Voyage+LLM full run replaces this (ADR-0009/0010/0020). Regenerate with: run_eval.py --smoke --update-baseline.",
+  "abstention_accuracy": 1.0,
+  "citation_accuracy": 1.0,
+  "hallucination_rate": 0.0,
+  "numeric_accuracy": 1.0,
+  "faithfulness": 1.0,
+  "recall_at_5": 0.5,
+  "precision_at_5": 0.5,
+  "mrr": 0.5,
+  "ndcg_at_5": 0.5
+}

@@ -4969,7 +4969,7 @@
     },
     "/api/v1/ready": {
       "get": {
-        "description": "Readiness probe (db, redis, queue). Full redis/queue checks land in Phase 5d.",
+        "description": "Readiness probe: DB and (when in use) Redis are checked for real; `queue` stays a static\n`True` until the Phase 5d worker exists to report its own health.",
         "operationId": "ready_api_v1_ready_get",
         "responses": {
           "200": {

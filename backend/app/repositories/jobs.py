@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Job
@@ -52,6 +52,16 @@ def find_by_idempotency_key(session: Session, *, job_type: str, key: str) -> Job
         .where(Job.job_type == job_type, Job.params["idempotency_key"].astext == key)
         .order_by(Job.id.desc())
     )
+
+
+def recent(session: Session, *, limit: int) -> list[Job]:
+    """The most recent jobs, newest first — job-failure-rate metric/alert feed (OBS-002/003)."""
+    return list(session.scalars(select(Job).order_by(Job.id.desc()).limit(limit)))
+
+
+def queued_count(session: Session) -> int:
+    """How many jobs are queued right now — the queue-depth gauge (OBS-002)."""
+    return session.scalar(select(func.count()).where(Job.status == "queued")) or 0
 
 
 def find_active_for_company(session: Session, *, job_type: str, ticker: str) -> Job | None:

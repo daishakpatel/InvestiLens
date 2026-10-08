@@ -18,6 +18,7 @@ from alembic.config import Config
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
 
+from app.billing.budget import BudgetExceededError
 from app.embeddings.pipeline import embed_pending
 from app.models import (
     ClaimVerification,
@@ -25,9 +26,11 @@ from app.models import (
     Document,
     DocumentChunk,
     FinancialMetric,
+    LlmCall,
     News,
     ResearchReport,
     ResearchSource,
+    User,
 )
 from app.providers.mocks.embeddings import MockEmbeddingClient
 from app.research.payloads import build_payload
@@ -171,6 +174,57 @@ def test_full_report_generates_and_persists(session: Session) -> None:
         .select_from(ClaimVerification)
         .where(ClaimVerification.report_id == row.id)
     )
+
+
+def test_report_generation_logs_every_llm_call(session: Session) -> None:
+    """Observability audit (OBS-005): report-section LLM calls must log to `llm_calls` like
+    chat/embeddings do — this was the gap the Phase 5c audit found (app.research.generator
+    called the LLM directly with no `llm_calls` row)."""
+    company = _seed_company(session, "OBS", gross_margin="0.71")
+    user = User(email="obs@example.com", password_hash="x", is_active=True)  # noqa: S106
+    session.add(user)
+    session.flush()
+
+    generate_report(session, company, llm=FakeLLM(), user_id=user.id)
+
+    rows = session.scalars(
+        select(LlmCall).where(LlmCall.purpose == "report_section", LlmCall.user_id == user.id)
+    ).all()
+    assert rows, "expected at least one report_section llm_calls row"
+    for row in rows:
+        assert row.prompt_version == REPORT_PROMPT_VERSION
+        assert row.model
+        assert row.cost_usd is not None
+        assert row.latency_ms is not None
+
+
+def test_report_generation_blocked_over_ai_budget(session: Session) -> None:
+    """NFR-008/ADR-0022: a user who has already spent their monthly AI budget is blocked before
+    another expensive report generation runs, with a clear (not generic) error."""
+    company = _seed_company(session, "BUD", gross_margin="0.71")
+    user = User(
+        email="budget@example.com",
+        password_hash="x",  # noqa: S106
+        is_active=True,
+        ai_budget_month_usd=Decimal("1.00"),
+    )
+    session.add(user)
+    session.flush()
+    session.add(
+        LlmCall(
+            user_id=user.id,
+            purpose="chat",
+            model="claude-sonnet-5-5",
+            input_tokens=1,
+            cost_usd=Decimal("1.00"),
+            latency_ms=1,
+            status="success",
+        )
+    )
+    session.flush()
+
+    with pytest.raises(BudgetExceededError):
+        generate_report(session, company, llm=FakeLLM(), user_id=user.id)
 
 
 def test_report_is_reproducible(session: Session) -> None:

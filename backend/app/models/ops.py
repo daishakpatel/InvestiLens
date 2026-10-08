@@ -70,6 +70,11 @@ class LlmCall(Base, TimestampMixin):
 
     id: Mapped[intpk]
     request_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    # Attributes spend to a user for the per-user AI budget check (NFR-008, ADR-0022). Nullable:
+    # embedding-batch calls (ingestion-time, no requesting user) never set it.
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     purpose: Mapped[str | None] = mapped_column(String(64))
     model: Mapped[str | None] = mapped_column(String(64))
     prompt_version: Mapped[str | None] = mapped_column(String(32))

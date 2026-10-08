@@ -6,6 +6,35 @@ to a verifiable source.
 
 > **Status:** Phase 0 (contracts) in progress. Architecture and ADRs done.
 
+## Project overview
+
+InvestiLens is a full-stack financial intelligence application for researching public
+companies. It combines deterministic financial calculations with SEC filings, market data,
+news, retrieval-augmented generation, and citation validation so generated research can be
+traced back to its evidence.
+
+### Language profile
+
+| Language | Approx. share of tracked source bytes | Main use |
+|----------|---------------------------------------|----------|
+| Python | 76.4% | FastAPI backend, finance, ingestion, RAG, evaluation, and tests |
+| TypeScript / TSX | 22.4% | React frontend, typed API client, and UI tests |
+| JavaScript, CSS, HTML, YAML | 1.2% | Tooling, styling, markup, configuration, and infrastructure |
+
+The percentages above are a local source-size snapshot. The language bar shown by GitHub is
+calculated automatically by GitHub Linguist and may differ because it applies its own rules for
+generated files, fixtures, documentation, and vendored content.
+
+### What is included
+
+- **Backend:** Python 3.12, FastAPI, Celery, PostgreSQL 16, pgvector, Redis, and deterministic
+	financial metrics.
+- **Frontend:** React, TypeScript, Vite, and a typed API client for the research dashboard.
+- **AI and data:** SEC EDGAR, Tiingo, Finnhub, Anthropic Claude, Voyage AI embeddings, hybrid
+	retrieval, and source-validated citations.
+- **Engineering focus:** contract-first APIs, offline mock providers, reproducible evaluation,
+	observability, security hardening, and an explicit educational-use disclaimer.
+
 ## Core principle
 
 The LLM is not the source of truth. Financial numbers are computed in code. The LLM only
@@ -51,6 +80,29 @@ make check              # lint, format, type-check, tests
 ```
 
 API keys are optional for development. Every external provider has an offline mock (Phase 0d).
+
+## Evaluation & quality
+
+Quality is measured against a 100+ question golden set (`backend/tests/eval/golden_v0.jsonl`,
+categories per spec §18.1) by the harness in `backend/app/eval/`. CI fails a PR that regresses
+citation accuracy (> 1 pt), Recall@5 (> 2 pts), or hallucination rate (> 0.5 pts) vs the baseline
+(EVAL-002). See `docs/testing.md` and [ADR-0020](docs/decisions/0020-evaluation-framework.md).
+
+| Metric | Baseline | Mode |
+|--------|----------|------|
+| Citation accuracy | 1.00 | measured (deterministic, offline) |
+| Hallucination rate | 0.00 | measured (deterministic, offline) |
+| Abstention accuracy | 1.00 | measured (deterministic, offline) |
+| Numeric answer accuracy | 1.00 | measured (deterministic, offline) |
+| Recall@5 | _pending_ | needs live Voyage embeddings (ADR-0010) |
+| Qualitative faithfulness (LLM-judge ≥ 0.85 agreement) | _pending_ | needs an LLM key (ADR-0009) |
+| Cost / latency per report & chat | _pending_ | needs a live run |
+
+Deterministic metrics are measured in the default mock mode (hash embeddings + Fake LLM), so
+numeric accuracy, abstention, citation accuracy, and hallucination are real numbers; Recall@K and
+judge faithfulness only become meaningful with live Voyage + an LLM key and are marked _pending_
+until that run — the resume bullets should cite the measured rows, not the pending ones. Reproduce
+with `make coverage` (gates) and `uv run python ../scripts/run_eval.py` (full set).
 
 ## Disclaimer
 

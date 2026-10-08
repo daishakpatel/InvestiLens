@@ -21,6 +21,11 @@ def list_runs(session: Session, *, limit: int, after_id: int | None) -> list[Ing
     )
 
 
+def recent(session: Session, *, limit: int) -> list[IngestionRun]:
+    """The most recent ingestion runs across all sources — failure-rate metric/alert feed."""
+    return list(session.scalars(select(IngestionRun).order_by(IngestionRun.id.desc()).limit(limit)))
+
+
 def start_run(session: Session, *, source: str, company_id: int | None) -> IngestionRun:
     run = IngestionRun(
         source=source,

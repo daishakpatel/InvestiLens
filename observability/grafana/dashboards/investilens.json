@@ -1,0 +1,118 @@
+{
+  "title": "InvestiLens",
+  "uid": "investilens-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "title": "API latency (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(api_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(api_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(api_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "API error rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(api_request_duration_seconds_count{status=~\"5..\"}[5m])) / sum(rate(api_request_duration_seconds_count[5m]))",
+          "legendFormat": "error rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "LLM cost / day",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(increase(llm_cost_usd_total[1d])) by (purpose, model)",
+          "legendFormat": "{{purpose}}/{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Ingestion lag (minutes, per source)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "ingestion_lag_minutes", "legendFormat": "{{source}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Cache hit rate",
+      "type": "stat",
+      "description": "No cache layer exists yet (RAG-050 semantic cache deferred); always N/A until one lands.",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "cache_hit_ratio" }]
+    },
+    {
+      "id": 6,
+      "title": "Citation rejection rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(citation_verifications_total{status=\"rejected\"}[1h])) / sum(rate(citation_verifications_total[1h]))",
+          "legendFormat": "rejection rate"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Retrieval top-score distribution",
+      "type": "heatmap",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(retrieval_top_score_bucket[5m])) by (le)" }]
+    },
+    {
+      "id": 8,
+      "title": "Job / ingestion failure rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "job_failure_rate", "legendFormat": "jobs" },
+        { "expr": "ingestion_failure_rate", "legendFormat": "ingestion" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Job queue depth",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "job_queue_depth" }]
+    }
+  ]
+}

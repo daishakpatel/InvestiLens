@@ -7,6 +7,8 @@ the correlating `request_id` (API-007). Never fail silently (P6).
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -14,7 +16,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.auth.passwords import WeakPasswordError
 from app.auth.service import AuthError
+from app.billing.budget import BudgetExceededError
 from app.schemas.common import FieldError, Problem
+from app.utils.logging import get_logger, log_event
+
+logger = get_logger(__name__)
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
 
@@ -92,6 +98,17 @@ def register_error_handlers(app: FastAPI) -> None:
         )
         return _problem_response(request, problem)
 
+    @app.exception_handler(BudgetExceededError)
+    async def _handle_budget(request: Request, exc: BudgetExceededError) -> JSONResponse:
+        problem = Problem(
+            title="AI Budget Exceeded",
+            status=exc.status_code,
+            detail=exc.message,
+            instance=str(request.url),
+            request_id=_request_id(request),
+        )
+        return _problem_response(request, problem)
+
     @app.exception_handler(StarletteHTTPException)
     async def _handle_http(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         problem = Problem(
@@ -115,5 +132,30 @@ def register_error_handlers(app: FastAPI) -> None:
             instance=str(request.url),
             request_id=_request_id(request),
             errors=errors,
+        )
+        return _problem_response(request, problem)
+
+    @app.exception_handler(Exception)
+    async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
+        """Catch-all (ERR-003): every unhandled exception still returns RFC 7807, never a stack
+        trace or internal detail. The real exception is logged server-side only, correlated by
+        `request_id` so it's debuggable without ever reaching the client (spec §28.2 "AI failure"
+        / generic degradation: the system must never silently fail *or* leak internals).
+        """
+        log_event(
+            logger,
+            logging.ERROR,
+            "api.unhandled_exception",
+            path=str(request.url),
+            method=request.method,
+            error=repr(exc),
+            exc_info=True,
+        )
+        problem = Problem(
+            title="Internal Server Error",
+            status=500,
+            detail="An unexpected error occurred. Your data is unaffected; please try again.",
+            instance=str(request.url),
+            request_id=_request_id(request),
         )
         return _problem_response(request, problem)

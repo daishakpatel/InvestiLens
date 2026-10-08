@@ -1,0 +1,57 @@
+# Prometheus alerting rules (OBS-003, ADR-0021).
+#
+# These mirror the exact thresholds evaluated in `app/observability/alerts.py` — that module is
+# the source of truth (and what's actually tested in CI, since this project has no running
+# Prometheus/Alertmanager in CI); this file is what a real deployment loads into Prometheus so
+# the same thresholds page someone, not just get logged. Keep both in sync by hand when a
+# threshold setting in `app/config.py` changes.
+groups:
+  - name: investilens
+    rules:
+      - alert: IngestionLag
+        expr: ingestion_lag_minutes > 60
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.source }} ingestion is stale"
+          description: "No successful ingest for {{ $labels.source }} in over 60 minutes."
+
+      - alert: JobFailureSpike
+        expr: job_failure_rate > 0.2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Background job failure rate is high"
+          description: "Over 20% of the most recent jobs failed."
+
+      - alert: IngestionFailureSpike
+        expr: ingestion_failure_rate > 0.2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ingestion failure rate is high"
+          description: "Over 20% of the most recent ingestion runs failed."
+
+      - alert: LlmSpendOverBudget
+        expr: increase(llm_cost_usd_total[1d]) > 25
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM spend is over the daily budget"
+          description: "More than $25 of LLM spend in the last 24h (global circuit-breaker signal)."
+
+      - alert: ErrorRateSloBurn
+        expr: |
+          sum(rate(api_request_duration_seconds_count{status=~"5.."}[5m]))
+          /
+          sum(rate(api_request_duration_seconds_count[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API error rate SLO burn"
+          description: "Over 5% of API requests are erroring (5xx) over the last 5 minutes."

@@ -23,6 +23,7 @@ from app.providers.sec.base import CompanyRef, FilingRef, SecSource
 from app.repositories import companies as company_repo
 from app.repositories import facts as facts_repo
 from app.repositories import filings as filing_repo
+from app.repositories.freshness import record_freshness
 from app.repositories.ingestion import dead_letter, finish_run, start_run
 from app.utils.dates import months_ago, years_ago
 from app.utils.logging import get_logger, log_event
@@ -188,8 +189,35 @@ def ingest_company(
     )
 
     run = start_run(session, source="sec", company_id=company_id)
+    attempt_at = datetime.now(UTC)
 
-    for filing in sec.list_filings(ref.cik):
+    # A provider outage (SEC EDGAR down/429-exhausted) must degrade, not crash the caller or leave
+    # the run stuck "running" forever with no data_freshness update (ERR-002, OBS-002/§28.2 "SEC
+    # unavailable" — this was a real gap: unlike prices/news, SEC ingestion never wrote
+    # data_freshness at all, so the API's freshness endpoint could never distinguish a healthy
+    # company from one whose ingest has never succeeded or has been failing for days).
+    try:
+        filings = list(sec.list_filings(ref.cik))
+    except Exception as exc:
+        dead_letter(
+            session, source="sec", payload_ref=ref.cik, error=f"{type(exc).__name__}: {exc}"
+        )
+        record_freshness(
+            session,
+            company_id=company_id,
+            source="sec",
+            status="failed",
+            last_success_at=None,
+            last_attempt_at=attempt_at,
+            message=str(exc),
+        )
+        finish_run(session, run, status="failed", counts=counts.as_dict(), error=str(exc))
+        log_event(
+            logger, logging.ERROR, "sec.list_filings.failed", ticker=ref.ticker, error=str(exc)
+        )
+        return counts
+
+    for filing in filings:
         if not _within_backfill(filing, settings, today):
             continue
         # SAVEPOINT per filing (ING-005): a failure rolls back only this filing, leaving the
@@ -240,6 +268,14 @@ def ingest_company(
         log_event(logger, logging.ERROR, "sec.facts.failed", cik=ref.cik, error=str(exc))
 
     status = "success" if counts.dead_letters == 0 else "partial"
+    record_freshness(
+        session,
+        company_id=company_id,
+        source="sec",
+        status="fresh",
+        last_success_at=datetime.now(UTC),
+        last_attempt_at=attempt_at,
+    )
     finish_run(session, run, status=status, counts=counts.as_dict())
     log_event(logger, logging.INFO, "sec.company.ingested", ticker=ref.ticker, **counts.as_dict())
     return counts

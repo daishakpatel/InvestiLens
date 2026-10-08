@@ -7,10 +7,11 @@ golden-set loop.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import CursorResult, delete, select
 from sqlalchemy.orm import Session
 
 from app.models import ChatMessage, ChatSession
@@ -74,3 +75,13 @@ def set_feedback(
     row.feedback = rating
     row.feedback_reason = reason
     return row
+
+
+def purge_messages_before(session: Session, *, cutoff: datetime) -> int:
+    """Delete chat messages older than `cutoff` (SEC-014: a real retention limit on logged user
+    questions, not indefinite storage). The session shell is left in place — only message
+    content is removed — so a later-generated eval candidate or support lookup by session id
+    still resolves, just without the retained text."""
+    result = session.execute(delete(ChatMessage).where(ChatMessage.created_at < cutoff))
+    assert isinstance(result, CursorResult)  # noqa: S101  # DELETE always yields a CursorResult
+    return result.rowcount

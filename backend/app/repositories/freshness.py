@@ -30,6 +30,11 @@ def list_for_company(session: Session, *, company_id: int) -> list[DataFreshness
     )
 
 
+def list_all(session: Session) -> list[DataFreshness]:
+    """Every per-(company, source) freshness row — the ingestion-lag dashboard feed (OBS-002)."""
+    return list(session.scalars(select(DataFreshness)))
+
+
 def record_freshness(
     session: Session,
     *,

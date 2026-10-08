@@ -1,7 +1,8 @@
 """claim_verifications persistence (CIT-005 L6).
 
 Every verified claim — accepted, softened, or rejected — is logged with its reason code so the
-Phase 5b eval harness and audits can see exactly what was dropped and why.
+Phase 5b eval harness and audits can see exactly what was dropped and why. Also the single choke
+point for the citation-rejection-rate Prometheus metric (OBS-002, ADR-0021).
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 
 from app.models import ClaimVerification
+from app.observability.metrics import record_citation_verification
 from app.schemas.citations import VerifiedClaim
 
 
@@ -37,4 +39,6 @@ def record_verifications(
         for claim in claims
     ]
     session.add_all(rows)
+    for claim in claims:
+        record_citation_verification(claim.status)
     return len(rows)

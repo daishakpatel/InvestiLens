@@ -46,6 +46,35 @@ Every test references at least one requirement ID (conventions.md). Highlights:
 LLM/embedding calls use deterministic fakes/recorded fixtures (Phase 0d) — never live models in
 the default run.
 
+### Observability & security (Phase 5c, §28/§29)
+
+- **Unit — tracing** (`unit/test_tracing.py`): OTel spans actually carry the attributes OBS-001
+  requires, asserted via `InMemorySpanExporter` (no collector running).
+- **Unit — error handling** (`unit/test_error_handling.py`): the catch-all exception handler
+  never leaks a stack trace or exception detail into an RFC 7807 response (ERR-003).
+- **Unit — rate limiting** (`unit/test_rate_limit.py`): the in-process and Redis-backed (via
+  `fakeredis`) limiters, plus the middleware's two tiers (general vs AI) end to end.
+- **Unit — billing** (`unit/test_billing_cost.py`): LLM cost estimation is `Decimal`, scales with
+  model tier, never negative.
+- **Integration — alerts** (`integration/test_alerts.py`): each of the five DB-driven alert rules
+  fires on a seeded "simulated failure" and stays silent on healthy state (the DoD's explicit
+  "alerts fire correctly in a simulated failure" requirement, testable with no Prometheus
+  running).
+- **Integration — budget/IDOR/retention/injection** (`integration/test_chat.py`,
+  `integration/test_report_generation.py`, `integration/test_auth.py`,
+  `integration/test_api_endpoints.py`, `integration/test_injection_production_shaped.py`): AI
+  budget enforcement blocks the LLM-cost path only (metric answers stay free); `/alerts` is now
+  IDOR-tested like watchlists/chat sessions; `hard_delete_user` cascades to owned data but keeps
+  public reports (`user_id` nulled); the Phase 2c/3c red-team corpus re-run against a **real**
+  NVDA 10-K fixture through the real parse→chunk→retrieve→chat pipeline, not just synthetic
+  strings.
+- **Integration — Redis** (`integration/test_rate_limit_redis.py`): the Redis-backed limiter
+  against a real Redis, skipping if unreachable (mirrors the Postgres skip-offline pattern,
+  ADR-0019); CI's `redis:7-alpine` service makes it run there.
+- **Integration — SEC degradation** (`integration/test_sec_ingestion.py`): a simulated EDGAR
+  outage degrades (dead-letter + `data_freshness` failed + run failed) instead of crashing —
+  closes a gap where SEC ingestion never wrote `data_freshness` at all.
+
 ### Coverage gate (NFR-013)
 
 `make coverage` runs the suite once under coverage and enforces two hard thresholds:
@@ -64,6 +93,29 @@ rejects malformed payloads (UI-001, `schemas.test.ts`); citation numbering first
 (CIT-006, `reportCitations.test.ts`); display formatting + unit conversion (`format.test.ts`); and
 a source guard that fails the build if `dangerouslySetInnerHTML` is ever introduced (XSS,
 `xssGuard.test.ts`). Run with `npm run test`.
+
+## Evaluation harness (`backend/app/eval/`, spec §18)
+
+Measures retrieval, answer, citation, hallucination, and abstention quality against the golden set
+(`backend/tests/eval/golden_v0.jsonl`, 100+ questions built by `scripts/build_golden.py`). It
+MEASURES the Phase 2c/3a pipeline — it never re-implements retrieval or verification.
+
+- **Metrics** (`metrics.py`, unit-tested): Precision@K, Recall@K, MRR, NDCG (document-level vs
+  `expected_sources`); numeric answer accuracy (Decimal, within tolerance); citation accuracy +
+  hallucination (from the Phase 3a verifier's exposed labels); abstention correctness.
+- **Judge** (`judge.py`): `LLMJudge` (versioned prompt `judge_v1`) for qualitative faithfulness,
+  `FakeJudge` offline; `calibrate()` reports agreement vs human labels (target ≥ 0.85, §18.4).
+- **Runner** (`runner.py`): drives each question through `chat.answer_question`, persists to
+  `eval_runs`/`eval_results`. **A/B** (`ab.py`) diffs two configs per question. **Report-level**
+  (`report.py`) and **feedback→golden triage** (`feedback.py`) round out §18.8/§18.9.
+- **Gate / EVAL-002** (`gate.py`): fails a PR if Recall@5 drops > 2 pts, citation accuracy > 1 pt,
+  or hallucination rises > 0.5 pts vs `app/eval/baseline.json`. Enforced in CI as a pytest
+  integration test (`tests/integration/test_eval_runner.py`) that also proves a deliberate
+  citation-accuracy regression is caught; the full set runs nightly via `scripts/run_eval.py`.
+
+Only the deterministic metrics (numeric accuracy, abstention, citation accuracy, hallucination) are
+meaningful in mock mode; Recall@K and judge faithfulness need live Voyage + an LLM key
+(ADR-0009/0010/0020). The README benchmark table marks those _pending_.
 
 ## Tier 2 — E2E + accessibility (`e2e/`)
 

@@ -120,9 +120,48 @@ class Settings(BaseSettings):
     # --- API endpoints (Phase 4a, §24.1) ---
     api_default_page_size: int = Field(default=50)  # cursor pagination default (API-002, ADR-0016)
     api_max_page_size: int = Field(default=200)  # hard cap on ?limit=
-    # Rate-limit seam (ADR-0018). Off by default; Phase 5c (§25.4) configures real limits + Redis.
+    # Rate-limit seam (ADR-0018). Off by default; real limits + Redis land below (Phase 5c).
     rate_limit_enabled: bool = Field(default=False)
     rate_limit_per_minute: int = Field(default=120)
+
+    # --- Observability (Phase 5c, §20, §28, ADR-0021) ---
+    # Unset = console span exporter (no infra needed); set to a collector URL for a real deploy.
+    otel_exporter_otlp_endpoint: str = Field(default="")
+    # Alert thresholds (OBS-003), evaluated by app/observability/alerts.py.
+    alert_ingestion_lag_minutes: int = Field(default=60)
+    alert_job_failure_rate_threshold: float = Field(default=0.2)  # fraction of recent jobs failed
+    alert_job_failure_window: int = Field(default=20)  # how many recent jobs to look at
+    alert_sec_429_count_threshold: int = Field(default=5)  # retryable-429 log lines in the window
+    alert_error_rate_threshold: float = Field(default=0.05)  # fraction of recent requests erroring
+    # Global circuit-breaker signal (OBS-003), distinct from the per-user ai_budget_month_usd cap.
+    llm_daily_budget_usd: Decimal = Field(default=Decimal("25.00"))
+
+    # --- CORS & security headers (Phase 5c, §29, SEC-005/012) ---
+    cors_allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    # HSTS is only meaningful (and only sent) over a real TLS deployment; disabled for local http.
+    hsts_enabled: bool = Field(default=False)
+
+    # --- Rate limiting & AI budget (Phase 5c, §25.4, SEC-008, ADR-0022) ---
+    # "memory" (default, existing in-process token bucket — deterministic in tests/CI, ADR-0018)
+    # or "redis" (real cross-worker limiting via REDIS_URL, ADR-0022).
+    rate_limit_backend: Literal["memory", "redis"] = Field(default="memory")
+    redis_url: str = Field(default="redis://localhost:6379/0")
+    rate_limit_ai_per_hour: int = Field(default=20)  # spec §25.4 example, applied to chat/research
+    # New users get this monthly AI budget (NFR-008); existing NULL rows mean "unlimited" (never
+    # auto-backfilled — an operator decision, not a migration's).
+    default_ai_budget_month_usd: Decimal = Field(default=Decimal("5.00"))
+
+    # --- LLM cost estimation (Phase 5c, OBS-002/005) ---
+    # Blended $/1M tokens, same spirit as embedding_cost_per_1m_tokens above: an estimate for the
+    # `llm_calls.cost_usd` column only, never financial output. Confirm against the provider's
+    # price list once a real ANTHROPIC_API_KEY is used (ADR-0009 live path is still deferred).
+    llm_cost_per_1m_input_tokens_cheap: Decimal = Field(default=Decimal("1.00"))
+    llm_cost_per_1m_output_tokens_cheap: Decimal = Field(default=Decimal("5.00"))
+    llm_cost_per_1m_input_tokens_strong: Decimal = Field(default=Decimal("3.00"))
+    llm_cost_per_1m_output_tokens_strong: Decimal = Field(default=Decimal("15.00"))
+
+    # --- Privacy & retention (Phase 5c, §29, SEC-014) ---
+    chat_message_retention_days: int = Field(default=365)
 
 
 @lru_cache

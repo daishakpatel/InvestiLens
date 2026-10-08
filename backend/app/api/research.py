@@ -15,12 +15,14 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
 from app.api.errors import not_implemented
+from app.billing.budget import check_budget
 from app.config import get_settings
 from app.db import get_db
 from app.models import Company, Job
 from app.repositories import companies as company_repo
 from app.repositories import jobs as job_repo
 from app.repositories import reports as report_repo
+from app.repositories import users as user_repo
 from app.research.prompts import REPORT_PROMPT_VERSION
 from app.schemas.jobs import (
     JobState,
@@ -85,6 +87,11 @@ async def create_research(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, f"company {body.ticker.upper()} not ingested"
         )
+
+    # Fast-fail before enqueueing a job the budget won't allow to finish (NFR-008, ADR-0022).
+    user = user_repo.get_active(db, user_id)
+    if user is not None:
+        check_budget(db, user)
 
     # Single-flight: an idempotency-key match, else any in-flight job for the same company.
     if idempotency_key:

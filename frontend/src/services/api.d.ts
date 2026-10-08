@@ -641,7 +641,8 @@ export interface paths {
         };
         /**
          * Ready
-         * @description Readiness probe (db, redis, queue). Full redis/queue checks land in Phase 5d.
+         * @description Readiness probe: DB and (when in use) Redis are checked for real; `queue` stays a static
+         *     `True` until the Phase 5d worker exists to report its own health.
          */
         get: operations["ready_api_v1_ready_get"];
         put?: never;

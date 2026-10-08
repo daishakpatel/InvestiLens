@@ -23,7 +23,16 @@ from app.auth.ratelimit import LoginThrottle
 from app.config import get_settings
 from app.db import get_db
 from app.main import app
-from app.models import ChatSession, Company, RefreshToken, User
+from app.models import (
+    Alert,
+    ChatSession,
+    Company,
+    Job,
+    RefreshToken,
+    ResearchReport,
+    User,
+    Watchlist,
+)
 
 _P = "/api/v1"
 _PW = "correct horse battery staple"
@@ -91,6 +100,14 @@ def test_password_and_refresh_tokens_are_hashed(client: TestClient, session: Ses
     assert user is not None and user.password_hash.startswith("$argon2id$")  # AUTH-001
     token = session.scalar(select(RefreshToken).where(RefreshToken.user_id == user.id))
     assert token is not None and len(token.token_hash) == 64 and _PW not in token.token_hash
+
+
+def test_registration_sets_default_ai_budget(client: TestClient, session: Session) -> None:
+    """NFR-008/ADR-0022: a new user gets a real monthly AI budget, not an unenforced NULL."""
+    _register_and_login(client, "budgeted@example.com")
+    user = session.scalar(select(User).where(User.email == "budgeted@example.com"))
+    assert user is not None
+    assert user.ai_budget_month_usd == get_settings().default_ai_budget_month_usd
 
 
 def test_refresh_reuse_revokes_family(client: TestClient, session: Session) -> None:
@@ -177,6 +194,58 @@ def test_delete_me_soft_deletes(client: TestClient, session: Session) -> None:
         ).status_code
         == 401
     )
+
+
+def test_hard_delete_cascades_but_keeps_public_reports(
+    client: TestClient, session: Session
+) -> None:
+    """SEC-014/LGL-007: the retention-job path must remove all of a user's owned data, but a
+    research report they generated stays (public per ADR-0006) with its `user_id` nulled, not
+    deleted — and the same for a background job's `created_by`."""
+    access = _register_and_login(client, "purge@example.com")
+    user = session.scalar(select(User).where(User.email == "purge@example.com"))
+    assert user is not None
+    company = session.scalar(select(Company).where(Company.ticker == "TST"))
+    if company is None:
+        company = Company(ticker="TST", cik="0000000012", name="Test Corp")
+        session.add(company)
+        session.flush()
+
+    chat = ChatSession(user_id=user.id, company_id=company.id)
+    watchlist = Watchlist(user_id=user.id, name="Mine")
+    alert = Alert(user_id=user.id, company_id=company.id, alert_type="new_10k")
+    report = ResearchReport(company_id=company.id, user_id=user.id, status="complete")
+    job = Job(job_type="research_report", params={}, created_by=user.id)
+    session.add_all([chat, watchlist, alert, report, job])
+    session.flush()
+    report_id, job_id = report.id, job.id
+    refresh_token_exists = (
+        session.scalar(select(RefreshToken).where(RefreshToken.user_id == user.id)) is not None
+    )
+    assert refresh_token_exists, "login should have issued a refresh token"
+
+    chat_id, watchlist_id, alert_id, user_id = chat.id, watchlist.id, alert.id, user.id
+    assert service.hard_delete_user(session, user.id)
+    session.flush()
+    # The DB-level ON DELETE CASCADE removed these rows without the ORM's unit-of-work knowing,
+    # so query fresh by id (bypassing the stale identity map) rather than `.get()` the old objects.
+    session.expunge_all()
+
+    assert session.scalar(select(User).where(User.id == user_id)) is None
+    assert session.scalar(select(ChatSession).where(ChatSession.id == chat_id)) is None
+    assert session.scalar(select(Watchlist).where(Watchlist.id == watchlist_id)) is None
+    assert session.scalar(select(Alert).where(Alert.id == alert_id)) is None
+    assert session.scalar(select(RefreshToken).where(RefreshToken.user_id == user_id)) is None
+
+    kept_report = session.scalar(select(ResearchReport).where(ResearchReport.id == report_id))
+    assert kept_report is not None and kept_report.user_id is None  # public report survives
+
+    kept_job = session.scalar(select(Job).where(Job.id == job_id))
+    assert kept_job is not None and kept_job.created_by is None
+
+    # The access token minted before deletion no longer resolves to anyone.
+    headers = {"Authorization": f"Bearer {access}"}
+    assert client.get(f"{_P}/auth/me", headers=headers).status_code == 401
 
 
 def test_email_verification_and_password_reset(client: TestClient, session: Session) -> None:

@@ -21,6 +21,7 @@ from app.ingestion.sec.poller import find_new_accessions
 from app.models import (
     Company,
     CompanyIdentifier,
+    DataFreshness,
     Document,
     Filing,
     FinancialFact,
@@ -65,6 +66,18 @@ def test_ingest_populates_all_tables(session: Session, storage: FilesystemObject
     counts = ingest_company(session, "NVDA", sec=MockSecSource(), storage=storage)
     assert counts.filings_ingested == 3
     assert counts.facts > 1000 and counts.dead_letters == 0
+
+    # OBS-002/§28.2: a successful ingest must leave data_freshness fresh — this was a real gap
+    # found in the Phase 5c audit (unlike prices/news, SEC ingestion never wrote data_freshness
+    # at all, so the API could never tell a healthy company from one that never ingested).
+    company = session.scalars(select(Company)).one()
+    freshness = session.scalar(
+        select(DataFreshness).where(
+            DataFreshness.company_id == company.id, DataFreshness.source == "sec"
+        )
+    )
+    assert freshness is not None and freshness.status == "fresh"
+    assert freshness.last_success_at is not None
 
     assert _count(session, Company) == 1
     assert _count(session, CompanyIdentifier) == 2  # ticker + cik
@@ -123,6 +136,40 @@ def test_partial_failure_is_dead_lettered(
 def test_unknown_ticker_raises(session: Session, storage: FilesystemObjectStorage) -> None:
     with pytest.raises(ValueError, match="unknown ticker"):
         ingest_company(session, "ZZZZ", sec=MockSecSource(), storage=storage)
+
+
+class _OutageSecSource(MockSecSource):
+    """Simulates SEC EDGAR being unreachable (HardenedHttpClient exhausting retries) for a known
+    company — distinct from the unknown-ticker case above, which is a client error, not an
+    outage."""
+
+    def list_filings(self, cik: str) -> Sequence[FilingRef]:
+        raise RuntimeError("simulated SEC EDGAR outage")
+
+
+def test_provider_outage_degrades_without_crashing(
+    session: Session, storage: FilesystemObjectStorage
+) -> None:
+    """§28.2 'SEC unavailable': a provider outage must never crash the caller or leave the run
+    stuck — it records a failed run, dead-letters, and marks data_freshness failed so the API
+    can show 'previously cached data' instead of silently looking healthy forever."""
+    counts = ingest_company(session, "NVDA", sec=_OutageSecSource(), storage=storage)
+    assert counts.filings_ingested == 0  # degraded, not crashed
+
+    company = session.scalars(select(Company)).one()
+    run = session.scalars(select(IngestionRun).where(IngestionRun.company_id == company.id)).one()
+    assert run.status == "failed"
+
+    freshness = session.scalar(
+        select(DataFreshness).where(
+            DataFreshness.company_id == company.id, DataFreshness.source == "sec"
+        )
+    )
+    assert freshness is not None and freshness.status == "failed"
+    assert freshness.last_success_at is None
+
+    dead = session.scalars(select(IngestionDeadLetter)).all()
+    assert any("outage" in (d.error or "") for d in dead)
 
 
 def test_poller_detects_new_then_none(session: Session, storage: FilesystemObjectStorage) -> None:
