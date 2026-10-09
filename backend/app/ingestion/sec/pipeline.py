@@ -17,6 +17,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.cache.cache import invalidate_company
 from app.config import Settings, get_settings
 from app.providers.sec import get_sec_source
 from app.providers.sec.base import CompanyRef, FilingRef, SecSource
@@ -277,6 +278,9 @@ def ingest_company(
         last_attempt_at=attempt_at,
     )
     finish_run(session, run, status=status, counts=counts.as_dict())
+    # `filing.ingested` event → drop this company's cached data so the API serves fresh (CACHE-002).
+    if counts.filings_ingested or counts.facts:
+        invalidate_company(ref.ticker)
     log_event(logger, logging.INFO, "sec.company.ingested", ticker=ref.ticker, **counts.as_dict())
     return counts
 

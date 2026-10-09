@@ -1,0 +1,116 @@
+# Render Blueprint (Phase 5d, ADR-0023). One-platform deploy: managed Postgres+pgvector, managed
+# Redis, the API web service, three queue workers, and the Beat scheduler — plus the frontend as
+# a Render static site. `render.yaml` is read on Blueprint sync; secrets (sync:false) are set once
+# in the dashboard. See docs/costs.md for the itemized monthly estimate.
+#
+# NOTE (ADR-0007): the public demo runs PROVIDER_MODE=mock so no Tiingo data is shown to others
+# (the free license forbids it); SEC filings/financials are real (keyless). DEMO_MODE caps AI
+# spend. Flip PROVIDER_MODE=live + add keys only under a license that permits public display.
+
+databases:
+  - name: investilens-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    # pgvector ships with Render Postgres 16; enable it once with `CREATE EXTENSION vector;`
+    # (the initial Alembic migration also issues it).
+
+services:
+  - type: redis
+    name: investilens-redis
+    plan: starter
+    maxmemoryPolicy: noeviction # broker must not drop queued tasks
+    ipAllowList: [] # internal only
+
+  - type: web
+    name: investilens-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/v1/health
+    # Migrations run as a deploy step before the new version takes traffic (spec §31.2).
+    preDeployCommand: alembic upgrade head
+    envVars: &backend_env
+      - key: DATABASE_URL
+        fromDatabase: {name: investilens-db, property: connectionString}
+      - key: REDIS_URL
+        fromService: {name: investilens-redis, type: redis, property: connectionString}
+      - key: CELERY_BROKER_URL
+        fromService: {name: investilens-redis, type: redis, property: connectionString}
+      - key: CELERY_RESULT_BACKEND
+        fromService: {name: investilens-redis, type: redis, property: connectionString}
+      - key: PROVIDER_MODE
+        value: mock # ADR-0007 public-display block → mock prices/news in the demo
+      - key: BACKGROUND_JOBS_ENABLED
+        value: "true"
+      - key: CACHE_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_BACKEND
+        value: redis
+      - key: HSTS_ENABLED
+        value: "true"
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEFAULT_AI_BUDGET_MONTH_USD
+        value: "0.50" # restrictive demo quota (scope #12)
+      - key: CORS_ALLOWED_ORIGINS
+        value: '["https://investilens.vercel.app"]'
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+
+  - type: worker
+    name: investilens-worker-interactive
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: celery -A app.tasks.celery_app worker -Q interactive -c 4 -n interactive@%h
+    envVars: *backend_env
+
+  - type: worker
+    name: investilens-worker-ingestion
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: celery -A app.tasks.celery_app worker -Q ingestion -c 2 -n ingestion@%h
+    envVars: *backend_env
+
+  - type: worker
+    name: investilens-worker-batch
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: celery -A app.tasks.celery_app worker -Q batch -c 1 -n batch@%h
+    envVars: *backend_env
+
+  - type: worker
+    name: investilens-beat
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: celery -A app.tasks.celery_app beat --loglevel=info
+    envVars: *backend_env
+
+  - type: web
+    name: investilens-frontend
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://investilens-api.onrender.com/api/v1
+      - key: VITE_DEMO_MODE
+        value: "true"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

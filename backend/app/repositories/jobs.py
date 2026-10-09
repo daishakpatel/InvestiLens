@@ -45,6 +45,42 @@ def get_job(session: Session, job_id: int) -> Job | None:
     return session.get(Job, job_id)
 
 
+def mark_running(session: Session, job: Job) -> None:
+    """Transition a job to running and bump its attempt counter (JOB-002)."""
+    job.status = "running"
+    job.attempts = (job.attempts or 0) + 1
+    if job.started_at is None:
+        job.started_at = datetime.now(UTC)
+    session.flush()
+
+
+def set_progress(session: Session, job: Job, *, progress: int, stage: str | None = None) -> None:
+    """Record progress (0-100) and an optional stage label as a progress/stage event (JOB-002)."""
+    job.progress = max(0, min(100, progress))
+    if stage is not None:
+        params = dict(job.params or {})
+        params["stage"] = stage
+        job.params = params
+    session.flush()
+
+
+def mark_done(session: Session, job: Job, *, result_ref: str | None = None) -> None:
+    job.status = "done"
+    job.progress = 100
+    job.ended_at = datetime.now(UTC)
+    if result_ref is not None:
+        job.result_ref = result_ref
+    session.flush()
+
+
+def mark_failed(session: Session, job: Job, *, error: str) -> None:
+    """Terminal failure after retries are exhausted — the job row is the dead-letter record."""
+    job.status = "failed"
+    job.error = error[:2000]
+    job.ended_at = datetime.now(UTC)
+    session.flush()
+
+
 def find_by_idempotency_key(session: Session, *, job_type: str, key: str) -> Job | None:
     """An existing job created under this idempotency key (API-003 single-flight)."""
     return session.scalar(

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin
 from app.api.pagination import NEXT_CURSOR_HEADER, clamp_limit, decode_cursor, encode_cursor
+from app.config import get_settings
 from app.db import get_db
 from app.repositories import companies as company_repo
 from app.repositories import eval_runs as eval_repo
@@ -67,10 +68,14 @@ async def list_eval_runs(
 
 @router.post("/companies/{ticker}/refresh", status_code=202, response_model=RefreshAccepted)
 async def refresh_company(ticker: str, db: Session = _DB, _: int = _ADMIN) -> RefreshAccepted:
-    """Enqueue a full re-ingest for a company; the Phase 5d worker runs it (ADR-0017)."""
+    """Enqueue a full re-ingest for a company; the interactive worker runs it (ADR-0017/0024)."""
     company = company_repo.get_by_ticker(db, ticker)
     if company is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"company {ticker.upper()} not ingested")
     job = job_repo.create_job(db, job_type="refresh", params={"ticker": company.ticker})
     db.commit()
+    if get_settings().background_jobs_enabled:
+        from app.tasks.ingestion import refresh_company_data
+
+        refresh_company_data.delay(company.ticker)
     return RefreshAccepted(ticker=company.ticker, job_id=str(job.id), status="queued")

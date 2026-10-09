@@ -93,12 +93,23 @@ QUEUE_DEPTH = Gauge(
     "Number of jobs currently queued.",
     registry=REGISTRY,
 )
-CACHE_HIT_RATIO = Gauge(
-    "cache_hit_ratio",
-    "Placeholder: no cache layer exists yet (RAG-050 semantic cache deferred); always NaN.",
+CACHE_ACCESS = Counter(
+    "cache_access_total",
+    "Cache accesses by key family and result (hit-rate per family = hit / (hit+miss), CACHE-004).",
+    ["family", "result"],
     registry=REGISTRY,
 )
-CACHE_HIT_RATIO.set(float("nan"))
+CACHE_HIT_RATIO = Gauge(
+    "cache_hit_ratio",
+    "Overall cache hit ratio across all families (computed from cache_access_total each scrape).",
+    registry=REGISTRY,
+)
+CACHE_HIT_RATIO.set(float("nan"))  # NaN until the first access is recorded (no cache traffic yet)
+
+
+def record_cache_access(*, family: str, hit: bool) -> None:
+    """Hooked from the cache layer on every get (CACHE-004)."""
+    CACHE_ACCESS.labels(family=family, result="hit" if hit else "miss").inc()
 
 
 def record_llm_call(*, purpose: str, model: str, cost_usd: Decimal, latency_ms: int) -> None:
@@ -139,6 +150,18 @@ def refresh_gauges(session: Session) -> None:
         INGESTION_FAILURE_RATE.set(
             sum(r.status == "failed" for r in terminal_runs) / len(terminal_runs)
         )
+
+    hits = misses = 0.0
+    for metric in CACHE_ACCESS.collect():
+        for sample in metric.samples:
+            if sample.name != "cache_access_total":
+                continue
+            if sample.labels.get("result") == "hit":
+                hits += sample.value
+            elif sample.labels.get("result") == "miss":
+                misses += sample.value
+    if hits + misses > 0:
+        CACHE_HIT_RATIO.set(hits / (hits + misses))
 
 
 router = APIRouter(tags=["Observability"])

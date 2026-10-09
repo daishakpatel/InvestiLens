@@ -75,11 +75,22 @@ Prerequisites: Python 3.12, [uv](https://docs.astral.sh/uv/), Node 22+, Docker.
 ```bash
 cp .env.example .env    # fill in POSTGRES_PASSWORD and any API keys you have
 make install            # backend deps (uv) + frontend deps (npm)
-make up                 # Postgres + Redis
+make up                 # full stack: Postgres, Redis, MinIO, API, workers, beat, frontend
+make seed               # mock-ingest the 3 seed companies + pre-generate demo reports
 make check              # lint, format, type-check, tests
 ```
 
 API keys are optional for development. Every external provider has an offline mock (Phase 0d).
+
+### Background jobs & deployment
+
+Celery runs the ingestion pipeline, EDGAR poller, alert dispatch, and report generation across
+three queues (`interactive`/`ingestion`/`batch`) with a Beat schedule (`app/tasks/`, ADR-0024).
+Locally: `make worker` + `make beat` (or the full `docker compose` stack). Redis backs the broker,
+the read-through cache (§25.3), and rate limiting (§25.4). Deployment targets Render via
+[`render.yaml`](render.yaml) (ADR-0023); see [`docs/costs.md`](docs/costs.md) for the itemized
+estimate and [`docs/observability.md`](docs/observability.md) for the ops runbook. Back up /
+restore the DB with `make backup` / `scripts/restore_db.sh`.
 
 ## Evaluation & quality
 

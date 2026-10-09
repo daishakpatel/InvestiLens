@@ -1746,6 +1746,65 @@
         "title": "NewsResponse",
         "type": "object"
       },
+      "Notification": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "channel": {
+            "enum": [
+              "email",
+              "in_app"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "company_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Id"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "read": {
+            "default": false,
+            "title": "Read",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "channel",
+          "created_at"
+        ],
+        "title": "Notification",
+        "type": "object"
+      },
       "OwnershipHolding": {
         "properties": {
           "change_shares": {
@@ -2943,7 +3002,7 @@
   "paths": {
     "/api/v1/admin/companies/{ticker}/refresh": {
       "post": {
-        "description": "Enqueue a full re-ingest for a company; the Phase 5d worker runs it (ADR-0017).",
+        "description": "Enqueue a full re-ingest for a company; the interactive worker runs it (ADR-0017/0024).",
         "operationId": "refresh_company_api_v1_admin_companies__ticker__refresh_post",
         "parameters": [
           {
@@ -4021,6 +4080,7 @@
     },
     "/api/v1/companies/{ticker}": {
       "get": {
+        "description": "Company profile (spec \u00a725.3's cache example). Read-through Redis cache when enabled; the\nloader is the DB read, so a cache miss or outage is transparent (CACHE-005).",
         "operationId": "get_company_api_v1_companies__ticker__get",
         "parameters": [
           {
@@ -4964,6 +5024,145 @@
         "tags": [
           "Health",
           "Meta"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "description": "The current user's in-app notifications, newest first (from the alert-dispatch job).",
+        "operationId": "list_notifications_api_v1_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  },
+                  "title": "Response List Notifications Api V1 Notifications Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Notifications",
+        "tags": [
+          "Watchlist & Alerts",
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/read": {
+      "post": {
+        "operationId": "mark_notification_read_api_v1_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Notification Read",
+        "tags": [
+          "Watchlist & Alerts",
+          "Notifications"
         ]
       }
     },

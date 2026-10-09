@@ -93,3 +93,27 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build the deploy images (spec §31.2 "build images") so a Dockerfile break fails CI, not the
+  # deploy. No push — publishing happens on Render's own build from the blueprint.
+  build-images:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile -t investilens-api:ci .
+      - name: Build frontend image
+        run: docker build -f frontend/Dockerfile -t investilens-frontend:ci frontend
+      # Scan the built backend image for OS/library CVEs (SEC-009 container scanning).
+      - name: Scan backend image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: investilens-api:ci
+          severity: HIGH,CRITICAL
+          exit-code: "0"  # report-only for now; flip to "1" to gate once a baseline is clean
+
+  # The §18.4 eval smoke gate runs as the `test_eval_runner` integration test inside the `backend`
+  # job (it seeds a company, runs the smoke set, and fails on a deliberate citation regression —
+  # ADR-0020). Kept there rather than as a bespoke step so it reuses the Postgres service and needs
+  # no live keys. The nightly full eval runs via the Celery `run_eval_suite` beat task (Phase 5b).

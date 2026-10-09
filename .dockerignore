@@ -1,0 +1,17 @@
+# Build context is the repo root for the backend image (it needs infrastructure/migrations).
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/htmlcov/
+**/node_modules/
+frontend/dist/
+.storage/
+backups/
+.git/
+.env
+.env.*
+!.env.example

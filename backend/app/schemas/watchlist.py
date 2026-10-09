@@ -33,3 +33,13 @@ class AlertCreate(BaseModel):
     ticker: str
     alert_type: Literal["new_10k", "new_10q", "new_8k", "price_move", "news_category"]
     channel: Literal["email", "in_app"] = "in_app"
+
+
+class Notification(BaseModel):
+    id: str
+    title: str
+    body: str | None = None
+    channel: Literal["email", "in_app"]
+    company_id: str | None = None
+    read: bool = False
+    created_at: str

@@ -163,6 +163,60 @@ class Settings(BaseSettings):
     # --- Privacy & retention (Phase 5c, §29, SEC-014) ---
     chat_message_retention_days: int = Field(default=365)
 
+    # --- Background jobs: Celery (Phase 5d, §25.1-2, JOB-001..006, ADR-0024) ---
+    # Broker + result backend both ride on Redis (one dependency). Default to the same local
+    # Redis as the cache/rate-limiter; a real deploy points these at managed Redis.
+    celery_broker_url: str = Field(default="redis://localhost:6379/1")
+    celery_result_backend: str = Field(default="redis://localhost:6379/2")
+    # Per-queue soft/hard task time limits (JOB-004). Report generation is the long pole.
+    celery_task_soft_time_limit_s: int = Field(default=600)
+    celery_task_time_limit_s: int = Field(default=660)
+    celery_max_retries: int = Field(default=3)  # JOB-001 max attempts per task
+    # Off in tests/CI/local-without-worker: `POST /research` and admin refresh create the `jobs`
+    # row exactly as Phase 4a did, without dispatching to a broker. On in a real deploy (a worker
+    # is running) so the enqueued job actually executes. Mirrors the cache/rate-limit seams.
+    background_jobs_enabled: bool = Field(default=False)
+    # EDGAR new-filing poll cadence for watched/seed companies (≤10 min target, §21.3).
+    edgar_poll_interval_minutes: int = Field(default=10)
+    news_poll_interval_minutes: int = Field(default=15)
+
+    # --- Redis cache (Phase 5d, §25.3, CACHE-001..005, ADR-0024) ---
+    cache_enabled: bool = Field(default=False)  # off in tests/CI; on in a real deploy
+    cache_key_version: str = Field(default="v1")  # bump to invalidate everything (CACHE-001)
+    cache_ttl_company_seconds: int = Field(default=86400)  # metadata ~24h
+    cache_ttl_prices_seconds: int = Field(default=3600)  # intra-day; EOD refresh invalidates
+    cache_ttl_metrics_seconds: int = Field(default=86400)  # until data_version changes
+    cache_ttl_news_seconds: int = Field(default=600)  # 5-15 min window
+    cache_ttl_research_seconds: int = Field(default=86400)  # popular reports
+    cache_singleflight_lock_seconds: int = Field(default=10)  # stampede lock TTL (CACHE-003)
+
+    # --- Notifications / alert dispatch (Phase 5d, §26.2, ADR-0025) ---
+    # "log" (default — no email provider configured; delivery is logged + persisted in-app) or
+    # "smtp" (real email via the SMTP_* settings below).
+    notification_email_backend: Literal["log", "smtp"] = Field(default="log")
+    smtp_host: str = Field(default="")
+    smtp_port: int = Field(default=587)
+    smtp_user: str = Field(default="")
+    smtp_password: str = Field(default="")
+    smtp_from: str = Field(default="alerts@investilens.example")
+    # Price-move alert threshold (fractional daily move that trips a `price_move` alert).
+    alert_price_move_threshold: float = Field(default=0.05)
+
+    # --- Object storage (Phase 5d, ADR-0012) ---
+    # "filesystem" (MVP default, storage_dir) or "s3" (MinIO locally / S3 in prod, via the
+    # object_storage_* settings). The ObjectStorage interface is unchanged either way.
+    object_storage_backend: Literal["filesystem", "s3"] = Field(default="filesystem")
+    object_storage_endpoint: str = Field(default="localhost:9000")  # MinIO; omit scheme
+    object_storage_access_key: str = Field(default="")
+    object_storage_secret_key: str = Field(default="")
+    object_storage_bucket: str = Field(default="investilens-filings")
+    object_storage_secure: bool = Field(default=False)  # True for real S3/https
+
+    # --- Demo mode (Phase 5d, scope #12) ---
+    # When on: anonymous visitors are read-only, AI generation is disabled (quota 0), and only
+    # pre-generated seed-company reports are served. The resume-link configuration.
+    demo_mode: bool = Field(default=False)
+
 
 @lru_cache
 def get_settings() -> Settings:

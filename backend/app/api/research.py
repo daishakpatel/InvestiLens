@@ -124,6 +124,12 @@ async def create_research(
         result_ref=str(report.id),
     )
     db.commit()
+    # Dispatch to the interactive worker when background jobs are enabled (ADR-0024); otherwise
+    # the row stays `queued` exactly as in Phase 4a (no broker in tests/CI).
+    if settings.background_jobs_enabled:
+        from app.tasks.interactive import generate_research_report
+
+        generate_research_report.delay(company.ticker, job.id, user_id)
     return _accepted(job)
 
 

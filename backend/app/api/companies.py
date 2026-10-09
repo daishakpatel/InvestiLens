@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.api._support import freshness_for, metric_to_result
 from app.api.pagination import NEXT_CURSOR_HEADER, clamp_limit, decode_cursor, encode_cursor
+from app.cache import cache
 from app.db import get_db
 from app.models import Company as CompanyModel
 from app.repositories import companies as company_repo
@@ -118,11 +119,18 @@ async def search_companies(
 
 @router.get("/{ticker}", response_model=CompanyResponse)
 async def get_company(ticker: str, db: Session = _DB) -> CompanyResponse:
-    company = _resolve(db, ticker)
-    return CompanyResponse(
-        company=_to_company(company),
-        freshness=freshness_for(db, company_id=company.id, source="sec"),
-    )
+    """Company profile (spec §25.3's cache example). Read-through Redis cache when enabled; the
+    loader is the DB read, so a cache miss or outage is transparent (CACHE-005)."""
+
+    def _load() -> dict[str, object]:
+        company = _resolve(db, ticker)
+        return CompanyResponse(
+            company=_to_company(company),
+            freshness=freshness_for(db, company_id=company.id, source="sec"),
+        ).model_dump(mode="json")
+
+    payload = cache.get_or_load("company", [ticker.upper()], loader=_load)
+    return CompanyResponse.model_validate(payload)
 
 
 @router.get("/{ticker}/financials", response_model=FinancialsResponse)

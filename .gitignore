@@ -29,3 +29,7 @@ coverage/
 
 # Local object storage (raw filings; ADR-0012)
 .storage/
+
+# Local DB backups (scripts/backup_db.sh, make backup)
+backups/
+celerybeat-schedule*

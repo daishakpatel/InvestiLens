@@ -1,0 +1,38 @@
+# Deploy to Render on merge to main (Phase 5d, scope #9, ADR-0023).
+#
+# Render auto-deploys from the blueprint on push, but this workflow gates the deploy on CI passing
+# and triggers it explicitly via a deploy hook, so a red build never ships. It is a no-op until
+# the RENDER_DEPLOY_HOOK_* secrets are set in the repo (the deploy can't run from the sandbox;
+# this is the wiring you enable when you connect the Render Blueprint — see docs/costs.md).
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy if CI succeeded (spec §31.2: deploy on green, migrations run as a deploy step
+    # via render.yaml's preDeployCommand).
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Trigger Render deploy (api + workers + beat via the blueprint)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL not set — skipping (configure it to enable auto-deploy)."
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK"
+          echo "Render deploy triggered."

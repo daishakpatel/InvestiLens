@@ -144,6 +144,25 @@ class ChatMessage(Base, TimestampMixin):
     feedback_reason: Mapped[str | None] = mapped_column(Text)
 
 
+class Notification(Base, TimestampMixin):
+    """An in-app notification delivered to a user by the alert-dispatch job (§26.2, Phase 5d).
+
+    Email delivery (when configured) is a side effect of dispatch; this row is the durable in-app
+    record the user can read via `GET /notifications`. `alert_id` is nullable so a notification
+    survives deletion of the rule that produced it (SET NULL)."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[intpk]
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    alert_id: Mapped[int | None] = mapped_column(ForeignKey("alerts.id", ondelete="SET NULL"))
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="SET NULL"))
+    title: Mapped[str] = mapped_column(String(256))
+    body: Mapped[str | None] = mapped_column(Text)
+    channel: Mapped[str] = mapped_column(String(16), default="in_app")  # in_app|email
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class ReportFeedback(Base, TimestampMixin):
     """User feedback on a report or a specific claim."""
 

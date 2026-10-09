@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Refresh Company
-         * @description Enqueue a full re-ingest for a company; the Phase 5d worker runs it (ADR-0017).
+         * @description Enqueue a full re-ingest for a company; the interactive worker runs it (ADR-0017/0024).
          */
         post: operations["refresh_company_api_v1_admin_companies__ticker__refresh_post"];
         delete?: never;
@@ -348,7 +348,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Company */
+        /**
+         * Get Company
+         * @description Company profile (spec §25.3's cache example). Read-through Redis cache when enabled; the
+         *     loader is the DB read, so a cache miss or outage is transparent (CACHE-005).
+         */
         get: operations["get_company_api_v1_companies__ticker__get"];
         put?: never;
         post?: never;
@@ -626,6 +630,43 @@ export interface paths {
         get: operations["data_freshness_api_v1_meta_data_freshness__ticker__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description The current user's in-app notifications, newest first (from the alert-dispatch job).
+         */
+        get: operations["list_notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Notification Read */
+        post: operations["mark_notification_read_api_v1_notifications__notification_id__read_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1411,6 +1452,29 @@ export interface components {
             next_cursor?: string | null;
             /** Ticker */
             ticker: string;
+        };
+        /** Notification */
+        Notification: {
+            /** Body */
+            body?: string | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "in_app";
+            /** Company Id */
+            company_id?: string | null;
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: string;
+            /**
+             * Read
+             * @default false
+             */
+            read: boolean;
+            /** Title */
+            title: string;
         };
         /** OwnershipHolding */
         OwnershipHolding: {
@@ -2992,6 +3056,71 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DataFreshnessResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: {
+                limit?: number | null;
+                cursor?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_notification_read_api_v1_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

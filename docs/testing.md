@@ -75,6 +75,25 @@ the default run.
   outage degrades (dead-letter + `data_freshness` failed + run failed) instead of crashing —
   closes a gap where SEC ingestion never wrote `data_freshness` at all.
 
+### Background jobs, cache & alerts (Phase 5d, §25-26, ADR-0024/0025)
+
+- **Integration — jobs** (`integration/test_tasks.py`): the `jobs`-row lifecycle (running → done
+  with progress, JOB-002), terminal failure → `failed` dead-letter row vs. a retriable attempt
+  that stays `running` (JOB-001), and real Celery tasks run in eager mode on both the `batch` and
+  `ingestion` queues, idempotent under a repeat run (JOB-003/005).
+- **Unit — cache** (`unit/test_cache.py`): versioned/namespaced keys, miss→hit, company
+  invalidation, and the headline guarantee — **Redis down falls back to the DB loader, never
+  failing the request** (CACHE-005), via a raising fake client.
+- **Integration — alert dispatch** (`integration/test_alert_dispatch.py`): the DoD scenario — a
+  simulated filing ingestion triggers a notification; plus price-move dispatch, email-channel
+  delivery through a capturing backend, idempotency (watermark advance), and the
+  `GET /notifications` read path.
+- **Verified manually (infra-bound, not in CI):** a real Celery worker boots against Redis and
+  registers all 14 tasks; a broker round-trip (`purge_chat_history.delay()`) executes and records
+  a `done` job row (local macOS needs `--pool solo`; Linux uses prefork). A backup→restore
+  round-trip through `pg_dump`/`pg_restore` reproduced all row counts exactly (companies/filings/
+  facts) into a fresh database — the DoD's "backup restore actually tested once".
+
 ### Coverage gate (NFR-013)
 
 `make coverage` runs the suite once under coverage and enforces two hard thresholds:
