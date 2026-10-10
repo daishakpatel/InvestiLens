@@ -8,6 +8,7 @@ import type {
   ChatResponse,
   CompanyResponse,
   CompanySearchResult,
+  ComparisonResponse,
   DataFreshnessResponse,
   FilingSectionsResponse,
   FilingSummary,
@@ -15,6 +16,8 @@ import type {
   JobState,
   MetricResult,
   NewsResponse,
+  PeerSuggestionsResponse,
+  PortfolioAnalysis,
   PricesResponse,
   ResearchAccepted,
   ResearchReportEnvelope,
@@ -22,6 +25,7 @@ import type {
   TokenResponse,
   UserProfile,
   ValuationResponse,
+  VerifiedOutput,
 } from "../types";
 
 const freshness = z.object({
@@ -251,6 +255,143 @@ const profile = z.object({
   email_verified: z.boolean(),
 });
 
+// --- Phase 6a: comparison & portfolio (Decimals arrive as strings) ---
+const verifiedClaim = z
+  .object({ text: z.string(), status: z.string(), citation_numbers: z.array(z.number()).default([]) })
+  .passthrough();
+const verifiedCitation = z
+  .object({ number: z.number(), source_id: z.string(), tier: z.number().nullish() })
+  .passthrough();
+const verifiedOutput = z.object({
+  rendered_text: z.string(),
+  claims: z.array(verifiedClaim).default([]),
+  citations: z.array(verifiedCitation).default([]),
+  sufficient: z.boolean().default(true),
+});
+
+const comparisonCell = z.object({
+  ticker: z.string(),
+  result: metricResult,
+  percentile: z.string().nullish(),
+});
+const comparisonCompany = z.object({
+  ticker: z.string(),
+  name: z.string(),
+  sic_code: z.string().nullish(),
+  sector: z.string().nullish(),
+  fiscal_year_end: z.string().nullish(),
+  fiscal_period: z.string().nullish(),
+  calendar_year: z.number().nullish(),
+  period_end: z.string().nullish(),
+});
+const comparisonResponse = z.object({
+  calendar_year: z.number().nullish(),
+  companies: z.array(comparisonCompany).default([]),
+  metrics: z
+    .array(
+      z.object({
+        metric_name: z.string(),
+        unit: z.string(),
+        cells: z.array(comparisonCell).default([]),
+      }),
+    )
+    .default([]),
+  commentary: verifiedOutput.nullish(),
+  notes: z.array(z.string()).default([]),
+  disclaimer: z.string(),
+});
+
+const peerSuggestion = z.object({
+  ticker: z.string(),
+  name: z.string(),
+  sic_code: z.string().nullish(),
+  sector: z.string().nullish(),
+  industry: z.string().nullish(),
+  market_cap: metricResult.nullish(),
+  reason: z.string(),
+});
+const peerSuggestions = z.object({
+  target: z.string(),
+  peers: z.array(peerSuggestion).default([]),
+  notes: z.array(z.string()).default([]),
+});
+
+const weightedMetric = z.object({
+  metric_name: z.string(),
+  unit: z.string(),
+  value: z.string().nullable(),
+  coverage: z.string(),
+  warnings: z.array(z.string()).default([]),
+});
+const riskTheme = z.object({
+  category: z.string(),
+  holding_count: z.number(),
+  portfolio_weight: z.string(),
+  contributions: z
+    .array(
+      z.object({
+        ticker: z.string(),
+        description: z.string(),
+        source_ids: z.array(z.string()).default([]),
+      }),
+    )
+    .default([]),
+});
+const riskStats = z.object({
+  window_start: z.string().nullish(),
+  window_end: z.string().nullish(),
+  holding_volatility: z
+    .array(
+      z.object({
+        ticker: z.string(),
+        annualized_volatility: z.string().nullish(),
+        observations: z.number(),
+      }),
+    )
+    .default([]),
+  correlation: z
+    .array(z.object({ ticker: z.string(), correlations: z.record(z.string(), z.string()) }))
+    .default([]),
+  portfolio_volatility: z.string().nullish(),
+  notes: z.array(z.string()).default([]),
+});
+const portfolioAnalysis = z.object({
+  holdings: z
+    .array(
+      z.object({
+        ticker: z.string(),
+        name: z.string(),
+        weight: z.string(),
+        sector: z.string().nullish(),
+      }),
+    )
+    .default([]),
+  weighted_metrics: z.array(weightedMetric).default([]),
+  sector_exposure: z.array(z.object({ sector: z.string(), weight: z.string() })).default([]),
+  concentration: z
+    .object({
+      hhi: z.string(),
+      effective_holdings: z.string(),
+      top_holding: z.string().nullish(),
+      top_weight: z.string().nullish(),
+    })
+    .nullish(),
+  risk_stats: riskStats.nullish(),
+  risk_themes: z.array(riskTheme).default([]),
+  holdings_data: z
+    .array(
+      z.object({
+        ticker: z.string(),
+        sector: z.string().nullish(),
+        metrics: z.record(z.string(), metricResult).default({}),
+        annualized_volatility: z.string().nullish(),
+      }),
+    )
+    .default([]),
+  notes: z.array(z.string()).default([]),
+  disclaimer: z.string(),
+});
+
 export const parse = {
   companyResponse: (d: unknown): CompanyResponse =>
     z.object({ company, freshness }).parse(d) as CompanyResponse,
@@ -275,4 +416,9 @@ export const parse = {
   chatResponse: (d: unknown): ChatResponse => chatResponse.parse(d) as ChatResponse,
   filingSections: (d: unknown): FilingSectionsResponse =>
     filingSections.parse(d) as FilingSectionsResponse,
+  comparison: (d: unknown): ComparisonResponse => comparisonResponse.parse(d) as ComparisonResponse,
+  peers: (d: unknown): PeerSuggestionsResponse =>
+    peerSuggestions.parse(d) as PeerSuggestionsResponse,
+  verifiedOutput: (d: unknown): VerifiedOutput => verifiedOutput.parse(d) as VerifiedOutput,
+  portfolio: (d: unknown): PortfolioAnalysis => portfolioAnalysis.parse(d) as PortfolioAnalysis,
 };

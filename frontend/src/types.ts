@@ -38,9 +38,28 @@ export type ResearchAccepted = Schemas["ResearchAccepted"];
 export type JobState = Schemas["JobState"];
 export type EvidenceLabel = NonNullable<ResearchClaim["confidence_label"]>;
 export type ChatResponse = Schemas["ChatResponse"];
-export type ChatCitation = Schemas["Citation"];
+// Two `Citation` schemas now coexist in the contract (chat's and the citation pipeline's, exposed
+// via /compare/commentary), so FastAPI fully-qualifies both names (Phase 6a).
+export type ChatCitation = Schemas["app__schemas__chat__Citation"];
 export type ChatSession = Schemas["ChatSession"];
 export type ChatMessageDto = Schemas["ChatMessage"];
 export type ToolTraceEntry = Schemas["ToolTraceEntry"];
 export type FilingSectionsResponse = Schemas["FilingSectionsResponse"];
 export type FilingSection = Schemas["FilingSection"];
+
+// --- Phase 6a: company comparison & portfolio analysis (§37.1/§37.2) ---
+export type ComparisonResponse = Schemas["ComparisonResponse"];
+export type ComparisonCompany = Schemas["ComparisonCompany"];
+export type ComparisonMetricRow = Schemas["ComparisonMetricRow"];
+export type ComparisonCell = Schemas["ComparisonCell"];
+export type PeerSuggestionsResponse = Schemas["PeerSuggestionsResponse"];
+export type PeerSuggestion = Schemas["PeerSuggestion"];
+export type VerifiedOutput = Schemas["VerifiedOutput"];
+export type PortfolioAnalysis = Schemas["PortfolioAnalysis"];
+export type NormalizedHolding = Schemas["NormalizedHolding"];
+export type WeightedMetric = Schemas["WeightedMetric"];
+export type SectorExposure = Schemas["SectorExposure"];
+export type Concentration = Schemas["Concentration"];
+export type RiskTheme = Schemas["RiskTheme"];
+export type RiskStats = Schemas["RiskStats"];
+export type HoldingData = Schemas["HoldingData"];

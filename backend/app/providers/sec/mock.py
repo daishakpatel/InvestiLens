@@ -10,7 +10,7 @@ from app.providers.mocks._fixtures import (
     fixture_gzip_bytes,
     load_json,
 )
-from app.providers.sec.base import CompanyRef, FilingRef, SecSource
+from app.providers.sec.base import CompanyMetadata, CompanyRef, FilingRef, SecSource
 
 _CIK_TO_DIR = {"0001045810": "nvda", "0000320193": "aapl", "0000019617": "jpm"}
 
@@ -44,6 +44,19 @@ class MockSecSource(SecSource):
             )
             for f in manifest["filings"]
         ]
+
+    def company_metadata(self, cik: str) -> CompanyMetadata:
+        padded = cik.zfill(10)
+        for row in company_reference().values():
+            if row["cik"] == padded:
+                return CompanyMetadata(
+                    name=row.get("name"),
+                    sic_code=row.get("sic"),
+                    industry=row.get("industry"),
+                    exchange=row.get("exchange"),
+                    fiscal_year_end=row.get("fiscal_year_end"),
+                )
+        return CompanyMetadata()
 
     def companyfacts(self, cik: str) -> dict[str, Any]:
         slug = self._dir(cik)

@@ -176,6 +176,40 @@ def get_stock_history(session: Session, ticker: str, start: date, end: date) -> 
     }
 
 
+def compare_companies(
+    session: Session,
+    tickers: list[str],
+    metrics: list[str] | None = None,
+    period: str | None = None,
+) -> dict[str, Any]:
+    """Deterministic side-by-side comparison (§37.1, the real logic behind the Phase 2c stub).
+
+    Calendarized, percentile-ranked, all in the finance layer — the LLM never computes a number. The
+    multi-company shape is why this lives beside the single-ticker tools rather than reusing
+    `_company_or_raise`.
+    """
+    from app.comparison.engine import build_response, gather  # local import avoids an import cycle
+
+    try:
+        g = gather(session, list(tickers), metrics=metrics, period=period)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    response = build_response(g)
+    source_ids = [
+        row.source_id
+        for company in g.companies
+        for metric_name in g.metric_names
+        if (row := g.selected(company, metric_name)) is not None and row.source_id
+    ]
+    return {
+        "calendar_year": response.calendar_year,
+        "companies": [c.model_dump(mode="json") for c in response.companies],
+        "metrics": [m.model_dump(mode="json") for m in response.metrics],
+        "notes": response.notes,
+        "source_ids": source_ids,
+    }
+
+
 _REGISTRY: dict[str, Callable[..., dict[str, Any]]] = {
     "get_company_info": get_company_info,
     "get_financial_metric": get_financial_metric,
@@ -183,6 +217,7 @@ _REGISTRY: dict[str, Callable[..., dict[str, Any]]] = {
     "calculate_growth": calculate_growth,
     "get_recent_news": get_recent_news,
     "get_stock_history": get_stock_history,
+    "compare_companies": compare_companies,
 }
 
 
@@ -233,6 +268,7 @@ __all__ = [
     "ToolLoopDetected",
     "ToolRunner",
     "calculate_growth",
+    "compare_companies",
     "get_company_info",
     "get_financial_metric",
     "get_metric_series",

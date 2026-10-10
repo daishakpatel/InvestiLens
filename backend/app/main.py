@@ -19,8 +19,10 @@ from app.api import (
     auth,
     chat,
     companies,
+    comparison,
     filings,
     health,
+    portfolio,
     research,
     sources,
     watchlist,
@@ -91,6 +93,8 @@ def create_app() -> FastAPI:
         auth,
         watchlist,
         admin,
+        comparison,
+        portfolio,
     ):
         app.include_router(module.router, prefix=API_V1_PREFIX)
     app.include_router(metrics_module.router)  # root-level /metrics (Prometheus scrape convention)

@@ -86,3 +86,14 @@ def public_table_names(engine: Engine) -> set[str]:
             )
         )
         return {r[0] for r in rows}
+
+
+def truncate_all(engine: Engine) -> None:
+    """Empty every data table (keeping `alembic_version`) so a module that COMMITS seed data does
+    not leak into the shared throwaway DB and break tests that assume a clean database."""
+    tables = public_table_names(engine) - {"alembic_version"}
+    if not tables:
+        return
+    joined = ", ".join(f'"{t}"' for t in tables)
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE TABLE {joined} RESTART IDENTITY CASCADE"))

@@ -24,6 +24,21 @@ class CompanyRef:
 
 
 @dataclass(frozen=True)
+class CompanyMetadata:
+    """Company profile fields from EDGAR `submissions` (top-level), separate from the filing list.
+
+    Enables peer-set grouping by SIC/industry (§37.1) and calendarization by fiscal-year end.
+    `fiscal_year_end` is normalized to "MM-DD" (EDGAR reports it as "MMDD").
+    """
+
+    name: str | None = None
+    sic_code: str | None = None
+    industry: str | None = None  # EDGAR `sicDescription`
+    exchange: str | None = None
+    fiscal_year_end: str | None = None  # "MM-DD"
+
+
+@dataclass(frozen=True)
 class FilingRef:
     """One filing, normalized from the `submissions` API (or a fixture manifest)."""
 
@@ -46,6 +61,10 @@ class SecSource(ABC):
     @abstractmethod
     def list_filings(self, cik: str) -> Sequence[FilingRef]:
         """Return all discoverable filings for a company (newest first)."""
+
+    @abstractmethod
+    def company_metadata(self, cik: str) -> CompanyMetadata:
+        """Return company profile metadata (SIC, industry, exchange, fiscal-year end)."""
 
     @abstractmethod
     def companyfacts(self, cik: str) -> dict[str, Any]:

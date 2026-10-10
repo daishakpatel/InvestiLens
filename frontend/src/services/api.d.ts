@@ -524,6 +524,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare
+         * @description Deterministic, calendarized, percentile-ranked comparison (no AI).
+         */
+        get: operations["compare_api_v1_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare/commentary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commentary
+         * @description AI commentary on the differences — cited + verified (Phase 3a), non-advisory (LGL-006).
+         */
+        post: operations["commentary_api_v1_compare_commentary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compare/peers/{ticker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Peers
+         * @description Suggest comparable companies by SIC/industry + market-cap band (§37.1).
+         */
+        get: operations["peers_api_v1_compare_peers__ticker__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/feedback/report": {
         parameters: {
             query?: never;
@@ -667,6 +727,26 @@ export interface paths {
         put?: never;
         /** Mark Notification Read */
         post: operations["mark_notification_read_api_v1_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Portfolio
+         * @description Analyze a hypothetical portfolio of user-entered ticker + weight holdings.
+         */
+        post: operations["analyze_portfolio_api_v1_portfolio_analyze_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -908,7 +988,7 @@ export interface components {
              * Citations
              * @default []
              */
-            citations: components["schemas"]["Citation"][];
+            citations: components["schemas"]["app__schemas__chat__Citation"][];
             /** Content */
             content: string;
             /** Id */
@@ -941,7 +1021,7 @@ export interface components {
              * Citations
              * @default []
              */
-            citations: components["schemas"]["Citation"][];
+            citations: components["schemas"]["app__schemas__chat__Citation"][];
             /** Evidence Label */
             evidence_label?: ("strongly_supported" | "supported" | "limited_evidence") | null;
             /** Message Id */
@@ -975,27 +1055,6 @@ export interface components {
              * @default []
              */
             messages: components["schemas"]["ChatMessage"][];
-        };
-        /**
-         * Citation
-         * @description A rendered citation shown next to an answer (CIT-006).
-         */
-        Citation: {
-            /** Number */
-            number: number;
-            /** Page */
-            page?: number | null;
-            /**
-             * Section Path
-             * @default []
-             */
-            section_path: string[];
-            /** Source Id */
-            source_id: string;
-            /** Tier */
-            tier?: number | null;
-            /** Title */
-            title?: string | null;
         };
         /** Company */
         Company: {
@@ -1032,6 +1091,112 @@ export interface components {
             name: string;
             /** Score */
             score: number;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * ComparisonCell
+         * @description One company's value for one metric, with its sector-normalized percentile vs the peer set.
+         */
+        ComparisonCell: {
+            /** Percentile */
+            percentile?: string | null;
+            result: components["schemas"]["MetricResult"];
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * ComparisonCommentaryRequest
+         * @description Request for AI comparison commentary (POST — gated by auth + AI budget, like research).
+         */
+        ComparisonCommentaryRequest: {
+            /** Metrics */
+            metrics?: string[] | null;
+            /** Period */
+            period?: string | null;
+            /** Tickers */
+            tickers: string[];
+        };
+        /**
+         * ComparisonCompany
+         * @description One company's alignment info in the comparison (calendarization transparency, DR-021).
+         */
+        ComparisonCompany: {
+            /** Calendar Year */
+            calendar_year?: number | null;
+            /** Fiscal Period */
+            fiscal_period?: string | null;
+            /** Fiscal Year End */
+            fiscal_year_end?: string | null;
+            /** Name */
+            name: string;
+            /** Period End */
+            period_end?: string | null;
+            /** Sector */
+            sector?: string | null;
+            /** Sic Code */
+            sic_code?: string | null;
+            /** Ticker */
+            ticker: string;
+        };
+        /** ComparisonMetricRow */
+        ComparisonMetricRow: {
+            /**
+             * Cells
+             * @default []
+             */
+            cells: components["schemas"]["ComparisonCell"][];
+            /** Metric Name */
+            metric_name: string;
+            /** Unit */
+            unit: string;
+        };
+        /** ComparisonResponse */
+        ComparisonResponse: {
+            /** Calendar Year */
+            calendar_year?: number | null;
+            commentary?: components["schemas"]["VerifiedOutput"] | null;
+            /**
+             * Companies
+             * @default []
+             */
+            companies: components["schemas"]["ComparisonCompany"][];
+            /**
+             * Disclaimer
+             * @default Analysis only — not investment advice or a buy/sell/hold recommendation.
+             */
+            disclaimer: string;
+            /**
+             * Metrics
+             * @default []
+             */
+            metrics: components["schemas"]["ComparisonMetricRow"][];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+        };
+        /**
+         * Concentration
+         * @description Herfindahl-Hirschman Index of holding weights (sum of squares, decimal). 1 = one holding.
+         */
+        Concentration: {
+            /** Effective Holdings */
+            effective_holdings: string;
+            /** Hhi */
+            hhi: string;
+            /** Top Holding */
+            top_holding?: string | null;
+            /** Top Weight */
+            top_weight?: string | null;
+        };
+        /** CorrelationRow */
+        CorrelationRow: {
+            /** Correlations */
+            correlations: {
+                [key: string]: string;
+            };
             /** Ticker */
             ticker: string;
         };
@@ -1244,6 +1409,56 @@ export interface components {
              */
             status: "ok";
         };
+        /** Holding */
+        Holding: {
+            /** Ticker */
+            ticker: string;
+            /** Weight */
+            weight: number | string;
+        };
+        /** HoldingContribution */
+        HoldingContribution: {
+            /** Description */
+            description: string;
+            /**
+             * Source Ids
+             * @default []
+             */
+            source_ids: string[];
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * HoldingData
+         * @description Per-holding raw inputs so the client can recompute aggregates on a what-if weight change.
+         */
+        HoldingData: {
+            /** Annualized Volatility */
+            annualized_volatility?: string | null;
+            /**
+             * Metrics
+             * @default {}
+             */
+            metrics: {
+                [key: string]: components["schemas"]["MetricResult"];
+            };
+            /** Sector */
+            sector?: string | null;
+            /** Ticker */
+            ticker: string;
+        };
+        /** HoldingVolatility */
+        HoldingVolatility: {
+            /** Annualized Volatility */
+            annualized_volatility?: string | null;
+            /**
+             * Observations
+             * @default 0
+             */
+            observations: number;
+            /** Ticker */
+            ticker: string;
+        };
         /** IngestionRunSummary */
         IngestionRunSummary: {
             /** Ended At */
@@ -1453,6 +1668,17 @@ export interface components {
             /** Ticker */
             ticker: string;
         };
+        /** NormalizedHolding */
+        NormalizedHolding: {
+            /** Name */
+            name: string;
+            /** Sector */
+            sector?: string | null;
+            /** Ticker */
+            ticker: string;
+            /** Weight */
+            weight: string;
+        };
         /** Notification */
         Notification: {
             /** Body */
@@ -1506,6 +1732,87 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /**
+         * PeerSuggestion
+         * @description A suggested comparable company (§37.1 peer set by SIC/industry + market-cap band).
+         */
+        PeerSuggestion: {
+            /** Industry */
+            industry?: string | null;
+            market_cap?: components["schemas"]["MetricResult"] | null;
+            /** Name */
+            name: string;
+            /** Reason */
+            reason: string;
+            /** Sector */
+            sector?: string | null;
+            /** Sic Code */
+            sic_code?: string | null;
+            /** Ticker */
+            ticker: string;
+        };
+        /** PeerSuggestionsResponse */
+        PeerSuggestionsResponse: {
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            /**
+             * Peers
+             * @default []
+             */
+            peers: components["schemas"]["PeerSuggestion"][];
+            /** Target */
+            target: string;
+        };
+        /** PortfolioAnalysis */
+        PortfolioAnalysis: {
+            concentration?: components["schemas"]["Concentration"] | null;
+            /**
+             * Disclaimer
+             * @default Analysis of a hypothetical portfolio for informational purposes only — not investment advice and not a recommendation to buy, sell, hold, or rebalance any security.
+             */
+            disclaimer: string;
+            /**
+             * Holdings
+             * @default []
+             */
+            holdings: components["schemas"]["NormalizedHolding"][];
+            /**
+             * Holdings Data
+             * @default []
+             */
+            holdings_data: components["schemas"]["HoldingData"][];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            risk_stats?: components["schemas"]["RiskStats"] | null;
+            /**
+             * Risk Themes
+             * @default []
+             */
+            risk_themes: components["schemas"]["RiskTheme"][];
+            /**
+             * Sector Exposure
+             * @default []
+             */
+            sector_exposure: components["schemas"]["SectorExposure"][];
+            /**
+             * Weighted Metrics
+             * @default []
+             */
+            weighted_metrics: components["schemas"]["WeightedMetric"][];
+        };
+        /** PortfolioRequest */
+        PortfolioRequest: {
+            /** Holdings */
+            holdings: components["schemas"]["Holding"][];
+            /** Metrics */
+            metrics?: string[] | null;
         };
         /** PricePoint */
         PricePoint: {
@@ -1683,6 +1990,57 @@ export interface components {
             source_ids: string[];
         };
         /**
+         * RiskStats
+         * @description Deterministic price-based risk, computed from `price_history` daily returns.
+         */
+        RiskStats: {
+            /**
+             * Correlation
+             * @default []
+             */
+            correlation: components["schemas"]["CorrelationRow"][];
+            /**
+             * Holding Volatility
+             * @default []
+             */
+            holding_volatility: components["schemas"]["HoldingVolatility"][];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            /** Portfolio Volatility */
+            portfolio_volatility?: string | null;
+            /** Window End */
+            window_end?: string | null;
+            /** Window Start */
+            window_start?: string | null;
+        };
+        /**
+         * RiskTheme
+         * @description A risk category shared across holdings; each contribution is cited back to its filing.
+         */
+        RiskTheme: {
+            /** Category */
+            category: string;
+            /**
+             * Contributions
+             * @default []
+             */
+            contributions: components["schemas"]["HoldingContribution"][];
+            /** Holding Count */
+            holding_count: number;
+            /** Portfolio Weight */
+            portfolio_weight: string;
+        };
+        /** SectorExposure */
+        SectorExposure: {
+            /** Sector */
+            sector: string;
+            /** Weight */
+            weight: string;
+        };
+        /**
          * SourceDetail
          * @description GET /sources/{source_id} payload: the record + marked span + deep link (CIT-006).
          */
@@ -1838,6 +2196,63 @@ export interface components {
             /** Ticker */
             ticker: string;
         };
+        /**
+         * VerifiedClaim
+         * @description One claim's verification outcome (CIT-005).
+         */
+        VerifiedClaim: {
+            /**
+             * Citation Numbers
+             * @default []
+             */
+            citation_numbers: number[];
+            /** Claim Id */
+            claim_id: string;
+            /** Confidence Label */
+            confidence_label?: ("strongly_supported" | "supported" | "limited_evidence") | null;
+            /**
+             * Entailment Label
+             * @default not_checked
+             * @enum {string}
+             */
+            entailment_label: "supported" | "partially" | "unsupported" | "not_checked";
+            /** Numeric Match */
+            numeric_match?: boolean | null;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "OK" | "UNKNOWN_SOURCE" | "NUMERIC_MISMATCH" | "UNSUPPORTED" | "NO_CITATION" | "OVERREACH";
+            /**
+             * Source Ids
+             * @default []
+             */
+            source_ids: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "rejected" | "softened";
+            /** Text */
+            text: string;
+        };
+        /**
+         * VerifiedOutput
+         * @description The full verified + rendered result for a block of generated text.
+         */
+        VerifiedOutput: {
+            /** Citations */
+            citations: components["schemas"]["app__schemas__citations__Citation"][];
+            /** Claims */
+            claims: components["schemas"]["VerifiedClaim"][];
+            /** Rendered Text */
+            rendered_text: string;
+            /**
+             * Sufficient
+             * @default true
+             */
+            sufficient: boolean;
+        };
         /** Watchlist */
         Watchlist: {
             /** Id */
@@ -1859,6 +2274,26 @@ export interface components {
         WatchlistItem: {
             /** Ticker */
             ticker: string;
+        };
+        /**
+         * WeightedMetric
+         * @description A portfolio-weighted metric. `coverage` is the fraction of weight that had a value (weights
+         *     are renormalized over covered holdings); value is NULL when coverage is 0 (DR-041 spirit).
+         */
+        WeightedMetric: {
+            /** Coverage */
+            coverage: string;
+            /** Metric Name */
+            metric_name: string;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
         };
         /** XbrlFactSource */
         XbrlFactSource: {
@@ -1886,6 +2321,45 @@ export interface components {
             url?: string | null;
             /** Value */
             value?: string | null;
+        };
+        /**
+         * Citation
+         * @description A rendered citation shown next to an answer (CIT-006).
+         */
+        app__schemas__chat__Citation: {
+            /** Number */
+            number: number;
+            /** Page */
+            page?: number | null;
+            /**
+             * Section Path
+             * @default []
+             */
+            section_path: string[];
+            /** Source Id */
+            source_id: string;
+            /** Tier */
+            tier?: number | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * Citation
+         * @description A numbered reference in first-appearance order (CIT-006).
+         */
+        app__schemas__citations__Citation: {
+            /** Citation Text */
+            citation_text: string;
+            /** Number */
+            number: number;
+            /** Source Id */
+            source_id: string;
+            /** Source Type */
+            source_type: string;
+            /** Tier */
+            tier: number;
+            /** Url */
+            url?: string | null;
         };
     };
     responses: never;
@@ -2891,6 +3365,110 @@ export interface operations {
             };
         };
     };
+    compare_api_v1_compare_get: {
+        parameters: {
+            query: {
+                /** @description Comma-separated tickers, e.g. NVDA,AMD,INTC */
+                tickers: string;
+                /** @description Optional comma-separated metric names */
+                metrics?: string | null;
+                /** @description Calendar year or fiscal period; default latest */
+                period?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commentary_api_v1_compare_commentary_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComparisonCommentaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifiedOutput"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    peers_api_v1_compare_peers__ticker__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeerSuggestionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     report_feedback_api_v1_feedback_report_post: {
         parameters: {
             query?: never;
@@ -3121,6 +3699,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_portfolio_api_v1_portfolio_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortfolioRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAnalysis"];
+                };
             };
             /** @description Validation Error */
             422: {

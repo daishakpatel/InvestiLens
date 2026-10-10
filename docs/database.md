@@ -60,6 +60,22 @@ lineage (`is_derived`, `formula_id`, `source_id`, `as_reported_accession`, `is_l
 them apart lets us recompute metrics, track restatements, and cite a derived number back to the
 exact facts it came from without mutating source data.
 
+A derived metric's `source_id` is **company-scoped** — `derived:<TICKER>:<formula_id>:FY<year>`
+(Phase 6a, ADR-0026). It was previously `derived:<formula_id>:FY<year>`, which collided across
+companies and made `GET /sources` ambiguous once comparison put two companies' metrics in one
+evidence set. No schema change; the resolver matches whatever `source_id` is stored. The analogous
+Q4-derived base IDs (`q4_derived:<metric>`) remain company-unscoped (unused by comparison;
+backlogged).
+
+### Company profile enrichment (Phase 6a)
+
+`companies.sic_code`, `sector`, `industry`, `exchange`, and `fiscal_year_end` were nullable and
+left NULL by Phase 1a. SEC ingestion now populates them from the EDGAR `submissions` endpoint
+(`sector` is derived from the SIC code via `app/finance/sic.py`); `scripts/enrich_companies.py`
+backfills them without re-downloading filings. These feed peer-set grouping (§37.1) and portfolio
+sector exposure (§37.2). No schema change — the columns already existed. `upsert_company` now
+preserves a non-NULL profile value on a metadata-less re-ingest (`COALESCE(excluded, existing)`).
+
 ## Index rationale
 
 | Table | Index | Why |

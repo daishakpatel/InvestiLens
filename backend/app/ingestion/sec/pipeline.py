@@ -19,8 +19,9 @@ from sqlalchemy.orm import Session
 
 from app.cache.cache import invalidate_company
 from app.config import Settings, get_settings
+from app.finance.sic import sic_to_sector
 from app.providers.sec import get_sec_source
-from app.providers.sec.base import CompanyRef, FilingRef, SecSource
+from app.providers.sec.base import CompanyMetadata, CompanyRef, FilingRef, SecSource
 from app.repositories import companies as company_repo
 from app.repositories import facts as facts_repo
 from app.repositories import filings as filing_repo
@@ -169,11 +170,30 @@ def ingest_company(
         )
         raise ValueError(f"unknown ticker: {ticker}")
 
+    # Profile enrichment from the submissions endpoint (SIC/industry/exchange/FYE): needed for
+    # peer-set grouping (§37.1) and sector exposure (§37.2). A metadata-fetch failure must not
+    # abort ingestion — the fields are nullable and `upsert_company` preserves any prior value.
+    meta = CompanyMetadata()
+    try:
+        meta = sec.company_metadata(ref.cik)
+    except Exception as exc:
+        log_event(
+            logger,
+            logging.WARNING,
+            "sec.company_metadata.failed",
+            ticker=ref.ticker,
+            error=str(exc),
+        )
     company_id = company_repo.upsert_company(
         session,
         ticker=ref.ticker,
         cik=ref.cik,
-        name=ref.title,
+        name=meta.name or ref.title,
+        exchange=meta.exchange,
+        sector=sic_to_sector(meta.sic_code),
+        industry=meta.industry,
+        sic_code=meta.sic_code,
+        fiscal_year_end=meta.fiscal_year_end,
     )
     company_repo.upsert_identifier(
         session,

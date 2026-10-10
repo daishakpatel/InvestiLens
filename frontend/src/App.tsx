@@ -19,6 +19,8 @@ const ResearchTab = lazy(() => import("./pages/tabs/ResearchTab"));
 const RisksTab = lazy(() => import("./pages/tabs/RisksTab"));
 const ManagementTab = lazy(() => import("./pages/tabs/ManagementTab"));
 const ChatTab = lazy(() => import("./pages/tabs/ChatTab"));
+const ComparePage = lazy(() => import("./pages/ComparePage"));
+const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
 
 function NotFound() {
   return (
@@ -36,6 +38,8 @@ export function App() {
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="login" element={<AuthPage />} />
+        <Route path="compare" element={<ComparePage />} />
+        <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="company/:ticker" element={<CompanyDashboard />}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewTab />} />

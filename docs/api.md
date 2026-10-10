@@ -152,6 +152,19 @@ but **may not** generate reports, use chat, or touch user-owned data (anonymous 
 | GET | `/admin/eval-runs` |
 | POST | `/admin/companies/{ticker}/refresh` |
 
+### Comparison & portfolio (Phase 6a, §37.1/§37.2)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/compare?tickers=NVDA,AMD,INTC&metrics=…&period=…` | Deterministic side-by-side: calendarized (aligned fiscal periods, DR-021), sector-normalized percentiles. Public. 2–6 tickers; `metrics`/`period` optional (default set; latest common calendar year). |
+| GET | `/compare/peers/{ticker}` | Peer-set suggestions by SIC/industry + market-cap band. Public. |
+| POST | `/compare/commentary` | AI commentary on the differences — cited + verified by the Phase 3a pipeline, non-advisory (LGL-006). Requires auth + AI budget (like research/chat). |
+| POST | `/portfolio/analyze` | Analyze a hypothetical portfolio (ticker + weight). Deterministic weighted metrics, HHI concentration, sector exposure, price-based volatility/correlation, and aggregated **cited** risk themes. Public (no LLM generation). Returns `holdings_data` so the client recomputes what-if weight changes with no round-trip. |
+
+Every comparison/portfolio response carries a `disclaimer`: analysis only, never a buy/sell/hold
+recommendation. The `compare_companies(tickers, metrics, period)` read-only tool (§16.7) exposes the
+same deterministic comparison to the agent layer. Calendarization and the company-scoped derived
+`source_id` scheme are ADR-0026.
+
 ## Regenerating the contract
 
 ```bash

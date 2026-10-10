@@ -105,13 +105,15 @@ jobs:
         run: docker build -f backend/Dockerfile -t investilens-api:ci .
       - name: Build frontend image
         run: docker build -f frontend/Dockerfile -t investilens-frontend:ci frontend
-      # Scan the built backend image for OS/library CVEs (SEC-009 container scanning).
+      # Scan the built backend image for OS/library CVEs (SEC-009 container scanning). Trivy is
+      # installed from its official script (pinned to a version) rather than a marketplace action
+      # so the ref always resolves and the scan is reproducible. Report-only for now (|| true);
+      # drop the `|| true` to gate once a clean baseline is established.
       - name: Scan backend image (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: investilens-api:ci
-          severity: HIGH,CRITICAL
-          exit-code: "0"  # report-only for now; flip to "1" to gate once a baseline is clean
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.56.2/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.56.2
+          trivy image --severity HIGH,CRITICAL --exit-code 0 investilens-api:ci || true
 
   # The §18.4 eval smoke gate runs as the `test_eval_runner` integration test inside the `backend`
   # job (it seeds a company, runs the smoke set, and fails on a deliberate citation regression —

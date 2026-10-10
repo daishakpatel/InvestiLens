@@ -49,7 +49,9 @@ class _Canonical:
         return sorted({fy for fy, _ in self._value})
 
 
-def _persist(session: Session, company_id: int, fiscal_year: int, result: MetricResult) -> None:
+def _persist(
+    session: Session, company_id: int, ticker: str, fiscal_year: int, result: MetricResult
+) -> None:
     lineage = [{"name": i.name, "source_id": i.source_id} for i in result.inputs]
     metrics_repo.upsert_metric(
         session,
@@ -65,7 +67,10 @@ def _persist(session: Session, company_id: int, fiscal_year: int, result: Metric
         unit=result.unit,
         is_derived=True,
         formula_id=result.formula_id,
-        source_id=f"derived:{result.formula_id}:FY{fiscal_year}",
+        # Company-scoped so a derived id is globally unique (two companies' gross_margin for the
+        # same fiscal year must not collide — this breaks cross-company comparison evidence and
+        # made GET /sources ambiguous; comparison, §37.1, surfaced it).
+        source_id=f"derived:{ticker}:{result.formula_id}:FY{fiscal_year}",
         as_reported_accession=_DERIVED_ACCESSION,
         is_latest=True,
         quality_flags={
@@ -164,6 +169,6 @@ def build_company_ratios(session: Session, company: Company) -> int:
     for index, fy in enumerate(years):
         prior = years[index - 1] if index > 0 else None
         for result in _compute_year(canonical, cmap, fy, prior):
-            _persist(session, company.id, fy, result)
+            _persist(session, company.id, company.ticker, fy, result)
             written += 1
     return written

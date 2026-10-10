@@ -98,7 +98,7 @@
           "citations": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/Citation"
+              "$ref": "#/components/schemas/app__schemas__chat__Citation"
             },
             "title": "Citations",
             "type": "array"
@@ -171,7 +171,7 @@
           "citations": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/Citation"
+              "$ref": "#/components/schemas/app__schemas__chat__Citation"
             },
             "title": "Citations",
             "type": "array"
@@ -266,66 +266,6 @@
           "company"
         ],
         "title": "ChatSession",
-        "type": "object"
-      },
-      "Citation": {
-        "description": "A rendered citation shown next to an answer (CIT-006).",
-        "properties": {
-          "number": {
-            "title": "Number",
-            "type": "integer"
-          },
-          "page": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page"
-          },
-          "section_path": {
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "title": "Section Path",
-            "type": "array"
-          },
-          "source_id": {
-            "title": "Source Id",
-            "type": "string"
-          },
-          "tier": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tier"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          }
-        },
-        "required": [
-          "source_id",
-          "number"
-        ],
-        "title": "Citation",
         "type": "object"
       },
       "Company": {
@@ -451,6 +391,313 @@
           "score"
         ],
         "title": "CompanySearchResult",
+        "type": "object"
+      },
+      "ComparisonCell": {
+        "description": "One company's value for one metric, with its sector-normalized percentile vs the peer set.",
+        "properties": {
+          "percentile": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentile"
+          },
+          "result": {
+            "$ref": "#/components/schemas/MetricResult"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "result"
+        ],
+        "title": "ComparisonCell",
+        "type": "object"
+      },
+      "ComparisonCommentaryRequest": {
+        "description": "Request for AI comparison commentary (POST \u2014 gated by auth + AI budget, like research).",
+        "properties": {
+          "metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "tickers": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 2,
+            "title": "Tickers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tickers"
+        ],
+        "title": "ComparisonCommentaryRequest",
+        "type": "object"
+      },
+      "ComparisonCompany": {
+        "description": "One company's alignment info in the comparison (calendarization transparency, DR-021).",
+        "properties": {
+          "calendar_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Year"
+          },
+          "fiscal_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Period"
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "sic_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sic Code"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "name"
+        ],
+        "title": "ComparisonCompany",
+        "type": "object"
+      },
+      "ComparisonMetricRow": {
+        "properties": {
+          "cells": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ComparisonCell"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_name",
+          "unit"
+        ],
+        "title": "ComparisonMetricRow",
+        "type": "object"
+      },
+      "ComparisonResponse": {
+        "properties": {
+          "calendar_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Year"
+          },
+          "commentary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerifiedOutput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ComparisonCompany"
+            },
+            "title": "Companies",
+            "type": "array"
+          },
+          "disclaimer": {
+            "default": "Analysis only \u2014 not investment advice or a buy/sell/hold recommendation.",
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ComparisonMetricRow"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "title": "ComparisonResponse",
+        "type": "object"
+      },
+      "Concentration": {
+        "description": "Herfindahl-Hirschman Index of holding weights (sum of squares, decimal). 1 = one holding.",
+        "properties": {
+          "effective_holdings": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Effective Holdings",
+            "type": "string"
+          },
+          "hhi": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Hhi",
+            "type": "string"
+          },
+          "top_holding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Holding"
+          },
+          "top_weight": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Weight"
+          }
+        },
+        "required": [
+          "hhi",
+          "effective_holdings"
+        ],
+        "title": "Concentration",
+        "type": "object"
+      },
+      "CorrelationRow": {
+        "properties": {
+          "correlations": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Correlations",
+            "type": "object"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "correlations"
+        ],
+        "title": "CorrelationRow",
         "type": "object"
       },
       "DataFreshnessResponse": {
@@ -1062,6 +1309,134 @@
           }
         },
         "title": "Health",
+        "type": "object"
+      },
+      "Holding": {
+        "properties": {
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "ticker",
+          "weight"
+        ],
+        "title": "Holding",
+        "type": "object"
+      },
+      "HoldingContribution": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "description"
+        ],
+        "title": "HoldingContribution",
+        "type": "object"
+      },
+      "HoldingData": {
+        "description": "Per-holding raw inputs so the client can recompute aggregates on a what-if weight change.",
+        "properties": {
+          "annualized_volatility": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annualized Volatility"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MetricResult"
+            },
+            "default": {},
+            "title": "Metrics",
+            "type": "object"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "title": "HoldingData",
+        "type": "object"
+      },
+      "HoldingVolatility": {
+        "properties": {
+          "annualized_volatility": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annualized Volatility"
+          },
+          "observations": {
+            "default": 0,
+            "title": "Observations",
+            "type": "integer"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "title": "HoldingVolatility",
         "type": "object"
       },
       "IngestionRunSummary": {
@@ -1746,6 +2121,41 @@
         "title": "NewsResponse",
         "type": "object"
       },
+      "NormalizedHolding": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "name",
+          "weight"
+        ],
+        "title": "NormalizedHolding",
+        "type": "object"
+      },
       "Notification": {
         "properties": {
           "body": {
@@ -1895,6 +2305,212 @@
           "email"
         ],
         "title": "PasswordResetRequest",
+        "type": "object"
+      },
+      "PeerSuggestion": {
+        "description": "A suggested comparable company (\u00a737.1 peer set by SIC/industry + market-cap band).",
+        "properties": {
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "market_cap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "sic_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sic Code"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "name",
+          "reason"
+        ],
+        "title": "PeerSuggestion",
+        "type": "object"
+      },
+      "PeerSuggestionsResponse": {
+        "properties": {
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "peers": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PeerSuggestion"
+            },
+            "title": "Peers",
+            "type": "array"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "PeerSuggestionsResponse",
+        "type": "object"
+      },
+      "PortfolioAnalysis": {
+        "properties": {
+          "concentration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Concentration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "disclaimer": {
+            "default": "Analysis of a hypothetical portfolio for informational purposes only \u2014 not investment advice and not a recommendation to buy, sell, hold, or rebalance any security.",
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "holdings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NormalizedHolding"
+            },
+            "title": "Holdings",
+            "type": "array"
+          },
+          "holdings_data": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HoldingData"
+            },
+            "title": "Holdings Data",
+            "type": "array"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "risk_stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskStats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "risk_themes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RiskTheme"
+            },
+            "title": "Risk Themes",
+            "type": "array"
+          },
+          "sector_exposure": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SectorExposure"
+            },
+            "title": "Sector Exposure",
+            "type": "array"
+          },
+          "weighted_metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WeightedMetric"
+            },
+            "title": "Weighted Metrics",
+            "type": "array"
+          }
+        },
+        "title": "PortfolioAnalysis",
+        "type": "object"
+      },
+      "PortfolioRequest": {
+        "properties": {
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/Holding"
+            },
+            "minItems": 1,
+            "title": "Holdings",
+            "type": "array"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics"
+          }
+        },
+        "required": [
+          "holdings"
+        ],
+        "title": "PortfolioRequest",
         "type": "object"
       },
       "PricePoint": {
@@ -2437,6 +3053,123 @@
         "title": "Risk",
         "type": "object"
       },
+      "RiskStats": {
+        "description": "Deterministic price-based risk, computed from `price_history` daily returns.",
+        "properties": {
+          "correlation": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CorrelationRow"
+            },
+            "title": "Correlation",
+            "type": "array"
+          },
+          "holding_volatility": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HoldingVolatility"
+            },
+            "title": "Holding Volatility",
+            "type": "array"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "portfolio_volatility": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Volatility"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          }
+        },
+        "title": "RiskStats",
+        "type": "object"
+      },
+      "RiskTheme": {
+        "description": "A risk category shared across holdings; each contribution is cited back to its filing.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "contributions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HoldingContribution"
+            },
+            "title": "Contributions",
+            "type": "array"
+          },
+          "holding_count": {
+            "title": "Holding Count",
+            "type": "integer"
+          },
+          "portfolio_weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Portfolio Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "holding_count",
+          "portfolio_weight"
+        ],
+        "title": "RiskTheme",
+        "type": "object"
+      },
+      "SectorExposure": {
+        "properties": {
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "weight": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Weight",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sector",
+          "weight"
+        ],
+        "title": "SectorExposure",
+        "type": "object"
+      },
       "SourceDetail": {
         "description": "GET /sources/{source_id} payload: the record + marked span + deep link (CIT-006).",
         "properties": {
@@ -2857,6 +3590,137 @@
         "title": "ValuationResponse",
         "type": "object"
       },
+      "VerifiedClaim": {
+        "description": "One claim's verification outcome (CIT-005).",
+        "properties": {
+          "citation_numbers": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Citation Numbers",
+            "type": "array"
+          },
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "confidence_label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "strongly_supported",
+                  "supported",
+                  "limited_evidence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Label"
+          },
+          "entailment_label": {
+            "default": "not_checked",
+            "enum": [
+              "supported",
+              "partially",
+              "unsupported",
+              "not_checked"
+            ],
+            "title": "Entailment Label",
+            "type": "string"
+          },
+          "numeric_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numeric Match"
+          },
+          "reason_code": {
+            "enum": [
+              "OK",
+              "UNKNOWN_SOURCE",
+              "NUMERIC_MISMATCH",
+              "UNSUPPORTED",
+              "NO_CITATION",
+              "OVERREACH"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "rejected",
+              "softened"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "text",
+          "status",
+          "reason_code"
+        ],
+        "title": "VerifiedClaim",
+        "type": "object"
+      },
+      "VerifiedOutput": {
+        "description": "The full verified + rendered result for a block of generated text.",
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/app__schemas__citations__Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/VerifiedClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "rendered_text": {
+            "title": "Rendered Text",
+            "type": "string"
+          },
+          "sufficient": {
+            "default": true,
+            "title": "Sufficient",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rendered_text",
+          "claims",
+          "citations"
+        ],
+        "title": "VerifiedOutput",
+        "type": "object"
+      },
       "Watchlist": {
         "properties": {
           "id": {
@@ -2907,6 +3771,52 @@
           "ticker"
         ],
         "title": "WatchlistItem",
+        "type": "object"
+      },
+      "WeightedMetric": {
+        "description": "A portfolio-weighted metric. `coverage` is the fraction of weight that had a value (weights\nare renormalized over covered holdings); value is NULL when coverage is 0 (DR-041 spirit).",
+        "properties": {
+          "coverage": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Coverage",
+            "type": "string"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "metric_name",
+          "unit",
+          "value",
+          "coverage"
+        ],
+        "title": "WeightedMetric",
         "type": "object"
       },
       "XbrlFactSource": {
@@ -2989,6 +3899,111 @@
           "concept_tag"
         ],
         "title": "XbrlFactSource",
+        "type": "object"
+      },
+      "app__schemas__chat__Citation": {
+        "description": "A rendered citation shown next to an answer (CIT-006).",
+        "properties": {
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "section_path": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Section Path",
+            "type": "array"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "source_id",
+          "number"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "app__schemas__citations__Citation": {
+        "description": "A numbered reference in first-appearance order (CIT-006).",
+        "properties": {
+          "citation_text": {
+            "title": "Citation Text",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "integer"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "number",
+          "source_id",
+          "source_type",
+          "citation_text",
+          "tier"
+        ],
+        "title": "Citation",
         "type": "object"
       }
     }
@@ -4792,6 +5807,202 @@
         ]
       }
     },
+    "/api/v1/compare": {
+      "get": {
+        "description": "Deterministic, calendarized, percentile-ranked comparison (no AI).",
+        "operationId": "compare_api_v1_compare_get",
+        "parameters": [
+          {
+            "description": "Comma-separated tickers, e.g. NVDA,AMD,INTC",
+            "in": "query",
+            "name": "tickers",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated tickers, e.g. NVDA,AMD,INTC",
+              "title": "Tickers",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional comma-separated metric names",
+            "in": "query",
+            "name": "metrics",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional comma-separated metric names",
+              "title": "Metrics"
+            }
+          },
+          {
+            "description": "Calendar year or fiscal period; default latest",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar year or fiscal period; default latest",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compare",
+        "tags": [
+          "Comparison"
+        ]
+      }
+    },
+    "/api/v1/compare/commentary": {
+      "post": {
+        "description": "AI commentary on the differences \u2014 cited + verified (Phase 3a), non-advisory (LGL-006).",
+        "operationId": "commentary_api_v1_compare_commentary_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparisonCommentaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifiedOutput"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commentary",
+        "tags": [
+          "Comparison"
+        ]
+      }
+    },
+    "/api/v1/compare/peers/{ticker}": {
+      "get": {
+        "description": "Suggest comparable companies by SIC/industry + market-cap band (\u00a737.1).",
+        "operationId": "peers_api_v1_compare_peers__ticker__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerSuggestionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Peers",
+        "tags": [
+          "Comparison"
+        ]
+      }
+    },
     "/api/v1/feedback/report": {
       "post": {
         "description": "Report-level feedback. Persisting it needs a report_id the v1 contract does not carry;\nstored feedback lands with the report UI (Phase 4d). Accepted as a no-op meanwhile.",
@@ -5163,6 +6374,48 @@
         "tags": [
           "Watchlist & Alerts",
           "Notifications"
+        ]
+      }
+    },
+    "/api/v1/portfolio/analyze": {
+      "post": {
+        "description": "Analyze a hypothetical portfolio of user-entered ticker + weight holdings.",
+        "operationId": "analyze_portfolio_api_v1_portfolio_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioAnalysis"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Portfolio",
+        "tags": [
+          "Portfolio"
         ]
       }
     },

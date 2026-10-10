@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,20 @@ from app.models import Company, CompanyIdentifier
 def get_by_ticker(session: Session, ticker: str) -> Company | None:
     """Look up a company by ticker (case-insensitive), company-scoped reads for the tool layer."""
     return session.scalar(select(Company).where(Company.ticker == ticker.upper()))
+
+
+def get_many_by_ticker(session: Session, tickers: list[str]) -> dict[str, Company]:
+    """Resolve several tickers at once (case-insensitive) → {UPPER ticker: Company} (no N+1)."""
+    upper = [t.upper() for t in tickers]
+    rows = session.scalars(select(Company).where(Company.ticker.in_(upper)))
+    return {c.ticker.upper(): c for c in rows}
+
+
+def list_active(session: Session) -> list[Company]:
+    """All active companies, for peer-set candidate generation (§37.1)."""
+    return list(
+        session.scalars(select(Company).where(Company.status == "active").order_by(Company.ticker))
+    )
 
 
 def search(session: Session, q: str, *, limit: int) -> list[Company]:
@@ -44,34 +58,40 @@ def upsert_company(
     exchange: str | None = None,
     sector: str | None = None,
     industry: str | None = None,
+    sic_code: str | None = None,
     fiscal_year_end: str | None = None,
 ) -> int:
-    """Insert or update a company by CIK; return its id (ING-001 idempotent)."""
-    stmt = (
-        pg_insert(Company)
-        .values(
-            ticker=ticker,
-            cik=cik,
-            name=name,
-            exchange=exchange,
-            sector=sector,
-            industry=industry,
-            fiscal_year_end=fiscal_year_end,
+    """Insert or update a company by CIK; return its id (ING-001 idempotent).
+
+    On conflict, profile fields (exchange/sector/industry/sic_code/fiscal_year_end) are only
+    overwritten when a non-NULL value is supplied, so a metadata-less re-ingest never wipes an
+    earlier enrichment (`COALESCE(excluded, existing)`).
+    """
+    values = {
+        "ticker": ticker,
+        "cik": cik,
+        "name": name,
+        "exchange": exchange,
+        "sector": sector,
+        "industry": industry,
+        "sic_code": sic_code,
+        "fiscal_year_end": fiscal_year_end,
+    }
+    insert_stmt = pg_insert(Company).values(**values)
+    preserve = ("exchange", "sector", "industry", "sic_code", "fiscal_year_end")
+    update_set = {
+        col: (
+            func.coalesce(insert_stmt.excluded[col], Company.__table__.c[col])
+            if col in preserve
+            else v
         )
-        .on_conflict_do_update(
-            index_elements=[Company.cik],
-            set_={
-                "ticker": ticker,
-                "name": name,
-                "exchange": exchange,
-                "sector": sector,
-                "industry": industry,
-                "fiscal_year_end": fiscal_year_end,
-            },
-        )
-        .returning(Company.id)
-    )
-    company_id = session.execute(stmt).scalar_one()
+        for col, v in values.items()
+        if col != "cik"
+    }
+    stmt = insert_stmt.on_conflict_do_update(
+        index_elements=[Company.cik], set_=update_set
+    ).returning(Company.id)
+    company_id: int = session.execute(stmt).scalar_one()
     return int(company_id)
 
 

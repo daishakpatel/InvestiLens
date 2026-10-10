@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from app.config import get_settings
-from app.providers.sec.base import CompanyRef, FilingRef, SecSource
+from app.providers.sec.base import CompanyMetadata, CompanyRef, FilingRef, SecSource
 from app.utils.http import HardenedHttpClient
 
 # SEC-015: ingestion only ever fetches from these hosts.
@@ -32,9 +32,27 @@ class LiveSecSource(SecSource):
             for r in rows
         ]
 
-    def list_filings(self, cik: str) -> Sequence[FilingRef]:
+    def _submissions(self, cik: str) -> dict[str, Any]:
         url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-        recent = json.loads(self._http.get_bytes(url))["filings"]["recent"]
+        result: dict[str, Any] = json.loads(self._http.get_bytes(url))
+        return result
+
+    def company_metadata(self, cik: str) -> CompanyMetadata:
+        sub = self._submissions(cik)
+        sic = str(sub["sic"]).strip() if sub.get("sic") else None
+        exchanges = sub.get("exchanges") or []
+        fye = sub.get("fiscalYearEnd") or ""  # "MMDD"
+        fye_fmt = f"{fye[:2]}-{fye[2:]}" if len(fye) == 4 and fye.isdigit() else None
+        return CompanyMetadata(
+            name=sub.get("name") or None,
+            sic_code=sic,
+            industry=sub.get("sicDescription") or None,
+            exchange=exchanges[0] if exchanges else None,
+            fiscal_year_end=fye_fmt,
+        )
+
+    def list_filings(self, cik: str) -> Sequence[FilingRef]:
+        recent = self._submissions(cik)["filings"]["recent"]
         refs: list[FilingRef] = []
         for form, accession, doc, filed, report, items in zip(
             recent["form"],

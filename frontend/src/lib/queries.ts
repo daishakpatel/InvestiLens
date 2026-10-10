@@ -8,6 +8,7 @@ import { parse } from "./schemas";
 import type {
   CompanyResponse,
   CompanySearchResult,
+  ComparisonResponse,
   DataFreshnessResponse,
   FilingSectionsResponse,
   FilingSummary,
@@ -15,11 +16,14 @@ import type {
   JobState,
   MetricResult,
   NewsResponse,
+  PeerSuggestionsResponse,
+  PortfolioAnalysis,
   PricesResponse,
   ResearchAccepted,
   ResearchReportEnvelope,
   SourceDetail,
   ValuationResponse,
+  VerifiedOutput,
 } from "../types";
 
 const MINUTE = 60_000;
@@ -222,6 +226,71 @@ export function useMetricLineage(
         { query: { period }, signal },
       );
       return parse.metricResult(data);
+    },
+  });
+}
+
+// --- Phase 6a: comparison & portfolio (§37.1/§37.2) ---
+
+export function useComparison(
+  tickers: string[],
+  metrics: string[],
+): UseQueryResult<ComparisonResponse> {
+  const tickersParam = tickers.join(",");
+  const metricsParam = metrics.join(",");
+  return useQuery({
+    queryKey: ["compare", tickersParam, metricsParam],
+    enabled: tickers.length >= 2,
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const query: Record<string, string> = { tickers: tickersParam };
+      if (metricsParam) query.metrics = metricsParam;
+      const { data } = await apiRequest<unknown>("/compare", { query, signal });
+      return parse.comparison(data);
+    },
+  });
+}
+
+export function usePeers(ticker: string): UseQueryResult<PeerSuggestionsResponse> {
+  return useQuery({
+    queryKey: ["peers", ticker],
+    enabled: ticker.length > 0,
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/compare/peers/${ticker}`, { signal });
+      return parse.peers(data);
+    },
+  });
+}
+
+export function useComparisonCommentary(): UseMutationResult<
+  VerifiedOutput,
+  Error,
+  { tickers: string[]; metrics?: string[]; period?: string }
+> {
+  return useMutation({
+    mutationFn: async (body) => {
+      const { data } = await apiRequest<unknown>("/compare/commentary", {
+        method: "POST",
+        body,
+      });
+      return parse.verifiedOutput(data);
+    },
+  });
+}
+
+export function usePortfolioAnalysis(): UseMutationResult<
+  PortfolioAnalysis,
+  Error,
+  { ticker: string; weight: number }[]
+> {
+  return useMutation({
+    mutationFn: async (holdings) => {
+      const { data } = await apiRequest<unknown>("/portfolio/analyze", {
+        method: "POST",
+        body: { holdings: holdings.map((h) => ({ ticker: h.ticker, weight: String(h.weight) })) },
+      });
+      return parse.portfolio(data);
     },
   });
 }
