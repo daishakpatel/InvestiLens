@@ -23,6 +23,20 @@ async function fetchProfile(): Promise<UserProfile> {
   return parse.profile(data);
 }
 
+// One session restore per page load, shared by every caller. React StrictMode mounts effects
+// twice in development; two refreshes carrying the same cookie rotate the token once and then
+// present the old one, which the server rightly treats as token reuse (AUTH-002). The second
+// mount must reuse the first request, not send its own.
+let sessionRestore: Promise<string | null> | null = null;
+
+function restoreSession(): Promise<string | null> {
+  sessionRestore ??= apiRequest<unknown>("/auth/refresh", { method: "POST" }).then(
+    ({ data }) => parse.token(data).access_token,
+    () => null, // no valid refresh cookie: anonymous
+  );
+  return sessionRestore;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [ready, setReady] = useState(false);
@@ -64,11 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const token = await restoreSession();
+      if (cancelled) return;
       try {
-        const { data } = await apiRequest<unknown>("/auth/refresh", { method: "POST" });
-        if (!cancelled) await applyToken(parse.token(data).access_token);
+        if (token) await applyToken(token);
       } catch {
-        // No valid refresh cookie — stay anonymous.
+        // The profile could not be loaded — stay anonymous.
       } finally {
         if (!cancelled) setReady(true);
       }

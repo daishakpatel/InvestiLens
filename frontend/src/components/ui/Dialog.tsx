@@ -17,7 +17,7 @@ const OVERLAY = "fixed inset-0 z-40 bg-black/60";
 
 /** These layers are opened by state, not by a Radix Trigger, so Radix has nowhere to send focus
  *  on close. Remember what was focused when the layer opened and hand focus back to it. */
-function useReturnFocus() {
+export function useReturnFocus() {
   const opener = useRef<Element | null>(null);
   return {
     onOpenAutoFocus: () => {

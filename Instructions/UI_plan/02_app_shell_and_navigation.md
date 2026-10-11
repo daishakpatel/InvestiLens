@@ -97,16 +97,162 @@ Watchlist, Compare, Portfolio internals (Step 5). No backend changes.
 
 ## Definition of Done
 
-- [ ] `⌘K`, `Ctrl+K`, and `/` open the palette from every page; a company can be reached from a
+- [x] `⌘K`, `Ctrl+K`, and `/` open the palette from every page; a company can be reached from a
       cold load using only the keyboard
-- [ ] An ambiguous query never auto-navigates without the user choosing a row (§9.2)
-- [ ] Company page shows five tabs; all five old URLs redirect to their new home; no route 404s
+- [x] An ambiguous query never auto-navigates without the user choosing a row (§9.2)
+- [x] Company page shows five tabs; all five old URLs redirect to their new home; no route 404s
       that previously worked
-- [ ] The sticky sub-header appears on scroll with price and tabs, with no layout shift
-- [ ] Disclaimer present on every page (FR-012); theme switch works from the account menu
-- [ ] Usable at 360 px wide: no horizontal page scroll on Home, Auth, or any company tab
-- [ ] `e2e/tests/happy-path.spec.ts` selectors updated for the new shell (do not delete the test)
-- [ ] `npm run screenshots` captures for Home, Auth, and Company in both themes and both widths
+- [x] The sticky sub-header appears on scroll with price and tabs, with no layout shift
+- [x] Disclaimer present on every page (FR-012); theme switch works from the account menu
+- [x] Usable at 360 px wide: no horizontal page scroll on Home, Auth, or any company tab
+- [x] `e2e/tests/happy-path.spec.ts` selectors updated for the new shell (do not delete the test)
+- [x] `npm run screenshots` captures for Home, Auth, and Company in both themes and both widths
       are listed in the hand-off
-- [ ] `make check` green and `npm run build` succeeds
-- [ ] `## Hand-off` section appended to this file
+- [x] `make check` green and `npm run build` succeeds
+- [x] `## Hand-off` section appended to this file
+
+## Hand-off
+
+Done 2026-10-10. `make check` green (450 backend, 29 frontend tests); `npm run build` succeeds;
+`e2e/tests/shell.spec.ts` 19/19; axe reports no serious or critical violations on 11 routes plus
+the open palette and menu, in both themes.
+
+**What shipped**
+
+- **Routing (`App.tsx`):** a `RootLayout` wraps every route with the command palette, the
+  loading line, the outage banner, and scroll reset. `/login` sits outside `AppShell` on the bare
+  canvas. Company routes: index is Overview (`/company/:ticker`), plus `financials`, `research`,
+  `filings`, `news`, and `chat`. Redirects: `overview` and `ownership` to the index, `valuation`
+  to `financials#valuation`, `risks` to `research#risks`, `management` to `research#management`,
+  anything else under a company to its index.
+- **Shell (`components/AppShell.tsx`):** full-width sticky bar (56 px) with a three-column grid so
+  the search field is centred on the page; `AccountMenu` (lazy chunk); `Footer` with the
+  disclaimer. **Pages now own their width**: wrap page content in `components/ui/Container`
+  (1240 px, 24/16 px gutters). `<main>` is full width, so a page can run something edge to edge
+  (the company sub-header does; Step 4's docked assistant can).
+- **Command palette:** `components/CommandPaletteContext.tsx` (provider, `useCommandPalette().open()`,
+  the ⌘K / Ctrl+K / "/" listener) and `components/CommandPalette.tsx` (cmdk in a Radix Dialog,
+  lazy, preloaded when idle). `components/SearchTrigger.tsx` has four variants: `bar`, `hero`,
+  `icon`, `button`. §9.2 holds by construction: results are selectable only once the debounce has
+  settled *and* the response for exactly the typed text has arrived, so Enter can never open a
+  row the user did not see highlighted. Tools ("Compare companies", "Analyze a portfolio") show
+  when idle or when the text names them, never as a fallback for a search with no matches.
+- **Company frame (`pages/CompanyDashboard.tsx`):** header (name, meta, Ask, Watch, price, stats),
+  then one sticky 48 px bar holding `RouteTabs` and, once the header has scrolled away, the
+  ticker and price (`data-testid="pinned-quote"`). The bar is always the same element at the
+  same height, so pinning shifts nothing. Changing tab while pinned scrolls the new tab to its
+  top. Unknown ticker (API 404) renders `NotFound` with the search button, no tabs.
+- **Home, Auth, 404:** rebuilt as specified. `components/home/WatchlistSlot.tsx` is the single
+  slot Step 5 fills. `pages/NotFoundPage.tsx` exports `NotFound({ title, message })`.
+- **Global states:** `components/RouteProgress.tsx` (2 px line, first loads only, after 300 ms);
+  `lib/apiStatus.tsx` + `components/ApiStatusBanner.tsx` (one banner; `AsyncContent` shows a
+  quiet "waiting" skeleton instead of an error while the API is unreachable, and failed queries
+  reload on recovery). `useApiStatus()` gives `{ online, reachable, retry }` to anything that
+  renders its own error state.
+- **New helpers:** `lib/quote.ts` (`latestQuote`), `lib/shortcuts.ts`, `lib/useMediaQuery.ts`,
+  `lib/useDocumentTitle.ts`, `lib/useScrollToHash.ts`, `POPULAR_COMPANIES` and
+  `PASSWORD_MIN_LENGTH` in `lib/config.ts`.
+- **Primitive changes:** `RouteTabs` no longer draws its own border, is 48 px tall, supports an
+  index tab (`to: ""`), keeps the active tab in view and fades the edge that hides more tabs;
+  `Section` takes an `id`; `DropdownMenu` is non-modal and has `MenuRadioGroup`; `Input` accepts
+  a `ref`; `Skeleton` lets a caller's width/height replace the shape default; `useTheme()` now
+  returns `setTheme` (no `toggle`); `Dialog.tsx` exports `useReturnFocus`.
+- **Deleted:** `SearchBox`, `DisambiguationPicker`, `ThemeToggle`, `RisksTab`, `ManagementTab`,
+  `PlaceholderTab`. (Step 4's list of files to delete is shorter as a result.)
+
+**Deviations from this file, and why**
+
+- **The account menu exists for signed-out visitors too** (an icon button beside "Sign in").
+  The plan put the theme switch and the mobile Compare/Portfolio links in the account menu and
+  gave signed-out users no menu, which would have left them without either.
+- **`/company/:ticker/chat` is a real route, not a redirect.** The plan asked both for a redirect
+  and for "Ask" to open the existing chat; chat has to live somewhere until Step 4 builds the
+  panel. It is not a tab: the header's "Ask" link leads to it.
+- **Research is the report plus the language tracker, not three stacked tabs.** `ReportView`
+  already renders the Risks and Management sections, so stacking `RisksTab` and `ManagementTab`
+  under it would have shown them twice.
+- **Home rows use a new `useRecentPrices` hook** (last 45 days) instead of `usePrices`: the full
+  series is 179 kB per ticker, too much for a list row. If a company's latest bar is older than
+  45 days the row shows no quote.
+- **Popular is NVDA, AAPL, JPM** (the seed set). The old list included MSFT, which no
+  environment has, so it was a dead link.
+- **Home's hero lets the next heading show at the fold** as a cue to scroll, rather than filling
+  the screen exactly.
+- **Data-layer edits outside the plan's allowance:** `lib/queries.ts` gained `useRecentPrices`;
+  `lib/auth.tsx` now restores the session once per page load (see the first bug below);
+  `main.tsx` no longer retries 4xx responses (a 404 used to cost a second request and a second
+  of skeleton before "not found" appeared).
+- **Token change:** `subtle` (both themes) and light `muted` were strengthened after the first
+  axe run flagged them. `00_README.md` and ADR-0028 carry the new values and ratios.
+
+**Bugs found and fixed here**
+
+- **Session lost on every reload in development.** React StrictMode ran the session-restore
+  effect twice, sending two refreshes with the same cookie; the second was rejected as token
+  reuse and its "signed out" result won. Restore is now single-flight (`lib/auth.tsx`).
+- **Outage detector could loop forever** (my bug, caught before hand-off): it refetched failed
+  queries after every successful health probe, so one endpoint that always returns 500 produced
+  about 24,000 requests in a few minutes. It now refetches only on recovery from an actual
+  outage (`afterProbe`, unit-tested, plus an E2E check).
+- **Light and dark `subtle` text failed AA contrast** (see token change above).
+- **Home overflowed horizontally on phones** when a company name was long (an `auto` grid track
+  sized to the untruncated name).
+
+**Backend problems found, NOT fixed (this step is frontend-only)**
+
+- **Concurrent token refreshes can hang the whole API.** In `app/auth/service.py::refresh`, the
+  reuse-detection path runs `revoke_family` (an UPDATE) and then raises, so the endpoint never
+  commits: the revocation is rolled back (AUTH-002 is therefore not actually enforced) and the
+  row locks stay held until the request's session is torn down. A second concurrent refresh for
+  the same family blocks on that lock inside an `async def` handler, which blocks the event
+  loop, which stops the first request's teardown from ever running. The API then answers
+  nothing, including `/health`, until restarted. It happened during this step (the owner's
+  signed-in tab was being hot-reloaded). The single-flight fix above removes the easy trigger
+  from one tab; several tabs reloading at once can still cause it. Needs its own task: commit
+  the revocation before raising, decide on a grace window for near-simultaneous refreshes, add
+  a `lock_timeout`, and test it.
+- **`GET /companies/{ticker}/research/latest` returns 500 in the dev database.** The stored
+  "complete" reports are Phase 0b seed placeholders (`{"summary": "placeholder"}`) that fail
+  `ResearchReport` validation. The UI treats any error there as "no report yet". Run `make seed`
+  for real reports before Step 4, or the Research tab has nothing to design against.
+
+**Verified in a real browser**
+
+`e2e/tests/shell.spec.ts` (committed) covers every Definition of Done item that can be checked
+mechanically. `e2e/tests/happy-path.spec.ts` has the new selectors; its accessibility test
+passes, and its main test passes through sign-up, palette search, and the company page, then
+stops at "executive summary" because this database has no valid report and no worker (see
+above). Its chat and citation steps are therefore unverified against the new shell.
+
+Captures, `e2e/screenshots/{dark,light}/{1440,390}/` (16 per folder, 64 total): `ui`, `home`,
+`palette`, `palette-results`, `auth`, `company-overview`, `company-pinned`, `company-financials`,
+`company-research`, `company-filings`, `company-news`, `company-chat`, `company-not-found`,
+`not-found`, `compare`, `portfolio`. All were produced; dark and light, desktop and phone samples
+of home, palette, auth, company (top and pinned), research, and not-found were looked at, as
+were one-off captures of the signed-in home page and the open account menu.
+
+**Bundle (gzip), Step 1 → Step 2**
+
+| Chunk | Step 1 | Step 2 |
+|-------|--------|--------|
+| entry `index` | 89.83 kB | 91.56 kB |
+| CSS | 7.44 kB | 8.42 kB |
+| `CompanyDashboard` | 4.90 kB | 3.24 kB |
+| `HomePage` | 2.17 kB | 1.77 kB |
+| `AuthPage` | 0.87 kB | 1.70 kB |
+| `CommandPalette` (lazy, new) | n/a | 7.76 kB |
+| `AccountMenu` (lazy, new) | n/a | 5.57 kB |
+
+**Left for later steps**
+
+- Tab *contents* are untouched: sections still sit 16 px inside their headings, page-level
+  buttons and tables are still hand-written, stats with no data still show "—", chart axis
+  labels are still clipped (Steps 3 and 4).
+- Compare and Portfolio only moved onto `Container`; their internals are Step 5.
+- The Watch button is a disabled placeholder with a tooltip (Step 5). "Ask" navigates to the
+  chat page (Step 4 makes it a panel; keep `/chat` as its deep link).
+- The screenshot spec captures signed-out states only. Steps that add signed-in screens should
+  add a signed-in pass using `signUp` from `e2e/tests/helpers.ts`.
+- Each `shell.spec.ts` run leaves a few `e2e-…@example.com` users in the dev database, and one
+  happy-path run left a queued research job for NVDA.
+- Not reviewed: Clyde and Albert live (still no general browser).

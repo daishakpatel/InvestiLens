@@ -99,7 +99,7 @@ export default function UiGallery() {
     <div className="space-y-12 py-8">
       <header>
         <h1 className="text-display-s font-semibold">Design system</h1>
-        <p className="mt-1 text-muted">Tokens and primitives. Toggle the theme to check both.</p>
+        <p className="mt-1 text-muted">Tokens and primitives. Switch theme from the account menu to check both.</p>
       </header>
 
       <Section title="Colour">

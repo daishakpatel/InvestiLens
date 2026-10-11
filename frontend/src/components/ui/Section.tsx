@@ -8,19 +8,21 @@ import { FreshnessBadge } from "./Badge";
  *  `kind="ai"` adds the AI mark that distinguishes generated content from data (FR-010). */
 export function Section({
   title,
+  id,
   kind = "data",
   freshness,
   actions,
   children,
 }: {
   title: string;
+  id?: string; // anchor target for in-page links (old tab URLs redirect to these)
   kind?: "data" | "ai";
   freshness?: Freshness | null | undefined;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section aria-label={title}>
+    <section id={id} aria-label={title}>
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
         <div className="flex items-baseline gap-2.5">
           <h2 className="text-title font-medium">{title}</h2>

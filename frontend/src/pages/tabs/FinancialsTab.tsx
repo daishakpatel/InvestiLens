@@ -7,6 +7,8 @@ import { AsyncContent } from "../../components/ui/States";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { downloadCsv, toCsv } from "../../lib/format";
 import { useFinancials, useMetricLineage } from "../../lib/queries";
+import { useScrollToHash } from "../../lib/useScrollToHash";
+import ValuationTab from "./ValuationTab";
 import type { FinancialsResponse, MetricSeries } from "../../types";
 
 interface ChartConfig {
@@ -81,7 +83,7 @@ function exportCsv(ticker: string, periodType: string, data: FinancialsResponse)
   downloadCsv(`${ticker}_financials_${periodType}.csv`, csv);
 }
 
-export default function FinancialsTab() {
+function Statements() {
   const { ticker = "" } = useParams();
   const [periodType, setPeriodType] = useState("FY");
   const [showYoY, setShowYoY] = useState(false);
@@ -163,5 +165,17 @@ export default function FinancialsTab() {
         )}
       </AsyncContent>
     </Section>
+  );
+}
+
+/** Financials tab: statements and charts, then valuation (formerly its own tab; `/valuation`
+ *  redirects to `#valuation` here). UI plan Step 3 merges the two properly. */
+export default function FinancialsTab() {
+  useScrollToHash();
+  return (
+    <div className="space-y-12">
+      <Statements />
+      <ValuationTab />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 // Dark/light theme (UI-007, ADR-0028). Dark is the default for everyone; `.light` on <html> is
 // the opt-in. Persisted to localStorage; the initial class is set pre-paint by the inline script
-// in index.html, so this just keeps React state in sync and lets the user toggle.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+// in index.html, so this just keeps React state in sync and lets the user choose (account menu).
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 type Theme = "light" | "dark";
@@ -9,7 +9,7 @@ const KEY = "il-theme";
 
 interface ThemeContextValue {
   theme: Theme;
-  toggle: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -38,8 +38,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
-  const toggle = useCallback(() => setTheme((t) => (t === "dark" ? "light" : "dark")), []);
-  const value = useMemo<ThemeContextValue>(() => ({ theme, toggle }), [theme, toggle]);
+  const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme }), [theme]);
   return <ThemeContext value={value}>{children}</ThemeContext>;
 }
 

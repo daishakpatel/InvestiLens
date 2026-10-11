@@ -123,7 +123,7 @@ function Tracker({ data }: { data: ManagementLanguageResponse }) {
 export function LanguageTracker({ ticker }: { ticker: string }) {
   const language = useManagementLanguage(ticker);
   return (
-    <Section title="Management language over time">
+    <Section id="management" title="Management language over time">
       <AsyncContent
         query={language}
         isEmpty={(d) => d.periods.length === 0}

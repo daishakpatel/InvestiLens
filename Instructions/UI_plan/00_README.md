@@ -66,8 +66,8 @@ change their **values**, and add the new ones marked ★. Dark is the base; ligh
 | `border` | `#22262d` | `#e4e7eb` | Hairlines |
 | `border-strong` ★ | `#2f343c` | `#cfd4da` | Inputs, focused containers |
 | `text` | `#f3f5f7` | `#0b0d10` | Primary text, numbers |
-| `muted` | `#a1a7b0` | `#565d68` | Secondary text, labels |
-| `subtle` ★ | `#6b727d` | `#6f7681` | Tertiary: units, timestamps, axis ticks |
+| `muted` | `#a1a7b0` | `#4d545e` | Secondary text, labels |
+| `subtle` ★ | `#848c97` | `#656c77` | Tertiary: units, timestamps, axis ticks |
 | `primary` | `#5b8cff` | `#2456e6` | The accent: primary action, active nav, focus ring |
 | `primary-contrast` | `#0a0b0d` | `#ffffff` | Text on accent |
 | `positive` | `#2fd27a` | `#067a3c` | Gains only |
@@ -75,8 +75,8 @@ change their **values**, and add the new ones marked ★. Dark is the base; ligh
 | `warning` | `#f5b84a` | `#9a5106` | Stale data, caveats |
 | `ai` | `#a78bfa` | `#6d3fe0` | AI-generated content marker |
 
-Step 1 measured contrast and adjusted four light values; the table above is what shipped, and
-the ratios are in ADR-0028. If you change a value, re-measure it; change values, not roles. The accent is deliberately not green: green is reserved for gains.
+Steps 1 and 2 measured contrast and adjusted values (Step 2 raised `subtle` and light `muted`
+after the first axe run); the table above is what shipped, and the ratios are in ADR-0028. If you change a value, re-measure it; change values, not roles. The accent is deliberately not green: green is reserved for gains.
 
 Chart series colours stay the colourblind-safe Okabe-Ito set (UI-003), retuned for the new canvas.
 A single-series price or metric line uses `text` (neutral) or `positive`/`negative` by direction,

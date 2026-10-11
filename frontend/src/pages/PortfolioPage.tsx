@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { Container } from "../components/ui/Container";
 import { Section } from "../components/ui/Section";
 import { ErrorState, LoadingState } from "../components/ui/States";
 import { formatPercent } from "../lib/format";
@@ -46,7 +47,7 @@ export default function PortfolioPage() {
     setHoldings(holdings.map((h, j) => (j === i ? { ...h, ...patch } : h)));
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6">
+    <Container className="py-8">
       <h1 className="mb-1 text-xl font-semibold">Portfolio analysis</h1>
       <p className="mb-4 text-sm text-muted">
         Enter hypothetical holdings as ticker + weight. All figures are deterministic analysis of a
@@ -126,7 +127,7 @@ export default function PortfolioPage() {
           <p className="text-xs text-muted">{analysis.disclaimer}</p>
         </div>
       )}
-    </main>
+    </Container>
   );
 }
 

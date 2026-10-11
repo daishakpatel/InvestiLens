@@ -96,6 +96,26 @@ export function usePrices(ticker: string): UseQueryResult<PricesResponse> {
   });
 }
 
+const RECENT_PRICE_DAYS = 45;
+
+/** The last few weeks of daily bars: enough for a last close and day change in a list row without
+ *  downloading the full multi-year series that `usePrices` returns for charts. */
+export function useRecentPrices(ticker: string): UseQueryResult<PricesResponse> {
+  return useQuery({
+    queryKey: ["prices", ticker, "recent"],
+    staleTime: 5 * MINUTE,
+    retry: false, // a ticker with no prices (or not ingested) just shows no quote
+    queryFn: async ({ signal }) => {
+      const start = new Date(Date.now() - RECENT_PRICE_DAYS * 86_400_000).toISOString().slice(0, 10);
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/prices`, {
+        query: { start },
+        signal,
+      });
+      return parse.prices(data);
+    },
+  });
+}
+
 export function useFilings(ticker: string): UseQueryResult<FilingSummary[]> {
   return useQuery({
     queryKey: ["filings", ticker],

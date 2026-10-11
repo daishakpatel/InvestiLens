@@ -132,9 +132,9 @@ function ReportMeta({ envelope }: { envelope: ResearchReportEnvelope }) {
   );
 }
 
-export function RisksCard({ risks, numberOf }: { risks: Risk[]; numberOf: NumberOf }) {
+function RisksCard({ risks, numberOf }: { risks: Risk[]; numberOf: NumberOf }) {
   return (
-    <Section title="Risks" kind="ai">
+    <Section id="risks" title="Risks" kind="ai">
       <ul className="px-4 py-1">
         {risks.map((r, i) => (
           <li key={i} className="flex flex-col gap-1 border-b border-border/60 py-2 last:border-0">
@@ -153,7 +153,7 @@ export function RisksCard({ risks, numberOf }: { risks: Risk[]; numberOf: Number
   );
 }
 
-export function ManagementCard({
+function ManagementCard({
   statements,
   numberOf,
 }: {
@@ -161,7 +161,7 @@ export function ManagementCard({
   numberOf: NumberOf;
 }) {
   return (
-    <Section title="Management commentary" kind="ai">
+    <Section id="management-commentary" title="Management commentary" kind="ai">
       <ul className="px-4 py-1">
         {statements.map((m, i) => (
           <li key={i} className="flex flex-col gap-1 border-b border-border/60 py-2 last:border-0">

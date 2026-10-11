@@ -1,106 +1,140 @@
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-import { DisambiguationPicker } from "../components/DisambiguationPicker";
-import { SearchBox } from "../components/SearchBox";
+import { WatchlistSlot } from "../components/home/WatchlistSlot";
+import { SearchTrigger } from "../components/SearchTrigger";
+import { Container } from "../components/ui/Container";
+import { Delta } from "../components/ui/Delta";
+import { Skeleton } from "../components/ui/Skeleton";
 import { useAuth } from "../lib/auth";
+import { POPULAR_COMPANIES } from "../lib/config";
+import { formatUsd } from "../lib/format";
+import { useRecentPrices } from "../lib/queries";
+import { latestQuote } from "../lib/quote";
 import { addRecentSearch, getRecentSearches } from "../lib/recentSearches";
-import type { CompanySearchResult } from "../types";
 
-const POPULAR: { ticker: string; name: string }[] = [
-  { ticker: "NVDA", name: "NVIDIA" },
-  { ticker: "AAPL", name: "Apple" },
-  { ticker: "MSFT", name: "Microsoft" },
-  { ticker: "JPM", name: "JPMorgan Chase" },
+const EXAMPLE = POPULAR_COMPANIES[0] ?? { ticker: "NVDA", name: "NVIDIA" };
+
+const FEATURES: { title: string; body: string; cta: string; to: string }[] = [
+  {
+    title: "Financials with lineage",
+    body: "Revenue, margins and cash flow taken straight from SEC filings. Every figure can show the filing and the formula behind it.",
+    cta: `See ${EXAMPLE.name}’s financials`,
+    to: `/company/${EXAMPLE.ticker}/financials`,
+  },
+  {
+    title: "AI research with citations",
+    body: "A full research report in which each claim links to the passage it came from. Where the evidence is thin, the report says so.",
+    cta: `Read ${EXAMPLE.name}’s research`,
+    to: `/company/${EXAMPLE.ticker}/research`,
+  },
+  {
+    title: "Filing change detection",
+    body: "What changed between one annual report and the next: new risk factors, removed ones, and reworded passages, word by word.",
+    cta: `See what changed at ${EXAMPLE.name}`,
+    to: `/company/${EXAMPLE.ticker}/filings`,
+  },
 ];
 
-export default function HomePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [ambiguous, setAmbiguous] = useState<CompanySearchResult[] | null>(null);
-  const recents = getRecentSearches();
-
-  const go = (ticker: string, name: string) => {
-    addRecentSearch({ ticker, name });
-    navigate(`/company/${ticker}`);
-  };
-
-  const onSubmitQuery = (results: CompanySearchResult[]) => {
-    if (results.length === 0) return;
-    if (results.length === 1 && results[0]) go(results[0].ticker, results[0].name);
-    else setAmbiguous(results); // never silently best-guess (§9.2)
-  };
-
+/** One company: ticker, name, last close, day change. The whole row is the link. */
+function TickerRow({ ticker, name }: { ticker: string; name: string }) {
+  const prices = useRecentPrices(ticker);
+  const quote = latestQuote(prices.data?.points);
   return (
-    <div className="mx-auto max-w-2xl py-10">
-      <h1 className="mb-1 text-2xl font-bold">Search a company</h1>
-      <p className="mb-6 text-sm text-muted">
-        Evidence-grounded financials and AI research for US public companies.
-      </p>
-
-      <SearchBox
-        autoFocus
-        onSelect={(r) => go(r.ticker, r.name)}
-        onSubmitQuery={onSubmitQuery}
-      />
-
-      {ambiguous && ambiguous.length > 1 && (
-        <div className="mt-4">
-          <DisambiguationPicker results={ambiguous} onSelect={(r) => go(r.ticker, r.name)} />
-        </div>
-      )}
-
-      <Section title="Popular">
-        <ChipRow items={POPULAR} onPick={go} />
-      </Section>
-
-      {recents.length > 0 && (
-        <Section title="Recent searches">
-          <ChipRow items={recents} onPick={go} />
-        </Section>
-      )}
-
-      {user && (
-        <Section title="Your watchlist">
-          <p className="text-sm text-muted">
-            Watchlist quick links appear here once you add companies (Watchlist &amp; Alerts, Phase
-            4d).
-          </p>
-        </Section>
-      )}
-    </div>
+    <li>
+      <Link
+        to={`/company/${ticker}`}
+        onClick={() => addRecentSearch({ ticker, name })}
+        className="-mx-3 flex h-12 items-center gap-3 rounded-control px-3 transition-colors hover:bg-surface"
+      >
+        <span className="w-14 shrink-0 font-medium">{ticker}</span>
+        <span className="min-w-0 flex-1 truncate text-muted">{name}</span>
+        {/* The price cells keep their width while loading and stay empty (not dashed) when a
+            company has no price data. */}
+        <span className="tnum w-20 shrink-0 text-right">
+          {prices.isPending ? <Skeleton className="ml-auto w-14" /> : quote && formatUsd(quote.close)}
+        </span>
+        <span className="w-20 shrink-0 text-right text-sm">
+          {quote && <Delta value={quote.changePct} />}
+        </span>
+      </Link>
+    </li>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function TickerList({ title, items }: { title: string; items: { ticker: string; name: string }[] }) {
   return (
-    <section className="mt-8">
-      <h2 className="mb-2 text-xs font-semibold text-muted">{title}</h2>
-      {children}
+    <section aria-label={title}>
+      <h2 className="border-b border-border pb-2 text-label text-muted">{title}</h2>
+      <ul className="divide-y divide-border/60">
+        {items.map((item) => (
+          <TickerRow key={item.ticker} {...item} />
+        ))}
+      </ul>
     </section>
   );
 }
 
-function ChipRow({
-  items,
-  onPick,
-}: {
-  items: { ticker: string; name: string }[];
-  onPick: (ticker: string, name: string) => void;
-}) {
+export default function HomePage() {
+  const { user } = useAuth();
+  const [recents] = useState(getRecentSearches);
+  const recentTickers = new Set(recents.map((r) => r.ticker));
+  const popular = POPULAR_COMPANIES.filter((c) => !recentTickers.has(c.ticker));
+  const lists = [
+    { title: "Recent", items: recents },
+    { title: "Popular", items: popular },
+  ].filter((list) => list.items.length > 0);
+  // One column width for the lists and the watchlist beneath them, so their edges line up.
+  const column = lists.length > 1 ? "max-w-4xl" : "max-w-xl";
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((c) => (
-        <button
-          key={c.ticker}
-          type="button"
-          onClick={() => onPick(c.ticker, c.name)}
-          className="rounded-full border border-border bg-surface px-3 py-1 text-sm hover:bg-surface-2"
+    <Container>
+      {/* The hero fills the first screen on a laptop; only the next heading shows at the fold. */}
+      <section className="flex min-h-[calc(100svh-11rem)] flex-col items-center justify-center py-16 text-center">
+        <h1 className="text-display-s font-semibold md:text-display-l">Research you can verify.</h1>
+        <p className="mt-4 max-w-xl text-body text-muted md:text-title">
+          Financials, filings and AI analysis for US public companies. Every number is traced to
+          its source, and every claim is cited.
+        </p>
+        <div className="mt-10 w-full max-w-xl">
+          <SearchTrigger variant="hero" />
+        </div>
+      </section>
+
+      <div className="space-y-20">
+        <div
+          className={`mx-auto grid grid-cols-1 gap-x-16 gap-y-10 ${column} ${
+            lists.length > 1 ? "md:grid-cols-2" : ""
+          }`}
         >
-          <span className="font-medium">{c.ticker}</span>{" "}
-          <span className="text-muted">{c.name}</span>
-        </button>
-      ))}
-    </div>
+          {lists.map((list) => (
+            <TickerList key={list.title} {...list} />
+          ))}
+        </div>
+
+        {user && (
+          <div className={`mx-auto ${column}`}>
+            <WatchlistSlot />
+          </div>
+        )}
+
+        <section aria-label="What you get" className="grid gap-x-12 gap-y-10 md:grid-cols-3">
+          {FEATURES.map((feature) => (
+            <div key={feature.title} className="border-t border-border pt-5">
+              <h2 className="text-title font-medium">{feature.title}</h2>
+              <p className="mt-2 text-muted">{feature.body}</p>
+              <Link
+                to={feature.to}
+                className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                {feature.cta}
+                <ArrowRight aria-hidden className="size-4" />
+              </Link>
+            </div>
+          ))}
+        </section>
+      </div>
+    </Container>
   );
 }

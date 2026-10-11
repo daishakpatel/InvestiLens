@@ -17,7 +17,7 @@
   --border-strong: #2f343c;
   --text: #f3f5f7;
   --text-muted: #a1a7b0;
-  --text-subtle: #6b727d;
+  --text-subtle: #848c97;
   --primary: #5b8cff;
   --primary-contrast: #0a0b0d;
   --positive: #2fd27a;
@@ -46,8 +46,8 @@
   --border: #e4e7eb;
   --border-strong: #cfd4da;
   --text: #0b0d10;
-  --text-muted: #565d68;
-  --text-subtle: #6f7681;
+  --text-muted: #4d545e;
+  --text-subtle: #656c77;
   --primary: #2456e6;
   --primary-contrast: #ffffff;
   --positive: #067a3c;
@@ -113,6 +113,7 @@
 
   --default-transition-duration: 120ms;
   --animate-shimmer: shimmer 1.2s ease-in-out infinite;
+  --animate-progress: progress 1.1s ease-in-out infinite;
 
   @keyframes shimmer {
     0%,
@@ -121,6 +122,15 @@
     }
     50% {
       opacity: 0.45;
+    }
+  }
+
+  @keyframes progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(350%);
     }
   }
 }
@@ -133,6 +143,8 @@ body,
 
 html {
   color-scheme: dark;
+  /* Anchors and focus scrolling clear the sticky top bar (56 px) and company sub-header (48 px). */
+  scroll-padding-top: 7.5rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
@@ -162,10 +174,14 @@ body {
   font-feature-settings: "tnum", "cv11", "ss01";
 }
 
-/* Visible focus ring for keyboard users everywhere (UI-003). */
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+/* Visible focus ring for keyboard users everywhere (UI-003). In the base layer so that a
+   component drawing its own focus treatment (inputs use a ring) can switch this one off; outside
+   a layer it would out-rank every utility class. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -44,8 +44,8 @@ the main screens in both themes at 1440 px and 390 px.
 | Token | Dark | Ratios | Light | Ratios |
 |-------|------|--------|-------|--------|
 | `text` | `#f3f5f7` | 18.0 / 17.0 / 15.8 | `#0b0d10` | 19.5 / 18.3 / 17.2 |
-| `muted` | `#a1a7b0` | 8.1 / 7.7 / 7.1 | `#565d68` | 6.6 / 6.3 / 5.9 |
-| `subtle` | `#6b727d` | 4.1 / 3.8 / 3.6 | `#6f7681` (was `#868d97`: 3.4 / 3.2 / 3.0) | 4.6 / 4.3 / 4.1 |
+| `muted` | `#a1a7b0` | 8.1 / 7.7 / 7.1 | `#4d545e` (was `#565d68`: 6.6 / 6.3 / 5.9) | 7.7 / 7.2 / 6.8 |
+| `subtle` | `#848c97` (was `#6b727d`: 4.1 / 3.8 / 3.6) | 5.8 / 5.5 / 5.1 | `#656c77` (was `#868d97`, then `#6f7681`: 4.6 / 4.3 / 4.1) | 5.3 / 5.0 / 4.7 |
 | `primary` | `#5b8cff` | 6.2 / 5.9 / 5.5 | `#2456e6` | 5.9 / 5.6 / 5.2 |
 | `positive` | `#2fd27a` | 10.0 / 9.4 / 8.7 | `#067a3c` (was `#0a8a45`: 4.4 / 4.2 / 3.9) | 5.4 / 5.1 / 4.8 |
 | `negative` | `#ff5c5c` | 6.5 / 6.2 / 5.7 | `#c8261a` (was `#d92d20`: 4.8 / 4.5 / 4.3) | 5.6 / 5.3 / 5.0 |
@@ -58,10 +58,11 @@ the light one, above the 3:1 needed for graphical objects.
 
 ## Consequences
 
-`text`, `muted`, and every semantic colour pass AA (4.5:1) on `bg`, `surface`, and `surface-2` in
-both themes. Known shortfalls, accepted for now: dark `subtle` is 3.6 to 4.1:1, so it is for
-non-essential text only (units, timestamps, axis ticks), never for anything a user must read;
-input and hairline borders (`border-strong` about 1.5:1) do not meet the 3:1 non-text guideline,
+`text`, `muted`, `subtle`, and every semantic colour pass AA (4.5:1) on `bg`, `surface`, and
+`surface-2` in both themes. `subtle` originally shipped at 3.6 to 4.1:1 in dark on the theory that
+it carried only non-essential text; UI plan Step 2's first axe run flagged it (it is used for the
+search placeholder, data freshness, and the disclaimer), so it was raised, and light `muted` was
+darkened to keep the two apart. Known shortfall, accepted for now: input and hairline borders (`border-strong` about 1.5:1) do not meet the 3:1 non-text guideline,
 so fields rely on their filled background, label, and focus ring. Radix adds one shared chunk of
 about 18 kB gzip; the entry bundle grew 0.4 kB gzip. The font package emits seven subset files but
 browsers fetch only the Latin one for our content. Revisit if a second accent colour is wanted, if

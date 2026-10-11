@@ -1,15 +1,30 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { LanguageTracker } from "../../components/filings/LanguageTracker";
 import { ReportView } from "../../components/research/ReportView";
 import { Section } from "../../components/ui/Section";
 import { Spinner } from "../../components/ui/Skeleton";
 import { LoadingState } from "../../components/ui/States";
 import { useAuth } from "../../lib/auth";
 import { useJob, useLatestResearch, useResearchReport, useStartResearch } from "../../lib/queries";
+import { useScrollToHash } from "../../lib/useScrollToHash";
 
+/** Research tab: the AI report (which carries the Risks and Management sections that used to be
+ *  tabs; `/risks` and `/management` redirect to anchors here), then management language tracking.
+ *  UI plan Step 4 turns this into one reading document. */
 export default function ResearchTab() {
   const { ticker = "" } = useParams();
+  useScrollToHash();
+  return (
+    <div className="space-y-12">
+      <Report ticker={ticker} />
+      <LanguageTracker ticker={ticker} />
+    </div>
+  );
+}
+
+function Report({ ticker }: { ticker: string }) {
   const latest = useLatestResearch(ticker);
 
   if (latest.isPending) return <LoadingState label="Loading latest report…" />;
@@ -42,7 +57,7 @@ function GenerateFlow({ ticker }: { ticker: string }) {
 
           {!user ? (
             <p className="text-muted">
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-primary underline underline-offset-2">
                 Sign in
               </Link>{" "}
               to generate a report (AI generation requires an account).
@@ -76,15 +91,15 @@ function GenerateFlow({ ticker }: { ticker: string }) {
               ? "Unable to generate the research report. Your financial data remains available — "
               : "While a report isn’t ready, the deterministic data is available — "}
             see{" "}
-            <Link to={`/company/${ticker}/financials`} className="text-primary hover:underline">
+            <Link to={`/company/${ticker}/financials`} className="text-primary underline underline-offset-2">
               Financials
             </Link>
             ,{" "}
-            <Link to={`/company/${ticker}/filings`} className="text-primary hover:underline">
-              SEC Filings
+            <Link to={`/company/${ticker}/filings`} className="text-primary underline underline-offset-2">
+              Filings
             </Link>
             , and{" "}
-            <Link to={`/company/${ticker}/news`} className="text-primary hover:underline">
+            <Link to={`/company/${ticker}/news`} className="text-primary underline underline-offset-2">
               News
             </Link>
             .

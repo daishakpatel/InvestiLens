@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { DropdownMenu as RadixMenu } from "radix-ui";
 import type { ReactNode } from "react";
 
@@ -11,7 +12,9 @@ export function DropdownMenu({
   align?: "start" | "center" | "end";
 }) {
   return (
-    <RadixMenu.Root>
+    // Non-modal: the page behind stays in the accessibility tree and keeps its scrollbar, so
+    // opening a menu neither hides content from assistive tech nor nudges the sticky bars.
+    <RadixMenu.Root modal={false}>
       <RadixMenu.Trigger asChild>{trigger}</RadixMenu.Trigger>
       <RadixMenu.Portal>
         <RadixMenu.Content
@@ -45,6 +48,42 @@ export function MenuItem({
     >
       {children}
     </RadixMenu.Item>
+  );
+}
+
+/** A single-choice group inside a menu. Choosing an option leaves the menu open, so the effect
+ *  (a theme change, say) is visible before the user moves on. */
+export function MenuRadioGroup<T extends string>({
+  label,
+  value,
+  onValueChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onValueChange: (value: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <RadixMenu.RadioGroup
+      aria-label={label}
+      value={value}
+      onValueChange={(next) => onValueChange(next as T)}
+    >
+      {options.map((option) => (
+        <RadixMenu.RadioItem
+          key={option.value}
+          value={option.value}
+          onSelect={(event) => event.preventDefault()}
+          className="flex h-8 cursor-default items-center justify-between gap-2 rounded-[4px] px-2 text-text outline-none data-[highlighted]:bg-surface-2"
+        >
+          {option.label}
+          <RadixMenu.ItemIndicator>
+            <Check aria-hidden className="size-3.5 text-primary" />
+          </RadixMenu.ItemIndicator>
+        </RadixMenu.RadioItem>
+      ))}
+    </RadixMenu.RadioGroup>
   );
 }
 

@@ -2,6 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { CircleAlert, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { useApiStatus } from "../../lib/apiStatus";
 import { Button } from "./Button";
 import { Skeleton } from "./Skeleton";
 
@@ -62,8 +63,12 @@ export function AsyncContent<T>({
   emptyMessage?: string;
   children: (data: T) => ReactNode;
 }) {
+  const { online, reachable } = useApiStatus();
   if (query.isPending) return <LoadingState />;
   if (query.isError) {
+    // An outage is announced once, by the shell's banner; each panel waits instead of repeating
+    // the error, and reloads on its own when the API is back.
+    if (!online || !reachable) return <LoadingState label="Waiting for connection" />;
     const message = query.error instanceof Error ? query.error.message : "Something went wrong.";
     return <ErrorState message={message} onRetry={() => void query.refetch()} />;
   }

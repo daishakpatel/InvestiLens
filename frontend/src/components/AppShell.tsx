@@ -1,60 +1,83 @@
-import { Suspense } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
-import { useAuth } from "../lib/auth";
-import { Footer, ThemeToggle } from "./chrome";
-import { LoadingState } from "./ui/States";
+import { Footer } from "./chrome";
+import { PageSkeleton } from "./PageSkeleton";
+import { SearchTrigger } from "./SearchTrigger";
+import { Container } from "./ui/Container";
 
-export function AppShell() {
-  const { user, logout } = useAuth();
+// The menu's positioning and focus machinery (Radix) is the heaviest thing in the bar and is not
+// needed to paint it, so it arrives in its own chunk; the bar reserves its 36 px meanwhile.
+const AccountMenu = lazy(() => import("./AccountMenu"));
+
+const NAV = [
+  { to: "/compare", label: "Compare" },
+  { to: "/portfolio", label: "Portfolio" },
+];
+
+export function Wordmark() {
   return (
-    <div className="mx-auto flex min-h-full max-w-6xl flex-col px-4">
-      <header className="flex items-center justify-between gap-4 py-4">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-lg font-bold tracking-tight">
-            InvestiLens
-          </Link>
-          <nav className="hidden items-center gap-3 text-sm sm:flex" aria-label="Primary">
-            <NavLink
-              to="/compare"
-              className={({ isActive }) =>
-                isActive ? "font-medium text-primary" : "text-muted hover:text-text"
-              }
-            >
-              Compare
-            </NavLink>
-            <NavLink
-              to="/portfolio"
-              className={({ isActive }) =>
-                isActive ? "font-medium text-primary" : "text-muted hover:text-text"
-              }
-            >
-              Portfolio
-            </NavLink>
-          </nav>
+    <Link to="/" className="text-title font-semibold tracking-tight text-text">
+      InvestiLens
+    </Link>
+  );
+}
+
+function TopBar() {
+  const { pathname } = useLocation();
+  // Home's hero is the search; a second field in the bar would compete with it.
+  const showSearchField = pathname !== "/";
+  return (
+    <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
+      {/* Three columns from md up, so the search field is centred on the page rather than in
+          whatever space the wordmark and links leave. */}
+      <Container className="flex h-14 items-center justify-between gap-3 md:grid md:grid-cols-[1fr_minmax(0,24rem)_1fr] md:gap-6">
+        <div>
+          <Wordmark />
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          {user ? (
-            <>
-              <span className="hidden text-muted sm:inline">{user.email}</span>
-              <button
-                type="button"
-                onClick={() => void logout()}
-                className="rounded-control border border-border px-3 py-1 hover:bg-surface-2"
+        <div className="hidden md:block">{showSearchField && <SearchTrigger variant="bar" />}</div>
+        <div className="flex items-center justify-end gap-1 md:gap-6">
+          <nav aria-label="Primary" className="hidden items-center gap-6 md:flex">
+            {NAV.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors ${
+                    isActive ? "text-text" : "text-muted hover:text-text"
+                  }`
+                }
               >
-                Sign out
-              </button>
-            </>
-          ) : (
-            <Link to="/login" className="rounded-control border border-border px-3 py-1 hover:bg-surface-2">
-              Sign in
-            </Link>
-          )}
-          <ThemeToggle />
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="md:hidden">
+            <SearchTrigger variant="icon" />
+          </div>
+          <Suspense fallback={<div aria-hidden className="size-9" />}>
+            <AccountMenu />
+          </Suspense>
         </div>
-      </header>
-      <main className="flex-1">
-        <Suspense fallback={<LoadingState />}>
+      </Container>
+    </header>
+  );
+}
+
+/** The global frame: a full-width sticky bar, the page, and the disclaimer. Pages own their
+ *  width by wrapping content in `Container`, so a page can also run something edge to edge. */
+export function AppShell() {
+  return (
+    <div className="flex min-h-full flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-control focus:bg-surface focus:px-3 focus:py-2 focus:text-sm"
+      >
+        Skip to content
+      </a>
+      <TopBar />
+      <main id="main" className="flex-1">
+        <Suspense fallback={<PageSkeleton />}>
           <Outlet />
         </Suspense>
       </main>

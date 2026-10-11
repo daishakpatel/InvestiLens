@@ -1,88 +1,192 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useId, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
+import { Wordmark } from "../components/AppShell";
+import { Footer } from "../components/chrome";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
 import { useAuth } from "../lib/auth";
+import { PASSWORD_MIN_LENGTH } from "../lib/config";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
+
+type Mode = "login" | "register";
+interface FieldErrors {
+  email?: string | undefined;
+  password?: string | undefined;
+}
+
+const COPY: Record<Mode, { title: string; submit: string; prompt: string; switchTo: string }> = {
+  login: {
+    title: "Sign in",
+    submit: "Sign in",
+    prompt: "New to InvestiLens?",
+    switchTo: "Create an account",
+  },
+  register: {
+    title: "Create your account",
+    submit: "Create account",
+    prompt: "Already have an account?",
+    switchTo: "Sign in",
+  },
+};
+
+function validate(mode: Mode, email: string, password: string): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = "Enter a valid email address.";
+  if (!password) errors.password = "Enter your password.";
+  else if (mode === "register" && password.length < PASSWORD_MIN_LENGTH) {
+    errors.password = `Use at least ${PASSWORD_MIN_LENGTH} characters.`;
+  }
+  return errors;
+}
+
+/** Where to go after signing in: back to the page that sent the user here, else home. */
+function useReturnPath(): string {
+  const state = useLocation().state as { from?: unknown } | null;
+  const from = state?.from;
+  return typeof from === "string" && from.startsWith("/") && !from.startsWith("//") ? from : "/";
+}
 
 export default function AuthPage() {
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const returnPath = useReturnPath();
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const copy = COPY[mode];
+  useDocumentTitle(copy.title);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  if (user) return <Navigate to={returnPath} replace />;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const found = validate(mode, email, password);
+    setErrors(found);
+    setFailure(null);
+    if (found.email) return emailRef.current?.focus();
+    if (found.password) return passwordRef.current?.focus();
+
     setBusy(true);
     try {
-      if (mode === "login") await login(email, password);
-      else await register(email, password);
-      navigate("/");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      if (mode === "login") await login(email.trim(), password);
+      else await register(email.trim(), password);
+      navigate(returnPath, { replace: true });
+    } catch (error) {
+      // A rejected fetch is a network failure; anything else is the API's own message, verbatim.
+      setFailure(
+        error instanceof TypeError
+          ? "Can’t reach InvestiLens. Check your connection and try again."
+          : error instanceof Error
+            ? error.message
+            : "Something went wrong.",
+      );
     } finally {
       setBusy(false);
     }
   };
 
+  const switchMode = () => {
+    setMode((current) => (current === "login" ? "register" : "login"));
+    setErrors({});
+    setFailure(null);
+  };
+
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <h1 className="mb-6 text-xl font-bold">{mode === "login" ? "Sign in" : "Create account"}</h1>
-      <form onSubmit={submit} className="space-y-4">
-        <label className="block text-sm">
-          <span className="mb-1 block text-muted">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-control border border-border bg-surface px-3 py-2"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block text-muted">Password</span>
-          <input
-            type="password"
-            required
-            minLength={12}
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-control border border-border bg-surface px-3 py-2"
-          />
-          {mode === "register" && (
-            <span className="mt-1 block text-xs text-muted">At least 12 characters.</span>
-          )}
-        </label>
-
-        {error && (
-          <p role="alert" className="text-sm text-negative">
-            {error}
+    <div className="flex min-h-full flex-col">
+      <main className="flex flex-1 items-center justify-center px-4 py-16">
+        <div className="w-full max-w-[400px]">
+          <Wordmark />
+          <h1 className="mt-10 text-heading font-semibold">{copy.title}</h1>
+          <p className="mt-1 text-muted">
+            An account lets you generate research reports and ask questions about a company.
           </p>
-        )}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-control bg-primary py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
-        >
-          {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
-        </button>
-      </form>
+          <form onSubmit={(event) => void submit(event)} noValidate className="mt-8 space-y-5">
+            <div>
+              <label htmlFor={`${id}-email`} className="mb-1.5 block text-label text-muted">
+                Email
+              </label>
+              <Input
+                ref={emailRef}
+                id={`${id}-email`}
+                type="email"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setErrors((current) => ({ ...current, email: undefined }));
+                }}
+                aria-invalid={errors.email ? true : undefined}
+                aria-describedby={errors.email ? `${id}-email-error` : undefined}
+                className="h-10"
+              />
+              {errors.email && (
+                <p id={`${id}-email-error`} className="mt-1.5 text-label text-negative">
+                  {errors.email}
+                </p>
+              )}
+            </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          setMode((m) => (m === "login" ? "register" : "login"));
-          setError(null);
-        }}
-        className="mt-4 text-sm text-primary hover:underline"
-      >
-        {mode === "login" ? "Need an account? Register" : "Have an account? Sign in"}
-      </button>
+            <div>
+              <label htmlFor={`${id}-password`} className="mb-1.5 block text-label text-muted">
+                Password
+              </label>
+              <Input
+                ref={passwordRef}
+                id={`${id}-password`}
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setErrors((current) => ({ ...current, password: undefined }));
+                }}
+                aria-invalid={errors.password ? true : undefined}
+                aria-describedby={`${id}-password-note`}
+                className="h-10"
+              />
+              <p
+                id={`${id}-password-note`}
+                className={`mt-1.5 text-label ${errors.password ? "text-negative" : "text-subtle"}`}
+              >
+                {errors.password ??
+                  (mode === "register" ? `At least ${PASSWORD_MIN_LENGTH} characters.` : "")}
+              </p>
+            </div>
+
+            {failure && (
+              <p role="alert" className="text-sm text-negative">
+                {failure}
+              </p>
+            )}
+
+            <Button type="submit" variant="primary" loading={busy} className="h-10 w-full">
+              {copy.submit}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-sm text-muted">
+            {copy.prompt}{" "}
+            <button
+              type="button"
+              onClick={switchMode}
+              className="font-medium text-primary hover:underline"
+            >
+              {copy.switchTo}
+            </button>
+          </p>
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 }

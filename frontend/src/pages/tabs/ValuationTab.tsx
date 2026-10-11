@@ -11,7 +11,7 @@ export default function ValuationTab() {
   const valuation = useValuation(ticker);
 
   return (
-    <Section title="Valuation metrics" freshness={valuation.data?.freshness}>
+    <Section id="valuation" title="Valuation" freshness={valuation.data?.freshness}>
       <AsyncContent
         query={valuation}
         isEmpty={(d) => d.metrics.length === 0}

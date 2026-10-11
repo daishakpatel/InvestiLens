@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { ComparisonBars } from "../charts/ComparisonBars";
 import { Badge } from "../components/ui/Badge";
+import { Container } from "../components/ui/Container";
 import { Section } from "../components/ui/Section";
 import { AsyncContent, EmptyState } from "../components/ui/States";
 import { useAuth } from "../lib/auth";
@@ -27,7 +28,7 @@ export default function ComparePage() {
   const remove = (t: string) => setTickers(tickers.filter((x) => x !== t));
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6">
+    <Container className="py-8">
       <h1 className="mb-1 text-xl font-semibold">Compare companies</h1>
       <p className="mb-4 text-sm text-muted">
         Side-by-side metrics, aligned to a common calendar year and ranked within the selected peer
@@ -119,7 +120,7 @@ export default function ComparePage() {
           )}
         </AsyncContent>
       )}
-    </main>
+    </Container>
   );
 }
 
