@@ -18,6 +18,15 @@ def get_chunks_by_ids(session: Session, ids: list[int]) -> dict[int, DocumentChu
     return {row.id: row for row in rows}
 
 
+def get_chunks_by_paragraph_ids(session: Session, paragraph_ids: list[str]) -> list[DocumentChunk]:
+    """Chunks addressed by their backend-issued source IDs (`paragraph_id`, CIT-001)."""
+    if not paragraph_ids:
+        return []
+    return list(
+        session.scalars(select(DocumentChunk).where(DocumentChunk.paragraph_id.in_(paragraph_ids)))
+    )
+
+
 def get_section_siblings(
     session: Session, *, document_id: int, parent_section_id: str, exclude_chunk_id: int
 ) -> list[DocumentChunk]:

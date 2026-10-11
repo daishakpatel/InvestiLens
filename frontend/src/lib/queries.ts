@@ -10,10 +10,13 @@ import type {
   CompanySearchResult,
   ComparisonResponse,
   DataFreshnessResponse,
+  EarningsResponse,
+  FilingDiffResponse,
   FilingSectionsResponse,
   FilingSummary,
   FinancialsResponse,
   JobState,
+  ManagementLanguageResponse,
   MetricResult,
   NewsResponse,
   PeerSuggestionsResponse,
@@ -178,6 +181,52 @@ export function useFilingSections(filingId: string | null): UseQueryResult<Filin
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/filings/${filingId}/sections`, { signal });
       return parse.filingSections(data);
+    },
+  });
+}
+
+/** What changed in a filing vs. an older one; `against` null = the prior filing of that type. */
+export function useFilingDiff(
+  filingId: string,
+  against: string | null,
+  kind: "risk_factor" | null,
+): UseQueryResult<FilingDiffResponse> {
+  return useQuery({
+    queryKey: ["filing-diff", filingId, against, kind],
+    staleTime: 10 * MINUTE,
+    retry: false, // 404/422 here mean "nothing to compare", not a transient failure
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/filings/${filingId}/diff`, {
+        query: { against: against ?? undefined, kind: kind ?? undefined },
+        signal,
+      });
+      return parse.filingDiff(data);
+    },
+  });
+}
+
+export function useEarningsReactions(ticker: string): UseQueryResult<EarningsResponse> {
+  return useQuery({
+    queryKey: ["earnings", ticker],
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/earnings`, { signal });
+      return parse.earnings(data);
+    },
+  });
+}
+
+export function useManagementLanguage(
+  ticker: string,
+): UseQueryResult<ManagementLanguageResponse> {
+  return useQuery({
+    queryKey: ["management-language", ticker],
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/management-language`, {
+        signal,
+      });
+      return parse.managementLanguage(data);
     },
   });
 }

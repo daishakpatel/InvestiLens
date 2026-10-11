@@ -1,0 +1,28 @@
+import { Popover as RadixPopover } from "radix-ui";
+import type { ReactNode } from "react";
+
+export function Popover({
+  trigger,
+  children,
+  align = "start",
+}: {
+  trigger: ReactNode; // a single button element
+  children: ReactNode;
+  align?: "start" | "center" | "end";
+}) {
+  return (
+    <RadixPopover.Root>
+      <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
+      <RadixPopover.Portal>
+        <RadixPopover.Content
+          align={align}
+          sideOffset={6}
+          collisionPadding={8}
+          className="z-50 w-72 rounded-surface border border-border-strong bg-surface p-4 text-sm shadow-float"
+        >
+          {children}
+        </RadixPopover.Content>
+      </RadixPopover.Portal>
+    </RadixPopover.Root>
+  );
+}

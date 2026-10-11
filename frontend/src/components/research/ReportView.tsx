@@ -1,7 +1,8 @@
 import { CitationChip } from "../citations/CitationChip";
+import { ChangeStatusBadge } from "../filings/FilingDiffView";
 import { ReferenceList } from "../citations/ReferenceList";
-import { Badge, EvidenceBadge } from "../primitives";
-import { Panel } from "../Panel";
+import { Badge, EvidenceBadge } from "../ui/Badge";
+import { Section } from "../ui/Section";
 import { buildNumbering } from "../../lib/reportCitations";
 import { reportToMarkdown } from "../../lib/reportExport";
 import { downloadText } from "../../lib/format";
@@ -59,13 +60,13 @@ export function ReportView({ envelope }: { envelope: ResearchReportEnvelope }) {
         const claims = report[key] as ResearchClaim[];
         if (claims.length === 0) return null;
         return (
-          <Panel key={key} title={title} kind="ai">
+          <Section key={key} title={title} kind="ai">
             <ul className="px-4 py-1">
               {claims.map((c) => (
                 <ClaimRow key={c.claim_id} claim={c} numberOf={numberOf} />
               ))}
             </ul>
-          </Panel>
+          </Section>
         );
       })}
 
@@ -84,20 +85,20 @@ export function ReportView({ envelope }: { envelope: ResearchReportEnvelope }) {
       )}
 
       {report.insufficient_evidence_sections.length > 0 && (
-        <Panel title="Insufficient evidence" kind="ai">
+        <Section title="Insufficient evidence" kind="ai">
           <p className="p-4 text-sm text-muted">
             These sections had no claims that passed citation verification, so they were left out
             rather than guessed:{" "}
             <span className="text-text">{report.insufficient_evidence_sections.join(", ")}</span>.
           </p>
-        </Panel>
+        </Section>
       )}
 
-      <Panel title="References" kind="data">
+      <Section title="References" kind="data">
         <div className="px-4 pb-3">
           <ReferenceList entries={order.map((id, i) => ({ number: i + 1, sourceId: id }))} />
         </div>
-      </Panel>
+      </Section>
     </div>
   );
 }
@@ -106,7 +107,7 @@ function ReportMeta({ envelope }: { envelope: ResearchReportEnvelope }) {
   const onMarkdown = () =>
     downloadText(`${envelope.ticker}_research.md`, reportToMarkdown(envelope), "text/markdown");
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-4 py-2 text-xs text-muted">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border bg-surface-2 px-4 py-2 text-xs text-muted">
       <span>
         Model {envelope.model ?? "—"} · prompt {envelope.prompt_version ?? "—"} · data{" "}
         {envelope.data_version ?? "—"}
@@ -115,14 +116,14 @@ function ReportMeta({ envelope }: { envelope: ResearchReportEnvelope }) {
         <button
           type="button"
           onClick={onMarkdown}
-          className="rounded-md border border-border px-2 py-1 hover:bg-surface"
+          className="rounded-control border border-border px-2 py-1 hover:bg-surface"
         >
           Export Markdown
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-md border border-border px-2 py-1 hover:bg-surface"
+          className="rounded-control border border-border px-2 py-1 hover:bg-surface"
         >
           Print / PDF
         </button>
@@ -133,13 +134,14 @@ function ReportMeta({ envelope }: { envelope: ResearchReportEnvelope }) {
 
 export function RisksCard({ risks, numberOf }: { risks: Risk[]; numberOf: NumberOf }) {
   return (
-    <Panel title="Risks" kind="ai">
+    <Section title="Risks" kind="ai">
       <ul className="px-4 py-1">
         {risks.map((r, i) => (
           <li key={i} className="flex flex-col gap-1 border-b border-border/60 py-2 last:border-0">
             <div className="flex items-center gap-2">
               <Badge tone="warning">{r.category.replace(/_/g, " ")}</Badge>
               <EvidenceBadge label={r.evidence_label} />
+              <ChangeStatusBadge status={r.change_status} />
             </div>
             <p className="text-sm">
               {r.description} <Chips ids={r.source_ids} numberOf={numberOf} />
@@ -147,7 +149,7 @@ export function RisksCard({ risks, numberOf }: { risks: Risk[]; numberOf: Number
           </li>
         ))}
       </ul>
-    </Panel>
+    </Section>
   );
 }
 
@@ -159,7 +161,7 @@ export function ManagementCard({
   numberOf: NumberOf;
 }) {
   return (
-    <Panel title="Management commentary" kind="ai">
+    <Section title="Management commentary" kind="ai">
       <ul className="px-4 py-1">
         {statements.map((m, i) => (
           <li key={i} className="flex flex-col gap-1 border-b border-border/60 py-2 last:border-0">
@@ -174,7 +176,7 @@ export function ManagementCard({
           </li>
         ))}
       </ul>
-    </Panel>
+    </Section>
   );
 }
 
@@ -188,7 +190,7 @@ function FactorsCard({
   numberOf: NumberOf;
 }) {
   return (
-    <Panel title={title} kind="ai">
+    <Section title={title} kind="ai">
       <div className="space-y-3 p-4">
         {factors.map((f, i) => (
           <div key={i}>
@@ -204,13 +206,13 @@ function FactorsCard({
           </div>
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
 function NewsSummaryCard({ items, numberOf }: { items: NewsItemSummary[]; numberOf: NumberOf }) {
   return (
-    <Panel title="News summary" kind="ai">
+    <Section title="News summary" kind="ai">
       <ul className="px-4 py-1">
         {items.map((n, i) => (
           <li key={i} className="flex flex-col gap-1 border-b border-border/60 py-2 last:border-0">
@@ -221,6 +223,6 @@ function NewsSummaryCard({ items, numberOf }: { items: NewsItemSummary[]; number
           </li>
         ))}
       </ul>
-    </Panel>
+    </Section>
   );
 }

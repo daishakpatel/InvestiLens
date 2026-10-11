@@ -1,7 +1,8 @@
 import { useParams } from "react-router-dom";
 
 import { DataRefreshChecklist } from "../../components/DataRefreshChecklist";
-import { AsyncContent, Panel } from "../../components/Panel";
+import { Section } from "../../components/ui/Section";
+import { AsyncContent } from "../../components/ui/States";
 import { useCompany, useDataFreshness } from "../../lib/queries";
 
 export default function OverviewTab() {
@@ -11,7 +12,7 @@ export default function OverviewTab() {
 
   return (
     <div className="space-y-4">
-      <Panel title="Company overview" freshness={company.data?.freshness}>
+      <Section title="Company overview" freshness={company.data?.freshness}>
         <AsyncContent query={company}>
           {(data) => {
             const c = data.company;
@@ -34,7 +35,7 @@ export default function OverviewTab() {
             );
           }}
         </AsyncContent>
-      </Panel>
+      </Section>
 
       <AsyncContent query={freshness}>
         {(data) => <DataRefreshChecklist sources={data.sources} />}

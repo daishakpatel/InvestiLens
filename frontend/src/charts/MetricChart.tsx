@@ -43,7 +43,7 @@ function ChartTooltip({
   const row = payload[0]?.payload;
   if (!row) return null;
   return (
-    <div className="rounded-md border border-border bg-surface p-2 text-xs shadow-lg">
+    <div className="rounded-control border border-border bg-surface p-2 text-xs shadow-float">
       <div className="font-medium">{fiscalCalendarLabel(row.period, row.periodEnd)}</div>
       <div>{formatMetricValue(row.value === null ? null : String(row.value), unit)}</div>
       {row.yoy !== null && <div className="text-muted">YoY {formatPercent(row.yoy)}</div>}
@@ -76,7 +76,7 @@ export function MetricChart({
           type="button"
           aria-pressed={showTable}
           onClick={() => setShowTable((v) => !v)}
-          className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-2"
+          className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2"
         >
           {showTable ? "View chart" : "View data table"}
         </button>
@@ -149,7 +149,7 @@ function DataTable({ rows, unit }: { rows: ChartRow[]; unit: string }) {
   return (
     <div className="max-h-64 overflow-auto">
       <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 bg-surface-2 text-xs uppercase text-muted">
+        <thead className="sticky top-0 bg-surface-2 text-xs text-muted">
           <tr>
             <th scope="col" className="px-2 py-1">
               Period
@@ -170,10 +170,10 @@ function DataTable({ rows, unit }: { rows: ChartRow[]; unit: string }) {
             <tr key={r.period} className="border-t border-border">
               <td className="px-2 py-1">{r.period}</td>
               <td className="px-2 py-1">{r.periodEnd ?? "—"}</td>
-              <td className="px-2 py-1 text-right tabular-nums">
+              <td className="px-2 py-1 text-right tnum">
                 {formatMetricValue(r.value === null ? null : String(r.value), unit)}
               </td>
-              <td className="px-2 py-1 text-right tabular-nums">
+              <td className="px-2 py-1 text-right tnum">
                 {r.yoy === null ? "—" : formatPercent(r.yoy)}
               </td>
             </tr>

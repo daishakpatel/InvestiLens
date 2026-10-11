@@ -2,15 +2,14 @@ import { Suspense } from "react";
 import { Outlet, useParams } from "react-router-dom";
 
 import { CitationProvider } from "../components/citations/CitationContext";
-import { MetricTile } from "../components/MetricTile";
-import type { MetricMeta } from "../components/MetricTile";
-import { FreshnessBadge } from "../components/Panel";
-import { LoadingState } from "../components/primitives";
-import { Tabs } from "../components/Tabs";
-import type { TabDef } from "../components/Tabs";
+import { FreshnessBadge } from "../components/ui/Badge";
+import { Stat } from "../components/ui/Stat";
+import type { StatMeta } from "../components/ui/Stat";
+import { LoadingState } from "../components/ui/States";
+import { RouteTabs } from "../components/ui/Tabs";
+import type { TabDef } from "../components/ui/Tabs";
 import {
   formatNumber,
-  formatPercent,
   formatUsd,
   formatUsdCompact,
   freshnessLabel,
@@ -18,6 +17,7 @@ import {
 } from "../lib/format";
 import { useCompany, useFinancials, usePrices, useValuation } from "../lib/queries";
 import type { MetricResult, MetricSeries } from "../types";
+import { Delta } from "../components/ui/Delta";
 
 const TABS: TabDef[] = [
   { to: "overview", label: "Overview" },
@@ -51,7 +51,7 @@ function CompanyHeader({ ticker }: { ticker: string }) {
   if (company.isError) {
     const msg = company.error instanceof Error ? company.error.message : "Company not found.";
     return (
-      <div role="alert" className="rounded-xl border border-border bg-surface p-6 text-negative">
+      <div role="alert" className="py-6 text-negative">
         {msg}
       </div>
     );
@@ -74,7 +74,7 @@ function CompanyHeader({ ticker }: { ticker: string }) {
   const marketCap = findMetric(valuation.data?.metrics, "market_cap");
   const pe = findMetric(valuation.data?.metrics, "pe_ratio");
 
-  const secMeta = (period?: string, formula?: string): MetricMeta => ({
+  const secMeta = (period?: string, formula?: string): StatMeta => ({
     source: "SEC filings (XBRL)",
     period: period ?? undefined,
     formula: formula ?? undefined,
@@ -82,10 +82,10 @@ function CompanyHeader({ ticker }: { ticker: string }) {
   });
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+    <section>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">{c.name}</h1>
+          <h1 className="text-heading font-semibold">{c.name}</h1>
           <p className="text-sm text-muted">
             {c.ticker}
             {c.exchange ? ` · ${c.exchange}` : ""}
@@ -93,37 +93,33 @@ function CompanyHeader({ ticker }: { ticker: string }) {
           </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold tabular-nums">{formatUsd(lastClose)}</div>
-          {changePct !== null && (
-            <div className={changePct >= 0 ? "text-positive" : "text-negative"}>
-              {changePct >= 0 ? "▲" : "▼"} {formatPercent(Math.abs(changePct), 2)}
-            </div>
-          )}
+          <div className="tnum text-heading font-semibold">{formatUsd(lastClose)}</div>
+          <Delta value={changePct} className="text-sm" />
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
-        <MetricTile
+      <div className="mt-6 flex flex-wrap gap-x-10 gap-y-4">
+        <Stat
           label="Market Cap"
           value={formatUsdCompact(marketCap?.value ?? null)}
           meta={secMeta(undefined, "price × shares")}
         />
-        <MetricTile
+        <Stat
           label="Revenue"
           value={formatUsdCompact(revenue?.value ?? null)}
           meta={secMeta(revenue?.period)}
         />
-        <MetricTile
+        <Stat
           label="Net Income"
           value={formatUsdCompact(netIncome?.value ?? null)}
           meta={secMeta(netIncome?.period)}
         />
-        <MetricTile
+        <Stat
           label="EPS"
           value={eps?.value ? formatUsd(eps.value) : "—"}
           meta={secMeta(eps?.period)}
         />
-        <MetricTile
+        <Stat
           label="P/E"
           value={pe?.value ? `${formatNumber(pe.value, 1)}×` : "—"}
           meta={secMeta(undefined, "price ÷ EPS")}
@@ -143,11 +139,11 @@ export default function CompanyDashboard() {
 
   return (
     <CitationProvider>
-      <div className="space-y-4 py-4">
+      <div className="space-y-6 py-6">
         <CompanyHeader ticker={ticker} />
-        <div className="rounded-xl border border-border bg-surface shadow-sm">
-          <Tabs base={base} tabs={TABS} />
-          <div className="p-4">
+        <div>
+          <RouteTabs base={base} tabs={TABS} label="Company sections" />
+          <div className="pt-6">
             <Suspense fallback={<LoadingState />}>
               <Outlet />
             </Suspense>

@@ -33,3 +33,8 @@ coverage/
 # Local DB backups (scripts/backup_db.sh, make backup)
 backups/
 celerybeat-schedule*
+
+# UI review captures (e2e `npm run screenshots`) and Playwright output
+e2e/screenshots/
+e2e/test-results/
+e2e/playwright-report/

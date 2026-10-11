@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { AsyncContent, Panel } from "../../components/Panel";
-import { Badge } from "../../components/primitives";
+import { Badge } from "../../components/ui/Badge";
+import { Section } from "../../components/ui/Section";
+import { AsyncContent } from "../../components/ui/States";
 import { formatDate, formatPercent } from "../../lib/format";
 import { useNews } from "../../lib/queries";
 import type { NewsItem } from "../../types";
@@ -50,7 +51,7 @@ export default function NewsTab() {
   const clusters = cluster(filtered);
 
   return (
-    <Panel
+    <Section
       title="News"
       freshness={news.data?.freshness}
       actions={
@@ -59,7 +60,7 @@ export default function NewsTab() {
             aria-label="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-md border border-border bg-surface px-2 py-1"
+            className="rounded-control border border-border bg-surface px-2 py-1"
           >
             <option value="">All categories</option>
             {categories.map((c) => (
@@ -72,7 +73,7 @@ export default function NewsTab() {
             aria-label="Source"
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            className="rounded-md border border-border bg-surface px-2 py-1"
+            className="rounded-control border border-border bg-surface px-2 py-1"
           >
             <option value="">All sources</option>
             {sources.map((s) => (
@@ -111,7 +112,7 @@ export default function NewsTab() {
           </ul>
         )}
       </AsyncContent>
-    </Panel>
+    </Section>
   );
 }
 

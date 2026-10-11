@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
+from app.filings import service as diff_service
 from app.models import Alert, Company, Filing, News, PriceHistory, User
 from app.notifications.sender import NotificationSender
 
@@ -75,6 +76,36 @@ def _price_move(
     return None
 
 
+def _new_risk_factors(
+    session: Session, alert: Alert, *, ticker: str, since: datetime, settings: Settings
+) -> tuple[str, str] | None:
+    """Fire when the newest parsed 10-K/10-Q, ingested since the watermark, adds a risk factor
+    its predecessor did not have (§37.4). Deterministic diff only: no LLM in the alert loop."""
+    for filing_type in ("10-K", "10-Q"):
+        pair = diff_service.latest_pair(
+            session, company_id=alert.company_id, filing_type=filing_type
+        )
+        if pair is None or pair[0].created_at <= since:
+            continue
+        latest, previous = pair
+        added = [
+            item.new.heading
+            for item in diff_service.diff_filings(
+                session, latest, previous, settings=settings
+            ).items
+            if item.status == "new" and item.new is not None and item.new.kind == "risk_factor"
+        ]
+        if added:
+            return (
+                f"New risk factor in {ticker} {filing_type}",
+                f"{len(added)} risk factor(s) in {latest.accession_number} were not in the prior "
+                f"{filing_type}. First: “{added[0][:200]}”",
+            )
+        # Nothing new: move the watermark past this filing so it is not re-diffed every run.
+        alert.last_triggered_at = max(since, latest.created_at)
+    return None
+
+
 def _evaluate_alert(
     session: Session, alert: Alert, *, settings: Settings
 ) -> tuple[str, str] | None:
@@ -96,6 +127,9 @@ def _evaluate_alert(
                 f"{ticker} filed a {filing_type} ({filing.accession_number}).",
             )
         return None
+
+    if alert.alert_type == "new_risk_factor":
+        return _new_risk_factors(session, alert, ticker=ticker, since=since, settings=settings)
 
     if alert.alert_type == "news_category":
         category = (alert.config or {}).get("category")

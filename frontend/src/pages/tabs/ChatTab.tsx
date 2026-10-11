@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 
 import { CitationChip } from "../../components/citations/CitationChip";
 import { ReferenceList } from "../../components/citations/ReferenceList";
-import { Panel } from "../../components/Panel";
-import { Badge, EvidenceBadge, Spinner } from "../../components/primitives";
+import { Badge, EvidenceBadge } from "../../components/ui/Badge";
+import { Section } from "../../components/ui/Section";
+import { Spinner } from "../../components/ui/Skeleton";
 import { apiRequest } from "../../lib/apiClient";
 import { useAuth } from "../../lib/auth";
 import { streamChat } from "../../lib/chatStream";
@@ -34,7 +35,7 @@ export default function ChatTab() {
 
   if (!user) {
     return (
-      <Panel title="Chat" kind="ai">
+      <Section title="Chat" kind="ai">
         <p className="p-6 text-sm text-muted">
           <Link to="/login" className="text-primary hover:underline">
             Sign in
@@ -42,7 +43,7 @@ export default function ChatTab() {
           to ask questions about {ticker}. Chat answers are grounded in the company’s filings and
           data, with citations.
         </p>
-      </Panel>
+      </Section>
     );
   }
 
@@ -102,7 +103,7 @@ export default function ChatTab() {
         )}
         {messages.map((m) =>
           m.role === "user" ? (
-            <div key={m.id} className="ml-auto max-w-[85%] rounded-lg bg-primary/10 px-3 py-2 text-sm">
+            <div key={m.id} className="ml-auto max-w-[85%] rounded-control bg-primary/10 px-3 py-2 text-sm">
               {m.text}
             </div>
           ) : (
@@ -125,12 +126,12 @@ export default function ChatTab() {
           disabled={busy}
           aria-label="Ask a question"
           placeholder={`Ask about ${ticker}…`}
-          className="flex-1 rounded-lg border border-border bg-surface px-4 py-2 text-sm"
+          className="flex-1 rounded-control border border-border bg-surface px-4 py-2 text-sm"
         />
         <button
           type="submit"
           disabled={busy || !input.trim()}
-          className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
+          className="rounded-control bg-primary px-4 py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
         >
           {busy ? "…" : "Ask"}
         </button>
@@ -148,7 +149,7 @@ function AssistantMessage({ msg, onAsk }: { msg: ChatMsg; onAsk: (q: string) => 
   }));
 
   return (
-    <div className="max-w-[85%] rounded-lg border border-border bg-surface px-3 py-2">
+    <div className="max-w-[85%] rounded-control border border-border bg-surface px-3 py-2">
       {!msg.done && msg.text === "" ? (
         <div className="flex items-center gap-2 text-sm text-muted">
           <Spinner /> Thinking…
@@ -211,7 +212,7 @@ function AnswerText({ text, citations }: { text: string; citations: ChatCitation
 function Notice({ tone, text }: { tone: "abstain" | "redirect"; text: string }) {
   const title = tone === "abstain" ? "Insufficient evidence" : "Out of scope";
   return (
-    <div className="rounded-md border border-border bg-surface-2 p-3 text-sm">
+    <div className="rounded-control border border-border bg-surface-2 p-3 text-sm">
       <div className="mb-1 flex items-center gap-2">
         <Badge tone="warning">{title}</Badge>
       </div>

@@ -83,6 +83,8 @@ def test_latest_common_year_is_intersection_max() -> None:
         ("6021", "Financials"),  # national commercial banks (JPM)
         ("2834", "Health Care"),  # pharmaceutical preparations
         ("1311", "Energy"),
+        ("5411", "Consumer Discretionary"),  # no curated prefix: SIC division fallback
+        ("0000", None),  # outside every division
         (None, None),
         ("", None),
         ("abcd", None),

@@ -67,6 +67,15 @@ condensed, actionable version of it.
 - `24_phase6a_comparison_and_portfolio.md`
 - `25_phase6b_filing_diff_and_mgmt_tracking.md`
 
+### UI rebuild (after Phase 6; frontend only)
+A five-step redesign of the whole frontend lives in `UI_plan/`. Start with
+`UI_plan/00_README.md` (design direction and shared rules), then one step file per session:
+- `UI_plan/01_design_system_and_theme.md`
+- `UI_plan/02_app_shell_and_navigation.md`
+- `UI_plan/03_company_overview_and_data.md`
+- `UI_plan/04_research_and_reading.md`
+- `UI_plan/05_tools_light_theme_and_polish.md`
+
 ## Dependency map (who blocks whom)
 
 ```text

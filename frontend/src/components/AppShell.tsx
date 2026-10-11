@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../lib/auth";
 import { Footer, ThemeToggle } from "./chrome";
-import { LoadingState } from "./primitives";
+import { LoadingState } from "./ui/States";
 
 export function AppShell() {
   const { user, logout } = useAuth();
@@ -40,13 +40,13 @@ export function AppShell() {
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="rounded-md border border-border px-3 py-1 hover:bg-surface-2"
+                className="rounded-control border border-border px-3 py-1 hover:bg-surface-2"
               >
                 Sign out
               </button>
             </>
           ) : (
-            <Link to="/login" className="rounded-md border border-border px-3 py-1 hover:bg-surface-2">
+            <Link to="/login" className="rounded-control border border-border px-3 py-1 hover:bg-surface-2">
               Sign in
             </Link>
           )}

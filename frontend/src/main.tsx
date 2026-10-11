@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { AuthProvider } from "./lib/auth";
 import { ThemeProvider } from "./lib/theme";
+import "@fontsource-variable/inter";
 import "./index.css";
 
 const queryClient = new QueryClient({

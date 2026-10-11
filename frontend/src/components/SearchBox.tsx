@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { useCompanySearch } from "../lib/queries";
 import type { CompanySearchResult } from "../types";
-import { Spinner } from "./primitives";
+import { Spinner } from "./ui/Skeleton";
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -78,12 +78,12 @@ export function SearchBox({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-base shadow-sm placeholder:text-muted focus:border-primary"
+          className="w-full rounded-control border border-border bg-surface px-4 py-3 text-base placeholder:text-muted focus:border-primary"
         />
         <button
           type="button"
           onClick={() => onSubmitQuery(results)}
-          className="rounded-lg bg-primary px-5 py-3 font-medium text-primary-contrast hover:opacity-90"
+          className="rounded-control bg-primary px-5 py-3 font-medium text-primary-contrast hover:opacity-90"
         >
           Analyze
         </button>
@@ -93,7 +93,7 @@ export function SearchBox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-border bg-surface py-1 shadow-xl"
+          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-control border border-border bg-surface py-1 shadow-float"
         >
           {search.isPending && (
             <li className="flex items-center gap-2 px-4 py-2 text-sm text-muted">

@@ -6,6 +6,10 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+AlertType = Literal[
+    "new_10k", "new_10q", "new_8k", "price_move", "news_category", "new_risk_factor"
+]
+
 
 class WatchlistItem(BaseModel):
     ticker: str
@@ -24,14 +28,14 @@ class WatchlistCreate(BaseModel):
 class Alert(BaseModel):
     id: str
     ticker: str
-    alert_type: Literal["new_10k", "new_10q", "new_8k", "price_move", "news_category"]
+    alert_type: AlertType
     channel: Literal["email", "in_app"] = "in_app"
     is_active: bool = True
 
 
 class AlertCreate(BaseModel):
     ticker: str
-    alert_type: Literal["new_10k", "new_10q", "new_8k", "price_move", "news_category"]
+    alert_type: AlertType
     channel: Literal["email", "in_app"] = "in_app"
 
 

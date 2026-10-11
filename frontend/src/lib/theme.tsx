@@ -1,5 +1,6 @@
-// Light/dark theme (UI-007). Persisted to localStorage; the initial class is set pre-paint by the
-// inline script in index.html, so this just keeps React state in sync and lets the user toggle.
+// Dark/light theme (UI-007, ADR-0028). Dark is the default for everyone; `.light` on <html> is
+// the opt-in. Persisted to localStorage; the initial class is set pre-paint by the inline script
+// in index.html, so this just keeps React state in sync and lets the user toggle.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -14,17 +15,22 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function initialTheme(): Theme {
-  if (typeof document !== "undefined" && document.documentElement.classList.contains("dark")) {
-    return "dark";
+  if (typeof document !== "undefined" && document.documentElement.classList.contains("light")) {
+    return "light";
   }
-  return "light";
+  return "dark";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    const root = document.documentElement;
+    root.classList.toggle("light", theme === "light");
+    // Keep the browser chrome (mobile address bar) on the canvas colour.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", getComputedStyle(root).getPropertyValue("--bg").trim());
     try {
       localStorage.setItem(KEY, theme);
     } catch {

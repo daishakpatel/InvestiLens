@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { ReportView } from "../../components/research/ReportView";
-import { Panel } from "../../components/Panel";
-import { LoadingState, Spinner } from "../../components/primitives";
+import { Section } from "../../components/ui/Section";
+import { Spinner } from "../../components/ui/Skeleton";
+import { LoadingState } from "../../components/ui/States";
 import { useAuth } from "../../lib/auth";
 import { useJob, useLatestResearch, useResearchReport, useStartResearch } from "../../lib/queries";
 
@@ -35,7 +36,7 @@ function GenerateFlow({ ticker }: { ticker: string }) {
 
   return (
     <div className="space-y-4">
-      <Panel title="AI Research" kind="ai">
+      <Section title="AI Research" kind="ai">
         <div className="space-y-3 p-6 text-sm">
           <p>No research report has been generated for {ticker} yet.</p>
 
@@ -51,7 +52,7 @@ function GenerateFlow({ ticker }: { ticker: string }) {
               type="button"
               onClick={() => void onGenerate()}
               disabled={start.isPending}
-              className="rounded-md bg-primary px-4 py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
+              className="rounded-control bg-primary px-4 py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
             >
               {start.isPending ? "Starting…" : "Generate research report"}
             </button>
@@ -65,11 +66,11 @@ function GenerateFlow({ ticker }: { ticker: string }) {
             </p>
           )}
         </div>
-      </Panel>
+      </Section>
 
       {/* FR-030 / §10.16: data stays available regardless of AI generation state. */}
       {(job.data?.status === "failed" || jobId === null) && (
-        <Panel title="Your data is still available" kind="data">
+        <Section title="Your data is still available" kind="data">
           <p className="p-4 text-sm text-muted">
             {job.data?.status === "failed"
               ? "Unable to generate the research report. Your financial data remains available — "
@@ -88,7 +89,7 @@ function GenerateFlow({ ticker }: { ticker: string }) {
             </Link>
             .
           </p>
-        </Panel>
+        </Section>
       )}
     </div>
   );

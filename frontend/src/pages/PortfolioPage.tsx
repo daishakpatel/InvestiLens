@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 
-import { Panel } from "../components/Panel";
-import { ErrorState, LoadingState } from "../components/primitives";
+import { Section } from "../components/ui/Section";
+import { ErrorState, LoadingState } from "../components/ui/States";
 import { formatPercent } from "../lib/format";
 import { recomputeFrom } from "../lib/portfolioRecompute";
 import { usePortfolioAnalysis } from "../lib/queries";
 import type { PortfolioAnalysis } from "../types";
+import { X } from "lucide-react";
 
 interface HoldingInput {
   ticker: string;
@@ -52,7 +53,7 @@ export default function PortfolioPage() {
         hypothetical portfolio — not a recommendation to buy, sell, hold, or rebalance.
       </p>
 
-      <Panel title="Holdings">
+      <Section title="Holdings">
         <div className="flex flex-col gap-2 p-4">
           {holdings.map((h, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -60,7 +61,7 @@ export default function PortfolioPage() {
                 value={h.ticker}
                 onChange={(e) => setHolding(i, { ticker: e.target.value.toUpperCase() })}
                 aria-label={`Holding ${i + 1} ticker`}
-                className="w-28 rounded-md border border-border bg-surface px-2 py-1 text-sm"
+                className="w-28 rounded-control border border-border bg-surface px-2 py-1 text-sm"
               />
               <input
                 type="number"
@@ -68,7 +69,7 @@ export default function PortfolioPage() {
                 value={h.weight}
                 onChange={(e) => setHolding(i, { weight: Number(e.target.value) })}
                 aria-label={`Holding ${i + 1} weight`}
-                className="w-24 rounded-md border border-border bg-surface px-2 py-1 text-sm"
+                className="w-24 rounded-control border border-border bg-surface px-2 py-1 text-sm"
               />
               <span className="text-xs text-muted">%</span>
               <button
@@ -77,7 +78,7 @@ export default function PortfolioPage() {
                 onClick={() => setHoldings(holdings.filter((_, j) => j !== i))}
                 className="text-muted hover:text-text"
               >
-                ×
+                <X aria-hidden className="size-3.5" />
               </button>
             </div>
           ))}
@@ -85,7 +86,7 @@ export default function PortfolioPage() {
             <button
               type="button"
               onClick={() => setHoldings([...holdings, { ticker: "", weight: 10 }])}
-              className="rounded-md border border-border px-2 py-1 text-sm hover:bg-surface-2"
+              className="rounded-control border border-border px-2 py-1 text-sm hover:bg-surface-2"
             >
               Add holding
             </button>
@@ -93,13 +94,13 @@ export default function PortfolioPage() {
               type="button"
               onClick={runAnalysis}
               disabled={analyze.isPending || holdings.filter((h) => h.ticker).length < 1}
-              className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-contrast hover:opacity-90 disabled:opacity-50"
+              className="rounded-control bg-primary px-3 py-1 text-sm font-medium text-primary-contrast hover:opacity-90 disabled:opacity-50"
             >
               {analyze.isPending ? "Analyzing…" : "Analyze"}
             </button>
           </div>
         </div>
-      </Panel>
+      </Section>
 
       {analyze.isPending && <LoadingState />}
       {analyze.isError && <ErrorState message={analyze.error.message} onRetry={runAnalysis} />}
@@ -141,7 +142,7 @@ function WhatIf({
   onChange: (ticker: string, weight: number) => void;
 }) {
   return (
-    <Panel title="What-if weights">
+    <Section title="What-if weights">
       <div className="flex flex-col gap-3 p-4">
         <p className="text-xs text-muted">
           Drag to re-weight; metrics below recompute instantly (no re-fetch).
@@ -158,17 +159,17 @@ function WhatIf({
               className="flex-1"
               aria-label={`${h.ticker} weight`}
             />
-            <span className="w-12 text-right tabular-nums">{(liveWeights[h.ticker] ?? 0).toFixed(0)}</span>
+            <span className="w-12 text-right tnum">{(liveWeights[h.ticker] ?? 0).toFixed(0)}</span>
           </label>
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
 function Aggregates({ recomputed }: { recomputed: Recomputed }) {
   return (
-    <Panel title="Weighted metrics & concentration">
+    <Section title="Weighted metrics & concentration">
       <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
         <Stat
           label="Concentration (HHI)"
@@ -184,20 +185,20 @@ function Aggregates({ recomputed }: { recomputed: Recomputed }) {
           />
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
 function SectorExposure({ recomputed }: { recomputed: Recomputed }) {
   const max = Math.max(...recomputed.sectorExposure.map((s) => s.weight), 0.0001);
   return (
-    <Panel title="Sector exposure">
+    <Section title="Sector exposure">
       <div className="flex flex-col gap-2 p-4">
         {recomputed.sectorExposure.map((s) => (
           <div key={s.sector} className="text-sm">
             <div className="flex justify-between">
               <span>{s.sector}</span>
-              <span className="tabular-nums text-muted">{formatPercent(s.weight, 0)}</span>
+              <span className="tnum text-muted">{formatPercent(s.weight, 0)}</span>
             </div>
             <div className="mt-1 h-2 w-full rounded-full bg-surface-2">
               <div
@@ -208,7 +209,7 @@ function SectorExposure({ recomputed }: { recomputed: Recomputed }) {
           </div>
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
@@ -216,7 +217,7 @@ function RiskStatsPanel({ analysis }: { analysis: PortfolioAnalysis }) {
   const risk = analysis.risk_stats;
   if (!risk) return null;
   return (
-    <Panel title="Risk (price-based)">
+    <Section title="Risk (price-based)">
       <div className="p-4">
         <div className="mb-3 flex flex-wrap gap-6 text-sm">
           <Stat
@@ -227,7 +228,7 @@ function RiskStatsPanel({ analysis }: { analysis: PortfolioAnalysis }) {
         {risk.correlation.length > 0 && (
           <div className="overflow-auto">
             <table className="text-sm">
-              <thead className="text-xs uppercase text-muted">
+              <thead className="text-xs text-muted">
                 <tr>
                   <th className="px-2 py-1" />
                   {risk.correlation.map((r) => (
@@ -244,7 +245,7 @@ function RiskStatsPanel({ analysis }: { analysis: PortfolioAnalysis }) {
                       {r.ticker}
                     </th>
                     {risk.correlation.map((c) => (
-                      <td key={c.ticker} className="px-2 py-1 text-right tabular-nums">
+                      <td key={c.ticker} className="px-2 py-1 text-right tnum">
                         {r.correlations[c.ticker] ? Number(r.correlations[c.ticker]).toFixed(2) : "—"}
                       </td>
                     ))}
@@ -260,13 +261,13 @@ function RiskStatsPanel({ analysis }: { analysis: PortfolioAnalysis }) {
           </p>
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
 function RiskThemes({ analysis }: { analysis: PortfolioAnalysis }) {
   return (
-    <Panel title="Aggregated risk themes">
+    <Section title="Aggregated risk themes">
       <div className="p-4">
         {analysis.risk_themes.length === 0 ? (
           <p className="text-sm text-muted">
@@ -296,15 +297,15 @@ function RiskThemes({ analysis }: { analysis: PortfolioAnalysis }) {
           </ul>
         )}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string | undefined }) {
   return (
     <div>
-      <div className="text-xs uppercase text-muted">{label}</div>
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
+      <div className="text-xs text-muted">{label}</div>
+      <div className="text-lg font-semibold tnum">{value}</div>
       {sub && <div className="text-xs text-muted">{sub}</div>}
     </div>
   );

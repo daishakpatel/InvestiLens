@@ -9,7 +9,8 @@
               "new_10q",
               "new_8k",
               "price_move",
-              "news_category"
+              "news_category",
+              "new_risk_factor"
             ],
             "title": "Alert Type",
             "type": "string"
@@ -53,7 +54,8 @@
               "new_10q",
               "new_8k",
               "price_move",
-              "news_category"
+              "news_category",
+              "new_risk_factor"
             ],
             "title": "Alert Type",
             "type": "string"
@@ -800,6 +802,143 @@
         "title": "DerivedMetricSource",
         "type": "object"
       },
+      "DiffOp": {
+        "properties": {
+          "op": {
+            "enum": [
+              "equal",
+              "insert",
+              "delete"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "text"
+        ],
+        "title": "DiffOp",
+        "type": "object"
+      },
+      "DiffPassage": {
+        "description": "One side of a diff item. `source_ids` are backend-issued and resolve via /sources/{id}.",
+        "properties": {
+          "heading": {
+            "title": "Heading",
+            "type": "string"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "heading",
+          "source_ids"
+        ],
+        "title": "DiffPassage",
+        "type": "object"
+      },
+      "EarningsReaction": {
+        "properties": {
+          "filing": {
+            "$ref": "#/components/schemas/FilingSummary"
+          },
+          "move": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move"
+          },
+          "post_close": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Close"
+          },
+          "post_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Date"
+          },
+          "pre_close": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Close"
+          },
+          "pre_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Date"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "filing"
+        ],
+        "title": "EarningsReaction",
+        "type": "object"
+      },
       "EarningsReleaseSource": {
         "description": "Earnings release or transcript (transcripts add `speaker`).",
         "properties": {
@@ -889,6 +1028,32 @@
           "document_id"
         ],
         "title": "EarningsReleaseSource",
+        "type": "object"
+      },
+      "EarningsResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EarningsReaction"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "method",
+          "events"
+        ],
+        "title": "EarningsResponse",
         "type": "object"
       },
       "EmailVerifyConfirm": {
@@ -1103,6 +1268,172 @@
           "company_ticker"
         ],
         "title": "FilingDetail",
+        "type": "object"
+      },
+      "FilingDiffCounts": {
+        "properties": {
+          "new": {
+            "default": 0,
+            "title": "New",
+            "type": "integer"
+          },
+          "removed": {
+            "default": 0,
+            "title": "Removed",
+            "type": "integer"
+          },
+          "reworded": {
+            "default": 0,
+            "title": "Reworded",
+            "type": "integer"
+          },
+          "unchanged": {
+            "default": 0,
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "title": "FilingDiffCounts",
+        "type": "object"
+      },
+      "FilingDiffItem": {
+        "properties": {
+          "decided_by": {
+            "enum": [
+              "heading",
+              "similarity",
+              "llm",
+              "threshold"
+            ],
+            "title": "Decided By",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "risk_factor",
+              "section"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiffPassage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "old": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiffPassage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          },
+          "status": {
+            "enum": [
+              "unchanged",
+              "reworded",
+              "new",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "word_diff": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DiffOp"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Word Diff"
+          }
+        },
+        "required": [
+          "section",
+          "kind",
+          "status",
+          "decided_by"
+        ],
+        "title": "FilingDiffItem",
+        "type": "object"
+      },
+      "FilingDiffResponse": {
+        "properties": {
+          "against": {
+            "$ref": "#/components/schemas/FilingSummary"
+          },
+          "caption_detection": {
+            "enum": [
+              "emphasis",
+              "heuristic"
+            ],
+            "title": "Caption Detection",
+            "type": "string"
+          },
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/FilingDiffCounts"
+          },
+          "filing": {
+            "$ref": "#/components/schemas/FilingSummary"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FilingDiffItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "similarity_method": {
+            "enum": [
+              "lexical",
+              "embedding"
+            ],
+            "title": "Similarity Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_ticker",
+          "filing",
+          "against",
+          "similarity_method",
+          "caption_detection",
+          "counts",
+          "items"
+        ],
+        "title": "FilingDiffResponse",
         "type": "object"
       },
       "FilingSection": {
@@ -1639,6 +1970,146 @@
         "title": "JobState",
         "type": "object"
       },
+      "LanguagePeriod": {
+        "properties": {
+          "filing_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filing Date"
+          },
+          "filing_id": {
+            "title": "Filing Id",
+            "type": "string"
+          },
+          "filing_type": {
+            "title": "Filing Type",
+            "type": "string"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "word_count": {
+            "title": "Word Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filing_id",
+          "filing_type",
+          "word_count"
+        ],
+        "title": "LanguagePeriod",
+        "type": "object"
+      },
+      "LanguagePoint": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "filing_id": {
+            "title": "Filing Id",
+            "type": "string"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "enum": [
+                  "first_appearance",
+                  "disappeared"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag"
+          },
+          "per_1k_words": {
+            "title": "Per 1K Words",
+            "type": "number"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/LanguageStatement"
+            },
+            "title": "Statements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "filing_id",
+          "count",
+          "per_1k_words",
+          "statements"
+        ],
+        "title": "LanguagePoint",
+        "type": "object"
+      },
+      "LanguageSeries": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/LanguagePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "label",
+          "points"
+        ],
+        "title": "LanguageSeries",
+        "type": "object"
+      },
+      "LanguageStatement": {
+        "properties": {
+          "mentions": {
+            "title": "Mentions",
+            "type": "integer"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "text",
+          "mentions"
+        ],
+        "title": "LanguageStatement",
+        "type": "object"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -1656,6 +2127,54 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "ManagementLanguageResponse": {
+        "properties": {
+          "hedging": {
+            "$ref": "#/components/schemas/LanguageSeries"
+          },
+          "hedging_lexicon_version": {
+            "title": "Hedging Lexicon Version",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/LanguagePeriod"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "taxonomy_version": {
+            "title": "Taxonomy Version",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/LanguageSeries"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ticker",
+          "taxonomy_version",
+          "hedging_lexicon_version",
+          "method",
+          "periods",
+          "topics",
+          "hedging"
+        ],
+        "title": "ManagementLanguageResponse",
         "type": "object"
       },
       "ManagementTopicStatement": {
@@ -5136,6 +5655,50 @@
         ]
       }
     },
+    "/api/v1/companies/{ticker}/earnings": {
+      "get": {
+        "description": "Deterministic price move around each earnings 8-K (Item 2.02), newest first (\u00a737.3).",
+        "operationId": "list_earnings_reactions_api_v1_companies__ticker__earnings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Earnings Reactions",
+        "tags": [
+          "Company",
+          "Filings"
+        ]
+      }
+    },
     "/api/v1/companies/{ticker}/filings": {
       "get": {
         "operationId": "list_company_filings_api_v1_companies__ticker__filings_get",
@@ -5370,6 +5933,73 @@
         "tags": [
           "Company",
           "Ownership"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/management-language": {
+      "get": {
+        "description": "Topic intensity and hedging index per filing, from MD&A text (\u00a737.5). Lexicon counts only.",
+        "operationId": "get_management_language_api_v1_companies__ticker__management_language_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "filing_type",
+            "required": false,
+            "schema": {
+              "default": "10-K",
+              "pattern": "^10-[KQ]$",
+              "title": "Filing Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 2,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagementLanguageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Management Language",
+        "tags": [
+          "Company",
+          "Filings"
         ]
       }
     },
@@ -6083,7 +6713,7 @@
     },
     "/api/v1/filings/{filing_id}/diff": {
       "get": {
-        "description": "Filing-to-filing diff (Phase 6b). Not yet available.",
+        "description": "What changed in this filing versus an older one of the same type (\u00a737.4).\n\n`against` defaults to the previous filing of the same type \u2014 last year's 10-K, or last\nquarter's 10-Q (\"what changed vs last quarter\", \u00a737.3). Deterministic: no LLM on this path.",
         "operationId": "diff_filings_api_v1_filings__filing_id__diff_get",
         "parameters": [
           {
@@ -6098,10 +6728,37 @@
           {
             "in": "query",
             "name": "against",
-            "required": true,
+            "required": false,
             "schema": {
-              "title": "Against",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Against"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "risk_factor",
+                    "section"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
             }
           }
         ],
@@ -6109,7 +6766,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FilingDiffResponse"
+                }
               }
             },
             "description": "Successful Response"

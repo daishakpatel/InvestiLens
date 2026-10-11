@@ -39,3 +39,38 @@ describe("parse.news", () => {
     ).toThrow();
   });
 });
+
+describe("parse.filingDiff", () => {
+  const filing = { filing_id: "2", filing_type: "10-K", accession_number: "a-2" };
+  const payload = {
+    company_ticker: "NVDA",
+    filing,
+    against: { ...filing, filing_id: "1" },
+    similarity_method: "lexical",
+    caption_detection: "emphasis",
+    counts: { unchanged: 0, reworded: 1, new: 0, removed: 0 },
+    items: [
+      {
+        section: "Item 1A",
+        kind: "risk_factor",
+        status: "reworded",
+        decided_by: "heading",
+        similarity: 0.9,
+        old: { heading: "H", source_ids: ["1_1A_0"] },
+        new: { heading: "H", source_ids: ["2_1A_0"] },
+        word_diff: [{ op: "insert", text: "more" }],
+      },
+    ],
+  };
+
+  it("keeps both filings' source ids on a diff item (CIT-001)", () => {
+    const item = parse.filingDiff(payload).items[0];
+    expect(item?.old?.source_ids).toEqual(["1_1A_0"]);
+    expect(item?.new?.source_ids).toEqual(["2_1A_0"]);
+  });
+
+  it("rejects an unknown change status", () => {
+    const bad = { ...payload, items: [{ ...payload.items[0], status: "tweaked" }] };
+    expect(() => parse.filingDiff(bad)).toThrow();
+  });
+});

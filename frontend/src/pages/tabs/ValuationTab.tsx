@@ -1,7 +1,8 @@
 import { useParams } from "react-router-dom";
 
-import { AsyncContent, Panel } from "../../components/Panel";
-import { Badge } from "../../components/primitives";
+import { Badge } from "../../components/ui/Badge";
+import { Section } from "../../components/ui/Section";
+import { AsyncContent } from "../../components/ui/States";
 import { formatMetricValue } from "../../lib/format";
 import { useValuation } from "../../lib/queries";
 
@@ -10,7 +11,7 @@ export default function ValuationTab() {
   const valuation = useValuation(ticker);
 
   return (
-    <Panel title="Valuation metrics" freshness={valuation.data?.freshness}>
+    <Section title="Valuation metrics" freshness={valuation.data?.freshness}>
       <AsyncContent
         query={valuation}
         isEmpty={(d) => d.metrics.length === 0}
@@ -18,7 +19,7 @@ export default function ValuationTab() {
       >
         {(data) => (
           <table className="w-full text-left text-sm">
-            <thead className="bg-surface-2 text-xs uppercase text-muted">
+            <thead className="bg-surface-2 text-xs text-muted">
               <tr>
                 <th scope="col" className="px-4 py-2">
                   Metric
@@ -35,7 +36,7 @@ export default function ValuationTab() {
               {data.metrics.map((m) => (
                 <tr key={m.formula_id} className="border-t border-border">
                   <td className="px-4 py-2 font-medium">{m.formula_id}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">
+                  <td className="px-4 py-2 text-right tnum">
                     {formatMetricValue(m.value, m.unit)}
                   </td>
                   <td className="px-4 py-2">
@@ -47,6 +48,6 @@ export default function ValuationTab() {
           </table>
         )}
       </AsyncContent>
-    </Panel>
+    </Section>
   );
 }

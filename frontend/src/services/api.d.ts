@@ -362,6 +362,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Earnings Reactions
+         * @description Deterministic price move around each earnings 8-K (Item 2.02), newest first (§37.3).
+         */
+        get: operations["list_earnings_reactions_api_v1_companies__ticker__earnings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/filings": {
         parameters: {
             query?: never;
@@ -408,6 +428,26 @@ export interface paths {
          * @description Form 4 insider transactions. Not yet ingested (Appendix F #10, P2) → empty.
          */
         get: operations["get_insiders_api_v1_companies__ticker__insiders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/management-language": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Management Language
+         * @description Topic intensity and hedging index per filing, from MD&A text (§37.5). Lexicon counts only.
+         */
+        get: operations["get_management_language_api_v1_companies__ticker__management_language_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -631,7 +671,10 @@ export interface paths {
         };
         /**
          * Diff Filings
-         * @description Filing-to-filing diff (Phase 6b). Not yet available.
+         * @description What changed in this filing versus an older one of the same type (§37.4).
+         *
+         *     `against` defaults to the previous filing of the same type — last year's 10-K, or last
+         *     quarter's 10-Q ("what changed vs last quarter", §37.3). Deterministic: no LLM on this path.
          */
         get: operations["diff_filings_api_v1_filings__filing_id__diff_get"];
         put?: never;
@@ -941,7 +984,7 @@ export interface components {
              * Alert Type
              * @enum {string}
              */
-            alert_type: "new_10k" | "new_10q" | "new_8k" | "price_move" | "news_category";
+            alert_type: "new_10k" | "new_10q" | "new_8k" | "price_move" | "news_category" | "new_risk_factor";
             /**
              * Channel
              * @default in_app
@@ -964,7 +1007,7 @@ export interface components {
              * Alert Type
              * @enum {string}
              */
-            alert_type: "new_10k" | "new_10q" | "new_8k" | "price_move" | "news_category";
+            alert_type: "new_10k" | "new_10q" | "new_8k" | "price_move" | "news_category" | "new_risk_factor";
             /**
              * Channel
              * @default in_app
@@ -1237,6 +1280,44 @@ export interface components {
             /** Value */
             value?: string | null;
         };
+        /** DiffOp */
+        DiffOp: {
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "equal" | "insert" | "delete";
+            /** Text */
+            text: string;
+        };
+        /**
+         * DiffPassage
+         * @description One side of a diff item. `source_ids` are backend-issued and resolve via /sources/{id}.
+         */
+        DiffPassage: {
+            /** Heading */
+            heading: string;
+            /** Source Ids */
+            source_ids: string[];
+            /** Text */
+            text?: string | null;
+        };
+        /** EarningsReaction */
+        EarningsReaction: {
+            filing: components["schemas"]["FilingSummary"];
+            /** Move */
+            move?: string | null;
+            /** Post Close */
+            post_close?: string | null;
+            /** Post Date */
+            post_date?: string | null;
+            /** Pre Close */
+            pre_close?: string | null;
+            /** Pre Date */
+            pre_date?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
         /**
          * EarningsReleaseSource
          * @description Earnings release or transcript (transcripts add `speaker`).
@@ -1266,6 +1347,15 @@ export interface components {
             tier: number;
             /** Url */
             url?: string | null;
+        };
+        /** EarningsResponse */
+        EarningsResponse: {
+            /** Events */
+            events: components["schemas"]["EarningsReaction"][];
+            /** Method */
+            method: string;
+            /** Ticker */
+            ticker: string;
         };
         /** EmailVerifyConfirm */
         EmailVerifyConfirm: {
@@ -1330,6 +1420,75 @@ export interface components {
             primary_document_url?: string | null;
             /** Source Url */
             source_url?: string | null;
+        };
+        /** FilingDiffCounts */
+        FilingDiffCounts: {
+            /**
+             * New
+             * @default 0
+             */
+            new: number;
+            /**
+             * Removed
+             * @default 0
+             */
+            removed: number;
+            /**
+             * Reworded
+             * @default 0
+             */
+            reworded: number;
+            /**
+             * Unchanged
+             * @default 0
+             */
+            unchanged: number;
+        };
+        /** FilingDiffItem */
+        FilingDiffItem: {
+            /**
+             * Decided By
+             * @enum {string}
+             */
+            decided_by: "heading" | "similarity" | "llm" | "threshold";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "risk_factor" | "section";
+            new?: components["schemas"]["DiffPassage"] | null;
+            old?: components["schemas"]["DiffPassage"] | null;
+            /** Section */
+            section: string;
+            /** Similarity */
+            similarity?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "unchanged" | "reworded" | "new" | "removed";
+            /** Word Diff */
+            word_diff?: components["schemas"]["DiffOp"][] | null;
+        };
+        /** FilingDiffResponse */
+        FilingDiffResponse: {
+            against: components["schemas"]["FilingSummary"];
+            /**
+             * Caption Detection
+             * @enum {string}
+             */
+            caption_detection: "emphasis" | "heuristic";
+            /** Company Ticker */
+            company_ticker: string;
+            counts: components["schemas"]["FilingDiffCounts"];
+            filing: components["schemas"]["FilingSummary"];
+            /** Items */
+            items: components["schemas"]["FilingDiffItem"][];
+            /**
+             * Similarity Method
+             * @enum {string}
+             */
+            similarity_method: "lexical" | "embedding";
         };
         /** FilingSection */
         FilingSection: {
@@ -1516,6 +1675,50 @@ export interface components {
              */
             status: "queued" | "processing" | "done" | "failed";
         };
+        /** LanguagePeriod */
+        LanguagePeriod: {
+            /** Filing Date */
+            filing_date?: string | null;
+            /** Filing Id */
+            filing_id: string;
+            /** Filing Type */
+            filing_type: string;
+            /** Period End */
+            period_end?: string | null;
+            /** Word Count */
+            word_count: number;
+        };
+        /** LanguagePoint */
+        LanguagePoint: {
+            /** Count */
+            count: number;
+            /** Filing Id */
+            filing_id: string;
+            /** Flag */
+            flag?: ("first_appearance" | "disappeared") | null;
+            /** Per 1K Words */
+            per_1k_words: number;
+            /** Statements */
+            statements: components["schemas"]["LanguageStatement"][];
+        };
+        /** LanguageSeries */
+        LanguageSeries: {
+            /** Label */
+            label: string;
+            /** Points */
+            points: components["schemas"]["LanguagePoint"][];
+            /** Topic */
+            topic: string;
+        };
+        /** LanguageStatement */
+        LanguageStatement: {
+            /** Mentions */
+            mentions: number;
+            /** Source Id */
+            source_id: string;
+            /** Text */
+            text: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -1525,6 +1728,22 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** ManagementLanguageResponse */
+        ManagementLanguageResponse: {
+            hedging: components["schemas"]["LanguageSeries"];
+            /** Hedging Lexicon Version */
+            hedging_lexicon_version: string;
+            /** Method */
+            method: string;
+            /** Periods */
+            periods: components["schemas"]["LanguagePeriod"][];
+            /** Taxonomy Version */
+            taxonomy_version: string;
+            /** Ticker */
+            ticker: string;
+            /** Topics */
+            topics: components["schemas"]["LanguageSeries"][];
         };
         /** ManagementTopicStatement */
         ManagementTopicStatement: {
@@ -3062,6 +3281,37 @@ export interface operations {
             };
         };
     };
+    list_earnings_reactions_api_v1_companies__ticker__earnings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_company_filings_api_v1_companies__ticker__filings_get: {
         parameters: {
             query?: {
@@ -3151,6 +3401,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsiderTransaction"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_management_language_api_v1_companies__ticker__management_language_get: {
+        parameters: {
+            query?: {
+                filing_type?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementLanguageResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3533,8 +3817,9 @@ export interface operations {
     };
     diff_filings_api_v1_filings__filing_id__diff_get: {
         parameters: {
-            query: {
-                against: string;
+            query?: {
+                against?: string | null;
+                kind?: ("risk_factor" | "section") | null;
             };
             header?: never;
             path: {
@@ -3550,7 +3835,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FilingDiffResponse"];
                 };
             };
             /** @description Validation Error */

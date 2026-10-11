@@ -24,6 +24,7 @@ from app.billing.budget import check_budget
 from app.citation.evidence import EvidenceItem
 from app.citation.pipeline import persist as persist_claims
 from app.config import Settings, get_settings
+from app.filings.service import change_statuses, llm_adjudicator
 from app.models import Company
 from app.providers import get_llm_client
 from app.providers.base import LLMClient
@@ -212,6 +213,7 @@ def generate_report(
     record("bear_factors", shared_pool, {})
 
     report = _assemble(sections)
+    _annotate_risk_changes(session, report.risks, llm=llm, settings=settings, user_id=user_id)
     report.insufficient_evidence_sections = sorted(set(insufficient))
     data_version = _data_version(evidence_ids)
 
@@ -234,6 +236,36 @@ def generate_report(
         latency_ms=int((time.monotonic() - started) * 1000),
     )
     return ReportResult(report=report, report_id=row.id, data_version=data_version)
+
+
+def _annotate_risk_changes(
+    session: Session,
+    risks: list[Risk],
+    *,
+    llm: LLMClient,
+    settings: Settings,
+    user_id: int | None,
+) -> None:
+    """Set each risk's `change_status` from the filing diff of its cited passage (§10.10 v2).
+
+    A risk whose sources are not in the company's latest filing, or which has no earlier filing to
+    compare against, keeps `None`: no status is better than a guessed one.
+    """
+    adjudicate = llm_adjudicator(llm, session=session, settings=settings, user_id=user_id)
+    try:
+        statuses = change_statuses(
+            session,
+            [sid for risk in risks for sid in risk.source_ids],
+            adjudicate=adjudicate,
+            settings=settings,
+        )
+    except Exception as exc:  # the diff is an enrichment: it must never sink the report
+        log_event(logger, logging.WARNING, "report.risk_changes.failed", error=str(exc))
+        return
+    for risk in risks:
+        risk.change_status = next(
+            (statuses[sid] for sid in risk.source_ids if sid in statuses), None
+        )
 
 
 def _claims_from(gen: SectionGeneration) -> list[ResearchClaim]:

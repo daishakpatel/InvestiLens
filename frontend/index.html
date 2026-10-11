@@ -3,22 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0a0b0d" />
     <meta
       name="description"
       content="InvestiLens — evidence-grounded equity research. Not investment advice."
     />
     <title>InvestiLens</title>
-    <!-- Set the theme before first paint to avoid a flash (UI-007). -->
+    <!-- Dark is the default for everyone; light only when the user chose it (UI-007, ADR-0028).
+         Runs before first paint so neither theme flashes. -->
     <script>
       (function () {
         try {
-          var saved = localStorage.getItem("il-theme");
-          var dark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-          if (dark) document.documentElement.classList.add("dark");
+          if (localStorage.getItem("il-theme") === "light") {
+            document.documentElement.classList.add("light");
+            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#ffffff");
+          }
         } catch (_) {}
       })();
     </script>
+    <!-- Paint the canvas before the stylesheet arrives. -->
+    <style>
+      html { background: #0a0b0d; }
+      html.light { background: #ffffff; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

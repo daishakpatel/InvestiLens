@@ -1,68 +1,128 @@
 @import "tailwindcss";
 
-/* Class-based dark mode: `.dark` is toggled on <html> (UI-007). */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Dark is the base theme; `.light` on <html> is the opt-in override (UI-007, ADR-0028). */
+@custom-variant dark (&:where(html:not(.light), html:not(.light) *));
+@custom-variant light (&:where(.light, .light *));
 
-/* Semantic design tokens. Light values here; dark overrides below. Charts use the Okabe–Ito
-   palette, which is colorblind-safe (UI-003). */
+/* Semantic design tokens — the single source of colour in the app. Roles and measured contrast
+   ratios are in docs/decisions/0028-ui-rebuild-design-system.md. Green and red mean gain and loss
+   only; `primary` is the one accent. Chart series use the Okabe–Ito hues, which are
+   colourblind-safe (UI-003). */
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --primary: #1d4ed8;
-  --primary-contrast: #ffffff;
-  --positive: #047857;
-  --negative: #b91c1c;
-  --warning: #b45309;
-  --ai: #7c3aed;
+  --bg: #0a0b0d;
+  --surface: #111316;
+  --surface-2: #181b20;
+  --surface-3: #20242a;
+  --border: #22262d;
+  --border-strong: #2f343c;
+  --text: #f3f5f7;
+  --text-muted: #a1a7b0;
+  --text-subtle: #6b727d;
+  --primary: #5b8cff;
+  --primary-contrast: #0a0b0d;
+  --positive: #2fd27a;
+  --negative: #ff5c5c;
+  --warning: #f5b84a;
+  --ai: #a78bfa;
+  --float-shadow: 0 0 0 0 transparent; /* dark separates floating layers with a hairline only */
 
-  --chart-1: #0072b2; /* blue */
+  --chart-1: #56b4e9; /* sky blue */
   --chart-2: #e69f00; /* orange */
-  --chart-3: #009e73; /* bluish green */
-  --chart-4: #cc79a7; /* reddish purple */
-  --chart-5: #56b4e9; /* sky blue */
-  --chart-6: #d55e00; /* vermillion */
+  --chart-3: #2fbf8f; /* bluish green */
+  --chart-4: #e58fbf; /* reddish purple */
+  --chart-5: #8fb8ff; /* blue */
+  --chart-6: #f0843c; /* vermillion */
+
+  --duration-fast: 120ms; /* hover, press */
+  --duration-slow: 200ms; /* drawers, tab indicator */
 }
 
-:where(.dark) {
-  --bg: #0b1120;
-  --surface: #0f172a;
-  --surface-2: #1e293b;
-  --border: #243043;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --primary: #60a5fa;
-  --primary-contrast: #0b1120;
-  --positive: #34d399;
-  --negative: #f87171;
-  --warning: #fbbf24;
-  --ai: #c4b5fd;
+/* `:root.light`, not `:where(.light)`: the override must out-rank the `:root` block above. */
+:root.light {
+  --bg: #ffffff;
+  --surface: #f7f8f9;
+  --surface-2: #eff1f3;
+  --surface-3: #e6e9ec;
+  --border: #e4e7eb;
+  --border-strong: #cfd4da;
+  --text: #0b0d10;
+  --text-muted: #565d68;
+  --text-subtle: #6f7681;
+  --primary: #2456e6;
+  --primary-contrast: #ffffff;
+  --positive: #067a3c;
+  --negative: #c8261a;
+  --warning: #9a5106;
+  --ai: #6d3fe0;
+  --float-shadow: 0 8px 28px rgb(11 13 16 / 0.12);
 
-  --chart-1: #56b4e9;
-  --chart-2: #e69f00;
-  --chart-3: #34d399;
-  --chart-4: #f0a6cf;
-  --chart-5: #93c5fd;
-  --chart-6: #fb923c;
+  --chart-1: #0072b2;
+  --chart-2: #b87400;
+  --chart-3: #008563;
+  --chart-4: #b85c92;
+  --chart-5: #2f86c4;
+  --chart-6: #c85200;
 }
 
-/* Expose tokens to Tailwind utilities (bg-surface, text-muted, border-border, …). */
+/* Expose tokens to Tailwind utilities (bg-surface, text-muted, rounded-control, text-title, …). */
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-text: var(--text);
   --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
   --color-primary: var(--primary);
   --color-primary-contrast: var(--primary-contrast);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-warning: var(--warning);
   --color-ai: var(--ai);
+  --shadow-float: var(--float-shadow);
+}
+
+@theme {
+  --font-sans:
+    "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+
+  /* Type scale (px): caption 12, label 13, body 15, title 18, heading 24, display 32 / 48. */
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.35;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.4;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.55;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.35;
+  --text-heading: 1.5rem;
+  --text-heading--line-height: 1.25;
+  --text-heading--letter-spacing: -0.01em;
+  --text-display-s: 2rem;
+  --text-display-s--line-height: 1.15;
+  --text-display-s--letter-spacing: -0.02em;
+  --text-display-l: 3rem;
+  --text-display-l--line-height: 1.05;
+  --text-display-l--letter-spacing: -0.02em;
+
+  --radius-control: 6px;
+  --radius-surface: 10px;
+
+  --default-transition-duration: 120ms;
+  --animate-shimmer: shimmer 1.2s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
 }
 
 html,
@@ -71,18 +131,41 @@ body,
   height: 100%;
 }
 
+html {
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+html.light {
+  color-scheme: light;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* Tabular figures for anything numeric (prices, tables, deltas). */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "cv11", "ss01";
 }
 
 /* Visible focus ring for keyboard users everywhere (UI-003). */
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,8 +1,8 @@
 import { useParams } from "react-router-dom";
 
 import { RisksCard } from "../../components/research/ReportView";
-import { Panel } from "../../components/Panel";
-import { LoadingState } from "../../components/primitives";
+import { Section } from "../../components/ui/Section";
+import { LoadingState } from "../../components/ui/States";
 import { buildNumbering } from "../../lib/reportCitations";
 import { useLatestResearch } from "../../lib/queries";
 
@@ -15,11 +15,11 @@ export default function RisksTab() {
     return <RisksCard risks={latest.data.report.risks} numberOf={buildNumbering(latest.data.report).numberOf} />;
   }
   return (
-    <Panel title="Risks" kind="ai">
+    <Section title="Risks" kind="ai">
       <p className="p-6 text-sm text-muted">
         No risk analysis yet. Generate a report in the <strong>AI Research</strong> tab to see
         risk factors with citations.
       </p>
-    </Panel>
+    </Section>
   );
 }

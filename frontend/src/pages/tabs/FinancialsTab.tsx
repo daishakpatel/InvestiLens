@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { MetricChart } from "../../charts/MetricChart";
-import { AsyncContent, Panel } from "../../components/Panel";
-import { Tooltip } from "../../components/primitives";
+import { Section } from "../../components/ui/Section";
+import { AsyncContent } from "../../components/ui/States";
+import { Tooltip } from "../../components/ui/Tooltip";
 import { downloadCsv, toCsv } from "../../lib/format";
 import { useFinancials, useMetricLineage } from "../../lib/queries";
 import type { FinancialsResponse, MetricSeries } from "../../types";
@@ -87,12 +88,12 @@ export default function FinancialsTab() {
   const financials = useFinancials(ticker, METRIC_NAMES, periodType);
 
   return (
-    <Panel
+    <Section
       title="Financials"
       freshness={financials.data?.freshness}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <div role="group" aria-label="Period type" className="flex rounded-md border border-border">
+          <div role="group" aria-label="Period type" className="flex rounded-control border border-border">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
@@ -115,7 +116,7 @@ export default function FinancialsTab() {
             type="button"
             disabled={!financials.data}
             onClick={() => financials.data && exportCsv(ticker, periodType, financials.data)}
-            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-50"
+            className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-50"
           >
             Export CSV
           </button>
@@ -133,7 +134,7 @@ export default function FinancialsTab() {
               const series = data.series.find((s) => s.metric_name === cfg.name);
               const points = series?.points ?? [];
               return (
-                <div key={cfg.name} className="rounded-lg border border-border p-3">
+                <div key={cfg.name} className="rounded-control border border-border p-3">
                   {points.length === 0 ? (
                     <div className="text-sm text-muted">
                       <div className="mb-1 font-medium text-text">{cfg.title}</div>
@@ -161,6 +162,6 @@ export default function FinancialsTab() {
           </div>
         )}
       </AsyncContent>
-    </Panel>
+    </Section>
   );
 }

@@ -2,7 +2,7 @@ import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/AppShell";
-import { Panel } from "./components/Panel";
+import { Section } from "./components/ui/Section";
 import OverviewTab from "./pages/tabs/OverviewTab";
 import ValuationTab from "./pages/tabs/ValuationTab";
 import FilingsTab from "./pages/tabs/FilingsTab";
@@ -21,13 +21,15 @@ const ManagementTab = lazy(() => import("./pages/tabs/ManagementTab"));
 const ChatTab = lazy(() => import("./pages/tabs/ChatTab"));
 const ComparePage = lazy(() => import("./pages/ComparePage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
+// Design-system review surface: dev server only, so it never ships in the production bundle.
+const UiGallery = import.meta.env.DEV ? lazy(() => import("./pages/UiGallery")) : null;
 
 function NotFound() {
   return (
     <div className="py-10">
-      <Panel title="Not found">
+      <Section title="Not found">
         <p className="p-6 text-sm text-muted">That page doesn’t exist.</p>
-      </Panel>
+      </Section>
     </div>
   );
 }
@@ -53,6 +55,7 @@ export function App() {
           <Route path="ownership" element={<OwnershipTab />} />
           <Route path="chat" element={<ChatTab />} />
         </Route>
+        {UiGallery && <Route path="_ui" element={<UiGallery />} />}
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

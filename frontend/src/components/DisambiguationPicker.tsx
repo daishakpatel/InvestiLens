@@ -1,4 +1,5 @@
 import type { CompanySearchResult } from "../types";
+import { ArrowRight } from "lucide-react";
 
 /** Shown when a query matches several companies — explicit pick, never a silent best-guess (§9.2). */
 export function DisambiguationPicker({
@@ -9,7 +10,7 @@ export function DisambiguationPicker({
   onSelect: (result: CompanySearchResult) => void;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="rounded-surface border border-border bg-surface p-4">
       <h2 className="mb-3 text-sm font-semibold">Did you mean…</h2>
       <ul className="divide-y divide-border">
         {results.map((r) => (
@@ -26,9 +27,7 @@ export function DisambiguationPicker({
                   {r.exchange ? ` · ${r.exchange}` : ""}
                 </span>
               </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
+              <ArrowRight aria-hidden className="size-4 text-subtle" />
             </button>
           </li>
         ))}

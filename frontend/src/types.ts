@@ -47,6 +47,15 @@ export type ToolTraceEntry = Schemas["ToolTraceEntry"];
 export type FilingSectionsResponse = Schemas["FilingSectionsResponse"];
 export type FilingSection = Schemas["FilingSection"];
 
+// --- Phase 6b: filing diff, earnings reaction, management language (§37.3-§37.5) ---
+export type FilingDiffResponse = Schemas["FilingDiffResponse"];
+export type FilingDiffItem = Schemas["FilingDiffItem"];
+export type DiffOp = Schemas["DiffOp"];
+export type EarningsResponse = Schemas["EarningsResponse"];
+export type ManagementLanguageResponse = Schemas["ManagementLanguageResponse"];
+export type LanguageSeries = Schemas["LanguageSeries"];
+export type LanguagePoint = Schemas["LanguagePoint"];
+
 // --- Phase 6a: company comparison & portfolio analysis (§37.1/§37.2) ---
 export type ComparisonResponse = Schemas["ComparisonResponse"];
 export type ComparisonCompany = Schemas["ComparisonCompany"];

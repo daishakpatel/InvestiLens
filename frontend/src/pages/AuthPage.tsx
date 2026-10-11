@@ -39,7 +39,7 @@ export default function AuthPage() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2"
+            className="w-full rounded-control border border-border bg-surface px-3 py-2"
           />
         </label>
         <label className="block text-sm">
@@ -51,7 +51,7 @@ export default function AuthPage() {
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2"
+            className="w-full rounded-control border border-border bg-surface px-3 py-2"
           />
           {mode === "register" && (
             <span className="mt-1 block text-xs text-muted">At least 12 characters.</span>
@@ -67,7 +67,7 @@ export default function AuthPage() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-md bg-primary py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
+          className="w-full rounded-control bg-primary py-2 font-medium text-primary-contrast hover:opacity-90 disabled:opacity-60"
         >
           {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
         </button>

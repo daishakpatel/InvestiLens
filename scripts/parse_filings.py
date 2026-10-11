@@ -23,7 +23,9 @@ from app.utils.storage import FilesystemObjectStorage
 def main() -> None:
     storage = FilesystemObjectStorage(get_settings().storage_dir)
     with session_scope() as session:
-        filings = list(session.scalars(select(Filing).where(Filing.filing_type == "10-K")))
+        filings = list(
+            session.scalars(select(Filing).where(Filing.filing_type.in_(("10-K", "10-Q"))))
+        )
         for filing in filings:
             counts = parse_and_chunk(session, filing, storage=storage)
             print(f"  {filing.accession_number}: {counts}")

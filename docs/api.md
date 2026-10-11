@@ -82,7 +82,9 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 | GET | `/companies/{ticker}/filings?type=&limit=&cursor=` | Filing list |
 | GET | `/filings/{filing_id}` | Filing detail |
 | GET | `/filings/{filing_id}/sections` | Section outline |
-| GET | `/filings/{filing_id}/diff?against=` | Filing diff (P2, 501) |
+| GET | `/filings/{filing_id}/diff?against=&kind=` | Filing diff (Phase 6b, §37.4): what is `unchanged / reworded / new / removed` versus an older filing of the same type. `against` defaults to the prior filing of that type (last year's 10-K, last quarter's 10-Q). `kind=risk_factor\|section` filters. Every item carries `old`/`new` passages with backend-issued `source_ids` (resolve via `/sources/{id}`), `decided_by`, and a word-level `word_diff` when reworded. Public and deterministic: no LLM. 404 = no earlier parsed filing; 422 = different company/type or an unparsed filing. |
+| GET | `/companies/{ticker}/earnings` | Earnings-day price reaction (§37.3): adjusted-close move around each Item 2.02 8-K. `move` is a ratio; `null` + `reason` when prices are missing. No expectations data (ADR-0027). |
+| GET | `/companies/{ticker}/management-language?filing_type=10-K&limit=8` | Management language tracking (§37.5): per-filing topic mentions per 1,000 MD&A words (`topic_taxonomy_v1`), a lexicon hedging index, first-appearance/disappearance flags, and the counted statements with `source_id`s. Lexicon counts, not AI. |
 
 ### News
 | Method | Path | Notes |
@@ -144,6 +146,9 @@ but **may not** generate reports, use chat, or touch user-owned data (anonymous 
 | GET / POST | `/watchlists`, `/watchlists/{id}` (DELETE) |
 | GET / POST | `/alerts`, `/alerts/{id}` (DELETE) |
 | POST | `/feedback/report` |
+
+Alert types: `new_10k`, `new_10q`, `new_8k`, `price_move`, `news_category`, and `new_risk_factor`
+(Phase 6b): fires when the newest parsed 10-K/10-Q contains a risk factor its predecessor did not.
 
 ### Admin (internal)
 | Method | Path |

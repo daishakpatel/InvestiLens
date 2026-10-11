@@ -75,7 +75,7 @@ export default function HomePage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-8">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{title}</h2>
+      <h2 className="mb-2 text-xs font-semibold text-muted">{title}</h2>
       {children}
     </section>
   );

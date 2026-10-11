@@ -1,5 +1,5 @@
 import { useSource } from "../../lib/queries";
-import { Badge } from "../primitives";
+import { Badge } from "../ui/Badge";
 import { useCitations } from "./CitationContext";
 import { sourceTitle } from "./sourceTitle";
 
@@ -15,7 +15,7 @@ export function ReferenceList({ entries }: { entries: ReferenceEntry[] }) {
   if (entries.length === 0) return null;
   return (
     <section aria-label="References" className="mt-4 border-t border-border pt-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">References</h3>
+      <h3 className="mb-2 text-xs font-semibold text-muted">References</h3>
       <ol className="space-y-1 text-sm">
         {entries.map((e) => (
           <ReferenceRow key={e.number} entry={e} />

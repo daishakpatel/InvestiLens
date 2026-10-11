@@ -36,7 +36,7 @@ function CellTooltip({
   const row = payload[0]?.payload;
   if (!row) return null;
   return (
-    <div className="rounded-md border border-border bg-surface p-2 text-xs shadow-lg">
+    <div className="rounded-control border border-border bg-surface p-2 text-xs shadow-float">
       <div className="font-medium">{row.ticker}</div>
       <div>{formatMetricValue(row.value === null ? null : String(row.value), unit)}</div>
     </div>
@@ -69,7 +69,7 @@ export function ComparisonBars({
           type="button"
           aria-pressed={showTable}
           onClick={() => setShowTable((v) => !v)}
-          className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-2"
+          className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2"
         >
           {showTable ? "Chart" : "Table"}
         </button>
@@ -82,7 +82,7 @@ export function ComparisonBars({
             {rows.map((r) => (
               <tr key={r.ticker} className="border-t border-border">
                 <td className="px-2 py-1">{r.ticker}</td>
-                <td className="px-2 py-1 text-right tabular-nums">
+                <td className="px-2 py-1 text-right tnum">
                   {formatMetricValue(r.value === null ? null : String(r.value), unit)}
                 </td>
               </tr>

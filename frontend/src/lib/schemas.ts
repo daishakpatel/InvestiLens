@@ -10,10 +10,13 @@ import type {
   CompanySearchResult,
   ComparisonResponse,
   DataFreshnessResponse,
+  EarningsResponse,
+  FilingDiffResponse,
   FilingSectionsResponse,
   FilingSummary,
   FinancialsResponse,
   JobState,
+  ManagementLanguageResponse,
   MetricResult,
   NewsResponse,
   PeerSuggestionsResponse,
@@ -392,7 +395,93 @@ const portfolioAnalysis = z.object({
   disclaimer: z.string(),
 });
 
+// --- Phase 6b: filing diff, earnings reaction, management language ---
+const changeStatus = z.enum(["unchanged", "reworded", "new", "removed"]);
+const diffPassage = z.object({
+  heading: z.string(),
+  source_ids: z.array(z.string()),
+  text: z.string().nullish(),
+});
+const filingDiff = z.object({
+  company_ticker: z.string(),
+  filing,
+  against: filing,
+  similarity_method: z.enum(["lexical", "embedding"]),
+  caption_detection: z.enum(["emphasis", "heuristic"]),
+  counts: z.object({
+    unchanged: z.number(),
+    reworded: z.number(),
+    new: z.number(),
+    removed: z.number(),
+  }),
+  items: z.array(
+    z.object({
+      section: z.string(),
+      kind: z.enum(["risk_factor", "section"]),
+      status: changeStatus,
+      decided_by: z.enum(["heading", "similarity", "llm", "threshold"]),
+      similarity: z.number().nullish(),
+      old: diffPassage.nullish(),
+      new: diffPassage.nullish(),
+      word_diff: z
+        .array(z.object({ op: z.enum(["equal", "insert", "delete"]), text: z.string() }))
+        .nullish(),
+    }),
+  ),
+});
+const earnings = z.object({
+  ticker: z.string(),
+  method: z.string(),
+  events: z.array(
+    z.object({
+      filing,
+      pre_date: z.string().nullish(),
+      pre_close: z.string().nullish(),
+      post_date: z.string().nullish(),
+      post_close: z.string().nullish(),
+      move: z.string().nullish(),
+      reason: z.string().nullish(),
+    }),
+  ),
+});
+const languageSeries = z.object({
+  topic: z.string(),
+  label: z.string(),
+  points: z.array(
+    z.object({
+      filing_id: z.string(),
+      count: z.number(),
+      per_1k_words: z.number(),
+      flag: z.enum(["first_appearance", "disappeared"]).nullish(),
+      statements: z.array(
+        z.object({ source_id: z.string(), text: z.string(), mentions: z.number() }),
+      ),
+    }),
+  ),
+});
+const managementLanguage = z.object({
+  ticker: z.string(),
+  taxonomy_version: z.string(),
+  hedging_lexicon_version: z.string(),
+  method: z.string(),
+  periods: z.array(
+    z.object({
+      filing_id: z.string(),
+      filing_type: z.string(),
+      filing_date: z.string().nullish(),
+      period_end: z.string().nullish(),
+      word_count: z.number(),
+    }),
+  ),
+  topics: z.array(languageSeries),
+  hedging: languageSeries,
+});
+
 export const parse = {
+  filingDiff: (d: unknown): FilingDiffResponse => filingDiff.parse(d) as FilingDiffResponse,
+  earnings: (d: unknown): EarningsResponse => earnings.parse(d) as EarningsResponse,
+  managementLanguage: (d: unknown): ManagementLanguageResponse =>
+    managementLanguage.parse(d) as ManagementLanguageResponse,
   companyResponse: (d: unknown): CompanyResponse =>
     z.object({ company, freshness }).parse(d) as CompanyResponse,
   searchResults: (d: unknown): CompanySearchResult[] =>

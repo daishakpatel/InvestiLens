@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ComparisonBars } from "../charts/ComparisonBars";
-import { AsyncContent, Panel } from "../components/Panel";
-import { Badge, EmptyState } from "../components/primitives";
+import { Badge } from "../components/ui/Badge";
+import { Section } from "../components/ui/Section";
+import { AsyncContent, EmptyState } from "../components/ui/States";
 import { useAuth } from "../lib/auth";
 import { formatMetricValue, formatPercent } from "../lib/format";
 import { useComparison, useComparisonCommentary, usePeers } from "../lib/queries";
 import type { ComparisonResponse } from "../types";
+import { X } from "lucide-react";
 
 const DEFAULT_TICKERS = ["NVDA", "AMD", "INTC"];
 const CHART_METRICS = ["gross_margin", "net_margin", "yoy_growth"];
@@ -47,7 +49,7 @@ export default function ComparePage() {
               onClick={() => remove(t)}
               className="text-muted hover:text-text"
             >
-              ×
+              <X aria-hidden className="size-3.5" />
             </button>
           </span>
         ))}
@@ -64,11 +66,11 @@ export default function ComparePage() {
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Add ticker"
               aria-label="Add ticker"
-              className="w-28 rounded-md border border-border bg-surface px-2 py-1 text-sm"
+              className="w-28 rounded-control border border-border bg-surface px-2 py-1 text-sm"
             />
             <button
               type="submit"
-              className="rounded-md border border-border px-2 py-1 text-sm hover:bg-surface-2"
+              className="rounded-control border border-border px-2 py-1 text-sm hover:bg-surface-2"
             >
               Add
             </button>
@@ -84,7 +86,7 @@ export default function ComparePage() {
             <div className="flex flex-col gap-4">
               <CalendarizationNote data={data} />
               <MetricTable data={data} />
-              <Panel title="Side-by-side">
+              <Section title="Side-by-side">
                 <div className="grid gap-6 p-4 sm:grid-cols-2 lg:grid-cols-3">
                   {CHART_METRICS.map((name) => {
                     const row = data.metrics.find((m) => m.metric_name === name);
@@ -99,7 +101,7 @@ export default function ComparePage() {
                     );
                   })}
                 </div>
-              </Panel>
+              </Section>
               <CommentaryPanel tickers={tickers} />
               <PeersPanel
                 ticker={tickers[0] ?? ""}
@@ -123,7 +125,7 @@ export default function ComparePage() {
 
 function CalendarizationNote({ data }: { data: ComparisonResponse }) {
   return (
-    <Panel title={`Comparison period — calendar year ${data.calendar_year ?? "—"}`}>
+    <Section title={`Comparison period — calendar year ${data.calendar_year ?? "—"}`}>
       <div className="flex flex-wrap gap-4 p-4 text-sm">
         {data.companies.map((c) => (
           <div key={c.ticker} className="min-w-32">
@@ -135,16 +137,16 @@ function CalendarizationNote({ data }: { data: ComparisonResponse }) {
           </div>
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
 function MetricTable({ data }: { data: ComparisonResponse }) {
   return (
-    <Panel title="Metrics">
+    <Section title="Metrics">
       <div className="overflow-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-surface-2 text-xs uppercase text-muted">
+          <thead className="bg-surface-2 text-xs text-muted">
             <tr>
               <th scope="col" className="px-3 py-2">
                 Metric
@@ -163,7 +165,7 @@ function MetricTable({ data }: { data: ComparisonResponse }) {
                   {row.metric_name}
                 </th>
                 {row.cells.map((cell) => (
-                  <td key={cell.ticker} className="px-3 py-2 text-right tabular-nums">
+                  <td key={cell.ticker} className="px-3 py-2 text-right tnum">
                     <div>{formatMetricValue(cell.result.value, row.unit)}</div>
                     {cell.percentile != null && cell.result.value != null && (
                       <div className="text-xs text-muted">
@@ -177,7 +179,7 @@ function MetricTable({ data }: { data: ComparisonResponse }) {
           </tbody>
         </table>
       </div>
-    </Panel>
+    </Section>
   );
 }
 
@@ -186,7 +188,7 @@ function CommentaryPanel({ tickers }: { tickers: string[] }) {
   const commentary = useComparisonCommentary();
 
   return (
-    <Panel
+    <Section
       title="AI commentary"
       kind="ai"
       actions={
@@ -195,7 +197,7 @@ function CommentaryPanel({ tickers }: { tickers: string[] }) {
             type="button"
             disabled={commentary.isPending}
             onClick={() => commentary.mutate({ tickers })}
-            className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-50"
+            className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-50"
           >
             {commentary.isPending ? "Generating…" : "Generate"}
           </button>
@@ -234,7 +236,7 @@ function CommentaryPanel({ tickers }: { tickers: string[] }) {
           </p>
         )}
       </div>
-    </Panel>
+    </Section>
   );
 }
 
@@ -242,7 +244,7 @@ function PeersPanel({ ticker, onAdd }: { ticker: string; onAdd: (t: string) => v
   const peers = usePeers(ticker);
   const content = useMemo(() => peers.data?.peers ?? [], [peers.data]);
   return (
-    <Panel title={`Suggested peers for ${ticker}`}>
+    <Section title={`Suggested peers for ${ticker}`}>
       <div className="p-4">
         {content.length === 0 ? (
           <p className="text-sm text-muted">No peer suggestions.</p>
@@ -260,7 +262,7 @@ function PeersPanel({ ticker, onAdd }: { ticker: string; onAdd: (t: string) => v
                 <button
                   type="button"
                   onClick={() => onAdd(p.ticker)}
-                  className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-2"
+                  className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2"
                 >
                   Add
                 </button>
@@ -274,6 +276,6 @@ function PeersPanel({ ticker, onAdd }: { ticker: string; onAdd: (t: string) => v
           </p>
         ))}
       </div>
-    </Panel>
+    </Section>
   );
 }

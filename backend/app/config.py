@@ -202,6 +202,14 @@ class Settings(BaseSettings):
     # Price-move alert threshold (fractional daily move that trips a `price_move` alert).
     alert_price_move_threshold: float = Field(default=0.05)
 
+    # --- Filing diff (Phase 6b, ADR-0027) ---
+    # "lexical" (word-bigram overlap; offline default) or "embedding" (cosine via EmbeddingClient).
+    # The two thresholds below are tuned for "lexical" on NVDA 10-Ks; re-tune if you switch.
+    diff_similarity: Literal["lexical", "embedding"] = Field(default="lexical")
+    diff_match_threshold: float = Field(default=0.45)  # >= this: same passage, reworded
+    diff_borderline_threshold: float = Field(default=0.20)  # below this: unrelated passages
+    diff_max_llm_adjudications: int = Field(default=8)  # LLM calls per diff, borderline pairs only
+
     # --- Object storage (Phase 5d, ADR-0012) ---
     # "filesystem" (MVP default, storage_dir) or "s3" (MinIO locally / S3 in prod, via the
     # object_storage_* settings). The ObjectStorage interface is unchanged either way.

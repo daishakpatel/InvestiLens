@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { useSource } from "../../lib/queries";
 import type { SourceDetail, SourceRecord } from "../../types";
-import { Badge, ErrorState, LoadingState } from "../primitives";
+import { Badge } from "../ui/Badge";
+import { ErrorState, LoadingState } from "../ui/States";
 import { sourceKindLabel, sourceTitle } from "./sourceTitle";
+import { ArrowUpRight, X } from "lucide-react";
 
 function HighlightedText({
   text,
@@ -38,7 +40,7 @@ function Derivation({
   onOpenSource: (id: string) => void;
 }) {
   return (
-    <div className="mt-3 rounded-lg border border-border bg-surface-2 p-3 text-sm">
+    <div className="mt-3 rounded-control border border-border bg-surface-2 p-3 text-sm">
       <div className="mb-2 font-medium">How this was calculated</div>
       <dl className="space-y-1">
         <Row k="Formula" v={`${source.formula_id} (v${source.formula_version})`} />
@@ -133,15 +135,15 @@ function Body({
             href={detail.deep_link}
             target="_blank"
             rel="noreferrer noopener"
-            className="rounded-md border border-border px-3 py-1 text-sm hover:bg-surface-2"
+            className="rounded-control border border-border px-3 py-1 text-sm hover:bg-surface-2"
           >
-            Open original ↗
+            Open original <ArrowUpRight aria-hidden className="inline size-3.5" />
           </a>
         )}
         <button
           type="button"
           onClick={copyCitation}
-          className="rounded-md border border-border px-3 py-1 text-sm hover:bg-surface-2"
+          className="rounded-control border border-border px-3 py-1 text-sm hover:bg-surface-2"
         >
           Copy citation
         </button>
@@ -149,7 +151,7 @@ function Body({
           <button
             type="button"
             onClick={() => setShowDerivation((v) => !v)}
-            className="rounded-md border border-border px-3 py-1 text-sm hover:bg-surface-2"
+            className="rounded-control border border-border px-3 py-1 text-sm hover:bg-surface-2"
           >
             {showDerivation ? "Hide derivation" : "View derivation"}
           </button>
@@ -193,7 +195,7 @@ export function CitationModal({
         aria-modal="true"
         aria-label="Source detail"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-xl border border-border bg-surface shadow-2xl"
+        className="w-full max-w-xl rounded-surface border border-border bg-surface shadow-2xl"
       >
         <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">
@@ -204,9 +206,9 @@ export function CitationModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md border border-border px-2 py-1 text-sm hover:bg-surface-2"
+            className="rounded-control border border-border px-2 py-1 text-sm hover:bg-surface-2"
           >
-            ✕
+            <X aria-hidden className="size-4" />
           </button>
         </header>
         {query.isPending ? (

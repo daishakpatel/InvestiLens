@@ -1,23 +1,28 @@
 import { DISCLAIMER } from "../lib/config";
 import { useTheme } from "../lib/theme";
+import { Moon, Sun } from "lucide-react";
+
+import { IconButton } from "./ui/Button";
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
   return (
-    <button
-      type="button"
+    <IconButton
       onClick={toggle}
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-      className="rounded-md border border-border px-2 py-1 text-sm hover:bg-surface-2"
+      label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
     >
-      <span aria-hidden>{theme === "dark" ? "☀" : "☾"}</span>
-    </button>
+      {theme === "dark" ? (
+        <Sun aria-hidden className="size-4" />
+      ) : (
+        <Moon aria-hidden className="size-4" />
+      )}
+    </IconButton>
   );
 }
 
 export function Disclaimer() {
   return (
-    <p className="text-xs text-muted" role="note">
+    <p className="text-caption text-subtle" role="note">
       {DISCLAIMER}
     </p>
   );
@@ -25,7 +30,7 @@ export function Disclaimer() {
 
 export function Footer() {
   return (
-    <footer className="mt-10 border-t border-border px-4 py-6">
+    <footer className="mt-16 border-t border-border py-6">
       <Disclaimer />
     </footer>
   );

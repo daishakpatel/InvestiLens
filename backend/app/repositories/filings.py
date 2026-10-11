@@ -35,6 +35,76 @@ def get_filing(session: Session, filing_id: int) -> Filing | None:
     return session.get(Filing, filing_id)
 
 
+def _parsed(parser_version: str) -> Any:
+    # Only filings chunked by the current parser are comparable: units rebuilt from two parser
+    # versions would differ for reasons that have nothing to do with the filing's wording.
+    return (
+        select(DocumentChunk.id)
+        .where(
+            DocumentChunk.document_id == Filing.document_id,
+            DocumentChunk.parser_version == parser_version,
+        )
+        .exists()
+    )
+
+
+def get_latest_filing(
+    session: Session,
+    *,
+    company_id: int,
+    filing_type: str,
+    parser_version: str,
+    before: date | None = None,
+) -> Filing | None:
+    """The company's newest parsed filing of this type, optionally strictly before a date."""
+    conditions = [
+        Filing.company_id == company_id,
+        Filing.filing_type == filing_type,
+        _parsed(parser_version),
+    ]
+    if before is not None:
+        conditions.append(Filing.filing_date < before)
+    return session.scalar(
+        select(Filing).where(*conditions).order_by(Filing.filing_date.desc(), Filing.id.desc())
+    )
+
+
+def get_filings_by_document_ids(session: Session, document_ids: list[int]) -> list[Filing]:
+    if not document_ids:
+        return []
+    return list(session.scalars(select(Filing).where(Filing.document_id.in_(document_ids))))
+
+
+def list_filings_by_type(session: Session, *, company_id: int, filing_type: str) -> list[Filing]:
+    """All of a company's filings of one type, oldest first."""
+    return list(
+        session.scalars(
+            select(Filing)
+            .where(Filing.company_id == company_id, Filing.filing_type == filing_type)
+            .order_by(Filing.filing_date, Filing.id)
+        )
+    )
+
+
+def get_section_chunks(
+    session: Session, *, document_ids: list[int], section_like: str, parser_version: str
+) -> list[DocumentChunk]:
+    """Chunks of one section (matched on its title) across several documents, in document order."""
+    if not document_ids:
+        return []
+    return list(
+        session.scalars(
+            select(DocumentChunk)
+            .where(
+                DocumentChunk.document_id.in_(document_ids),
+                DocumentChunk.section.ilike(section_like),
+                DocumentChunk.parser_version == parser_version,
+            )
+            .order_by(DocumentChunk.document_id, DocumentChunk.chunk_index)
+        )
+    )
+
+
 def get_filing_sections(session: Session, *, document_id: int) -> list[DocumentChunk]:
     """Distinct section chunks for a filing's document, in document order (for the outline)."""
     return list(
