@@ -149,15 +149,20 @@ cd e2e && npm install && npm run install-browsers && npm test
 Or run `e2e.yml` via "Run workflow". A full run needs a completed report + chat, which require an
 LLM key (ADR-0006/ADR-0009) or the Fake-LLM seed.
 
-The suite has three specs:
+The suite has four specs, plus the capture script:
 
 | Spec | What it covers | Needs |
 |------|----------------|-------|
-| `tests/happy-path.spec.ts` | The §30.3 happy path and the axe scan of the company page. Creates its own account through the sign-in form. | A completed research report for the ticker and an LLM or Fake-LLM that answers with citations. The axe test alone needs only the seed companies. |
+| `tests/happy-path.spec.ts` | The §30.3 happy path (search, company page, research report, a question in the assistant panel, its citation, the source) and the axe scan of the company page. Creates its own account through the sign-in form. | A completed research report for the ticker. The question is a figure question, which mock mode answers deterministically with a citation. The axe test alone needs only the seed companies. |
 | `tests/shell.spec.ts` | The app shell (UI plan Step 2): command palette shortcuts and §9.2 disambiguation, the five company tabs and old-URL redirects, the pinned sub-header, the outage banner and its recovery, no horizontal scroll at 360 px, theme switch, sign-in validation and return-to-page. | Seed companies only. Creates a few throwaway `e2e-…@example.com` users per run. |
-| `tests/screenshots.spec.ts` | Not assertions: writes full-page captures of every key screen, dark and light, at 1440 px and 390 px, to `e2e/screenshots/` for visual review. Run with `npm run screenshots`. | Seed companies and the dev server (`/_ui` exists only there). |
+| `tests/company.spec.ts` | The company page (UI plan Step 3): the price hero (range changes without refetching; scrubbing by mouse, touch, and arrow keys with no layout shift), key figures, the no-price and not-applicable cases, chart table views and CSV downloads, theme-following charts, Financials controls, statement lineage tooltips, and 360 px fit. | Seed companies, plus one company with no price history (AMD in the dev database). |
+| `tests/reading.spec.ts` | The reading surfaces (UI plan Step 4): the citation panel (opens beside the text, swaps, returns focus, closes when the reader moves on), the research document (one AI mark, contents, every claim cited, risks filter, old Risks/Management links), the filing comparison (summary sentence, inline word diff, both filings' passages, the 404 and 422 cases), the news feed (day groups, clustered stories, filters), unsafe URLs in API data never becoming links, the assistant panel (docks at 1440 px, survives tab changes, cites, declines, one panel only, keyboard), phone layouts at 360 px, and an axe scan of all of it in both themes. | The dev database's NVDA filings (ids in the spec). The research report is mocked from `e2e/fixtures/research-nvda.json`, whose source ids are real and resolve against the API; dev databases only hold FakeLLM placeholder reports. Creates one throwaway user. |
+| `tests/screenshots.spec.ts` | Not assertions: writes full-page captures of every key screen, dark and light, at 1440 px and 390 px, to `e2e/screenshots/` for visual review. Run with `npm run screenshots`. | Seed companies and the dev server (`/_ui` exists only there). NVDA's research report is the same fixture. |
 
 Run one spec with `npx playwright test tests/shell.spec.ts`.
+
+The suites run in parallel (Playwright's default workers). They used to need one worker because
+overlapping requests could stall the API; ADR-0029 fixed that, and a stall here is now a bug.
 
 ## Tier 3 — Load (`load/locustfile.py`)
 

@@ -31,7 +31,7 @@ export function Stat({
       ].filter((r): r is [string, string] => Boolean(r[1]))
     : [];
 
-  const figure = <span className="tnum text-title font-medium text-text">{value}</span>;
+  const figure = <span className="text-title font-medium text-text">{value}</span>;
 
   return (
     <div className="min-w-24">

@@ -91,7 +91,7 @@ test.describe("company frame", () => {
       ["filings", new RegExp(`${company}/filings$`)],
       ["news", new RegExp(`${company}/news$`)],
       ["research", new RegExp(`${company}/research$`)],
-      ["chat", new RegExp(`${company}/chat$`)],
+      ["chat", new RegExp(`${company}$`)], // opens the assistant panel over the company page
     ];
     for (const [from, to] of redirects) {
       await page.goto(`${company}/${from}`);
@@ -101,17 +101,21 @@ test.describe("company frame", () => {
   });
 
   test("the sub-header pins with the price and moves nothing", async ({ page }) => {
-    await page.goto(`${company}/financials`);
+    // Overview shows the price itself (the hero), so the bar adds its copy only once that has
+    // scrolled away. The finer rules are covered in company.spec.ts.
+    await page.goto(company);
     const nav = page.getByRole("navigation", { name: "Company sections" });
     const quote = page.getByTestId("pinned-quote");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await page.waitForLoadState("networkidle");
     await expect(quote).toHaveCSS("opacity", "0");
 
-    const before = await page.evaluate(() => ({
-      height: document.documentElement.scrollHeight,
-      navHeight: document.querySelector('nav[aria-label="Company sections"]')!.getBoundingClientRect().height,
-    }));
+    const measure = () =>
+      page.evaluate(() => ({
+        height: document.documentElement.scrollHeight,
+        navHeight: document.querySelector('nav[aria-label="Company sections"]')!.getBoundingClientRect().height,
+      }));
+    const before = await measure();
     await page.mouse.wheel(0, 900);
     await expect(quote).toHaveCSS("opacity", "1");
     await expect(quote).toContainText(TICKER);
@@ -119,11 +123,7 @@ test.describe("company frame", () => {
 
     const box = await nav.boundingBox();
     expect(Math.round(box!.y)).toBe(56); // directly under the 56 px top bar
-    const after = await page.evaluate(() => ({
-      height: document.documentElement.scrollHeight,
-      navHeight: document.querySelector('nav[aria-label="Company sections"]')!.getBoundingClientRect().height,
-    }));
-    expect(after).toEqual(before); // pinning changed no heights: no layout shift
+    expect(await measure()).toEqual(before); // pinning changed no heights: no layout shift
   });
 
   test("an unknown ticker gets a way forward, not an error box", async ({ page }) => {

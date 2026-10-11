@@ -165,7 +165,7 @@ def refresh_gauges(session: Session) -> None:
 
 
 router = APIRouter(tags=["Observability"])
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 
 
 @router.get("/metrics", include_in_schema=False)

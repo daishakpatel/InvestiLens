@@ -26,6 +26,12 @@
   --ai: #a78bfa;
   --float-shadow: 0 0 0 0 transparent; /* dark separates floating layers with a hairline only */
 
+  /* A single series is drawn in neutral ink, never a categorical hue: colour is reserved for
+     identity between series and for gain/loss. */
+  --chart-ink: color-mix(in srgb, var(--text) 62%, var(--bg));
+  --chart-ink-strong: var(--text);
+  --chart-grid: var(--border);
+
   --chart-1: #56b4e9; /* sky blue */
   --chart-2: #e69f00; /* orange */
   --chart-3: #2fbf8f; /* bluish green */
@@ -181,6 +187,30 @@ body {
   :focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
+  }
+}
+
+/* On paper (the research report's Print action) the page is always ink on white, whichever
+   theme is on screen. Keep these in step with `:root.light`. */
+@media print {
+  :root,
+  :root.light {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #f7f8f9;
+    --surface-2: #eff1f3;
+    --surface-3: #e6e9ec;
+    --border: #e4e7eb;
+    --border-strong: #cfd4da;
+    --text: #0b0d10;
+    --text-muted: #4d545e;
+    --text-subtle: #656c77;
+    --primary: #2456e6;
+    --primary-contrast: #ffffff;
+    --positive: #067a3c;
+    --negative: #c8261a;
+    --warning: #9a5106;
+    --ai: #6d3fe0;
   }
 }
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 from app.schemas.research import EvidenceLabel
 
@@ -25,9 +25,17 @@ class ToolTraceEntry(BaseModel):
     latency_ms: int | None = None
 
 
+# The question is sent to the model, so its size is a cost and abuse control (SEC-002, SEC-008).
+# The assistant's composer enforces the same limit (frontend `MAX_QUESTION_LENGTH`).
+MAX_QUESTION_LENGTH = 2000
+
+
 class ChatRequest(BaseModel):
     company: str
-    question: str
+    question: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_QUESTION_LENGTH),
+    ]
     session_id: str | None = None
 
 

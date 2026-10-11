@@ -64,6 +64,13 @@ export function useFinancials(
   return useQuery({
     queryKey: ["financials", ticker, metricsParam, periodType],
     staleTime: 5 * MINUTE,
+    // Switching Annual ↔ Quarterly keeps the previous figures on screen (dimmed by the caller via
+    // `isPlaceholderData`) instead of flashing skeletons. Never across companies: another
+    // ticker's numbers must not appear, even for a moment.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === ticker && previousQuery.queryKey[2] === metricsParam
+        ? previous
+        : undefined,
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/financials`, {
         query: { metrics: metricsParam, period_type: periodType },
@@ -116,13 +123,15 @@ export function useRecentPrices(ticker: string): UseQueryResult<PricesResponse> 
   });
 }
 
-export function useFilings(ticker: string): UseQueryResult<FilingSummary[]> {
+/** A company's filings. The API pages by id, not by date, so a caller that needs "the latest"
+ *  must ask for enough rows to contain them and sort by `filing_date` itself. */
+export function useFilings(ticker: string, limit = 25): UseQueryResult<FilingSummary[]> {
   return useQuery({
-    queryKey: ["filings", ticker],
+    queryKey: ["filings", ticker, limit],
     staleTime: 5 * MINUTE,
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/filings`, {
-        query: { limit: 25 },
+        query: { limit },
         signal,
       });
       return parse.filings(data);

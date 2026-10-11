@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { formatMetricValue, formatPercent, toCsv, toNumber } from "./format";
+import { formatDate, formatMetricValue, formatPercent, toCsv, toNumber } from "./format";
+
+describe("formatDate", () => {
+  it("prints a date-only value as written, whatever the reader's time zone (DR: dates are ISO)", () => {
+    // Regression: these rendered a day early (Jan 24, Sep 29) anywhere west of UTC.
+    expect(formatDate("2026-01-25")).toBe("Jan 25, 2026");
+    expect(formatDate("2026-09-30")).toBe("Sep 30, 2026");
+    expect(formatDate("2024-12-31")).toBe("Dec 31, 2024");
+  });
+
+  it("returns a dash for a missing or unparseable date", () => {
+    expect(formatDate(null)).toBe("—");
+    expect(formatDate("not a date")).toBe("—");
+  });
+});
+
+describe("formatMetricValue units", () => {
+  it("prints per-share amounts as dollars (EPS), not a bare number (§12)", () => {
+    expect(formatMetricValue("4.90000000", "USD/shares")).toBe("$4.90");
+    expect(formatMetricValue(null, "USD/shares")).toBe("—");
+  });
+});
 
 describe("toNumber", () => {
   it("parses decimal strings and rejects non-numbers", () => {

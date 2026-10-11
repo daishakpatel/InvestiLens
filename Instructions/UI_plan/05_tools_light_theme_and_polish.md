@@ -23,6 +23,12 @@ quality holds.
   `text` weight 600 and the rest in `muted` (no green/red: "best" is not a gain). The percentile
   appears as a thin inline bar inside the cell.
 - Selecting a metric row shows its bar chart beneath the table, on the Step 3 chart system.
+- **The categorical chart palette must be re-stepped before it is used here.** Step 3 ran the
+  dataviz palette validator on `--chart-1…6` (the only multi-series colours, used only by
+  `ComparisonBars`): in dark they fail the lightness band and the colour-vision separation check
+  (worst adjacent pair ΔE 5.9); light passes with a warning. Step 3 itself uses no categorical
+  colour. Fix the dark values, re-run the validator for both themes, and record the result in
+  ADR-0028.
 - The calendar-year alignment note and any N/A reasons are one `subtle` line under the table.
 - **AI commentary** is an explicit action ("Explain the differences") with the `AiMark`, cited
   through the citation drawer, sign-in gated. Its insufficient-evidence result is a plain note.

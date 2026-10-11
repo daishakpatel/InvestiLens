@@ -29,7 +29,7 @@ from app.schemas.filings import (
 
 router = APIRouter(prefix="/filings", tags=["Filings"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 
 
 def _resolve(db: Session, filing_id: str) -> Filing:
@@ -44,7 +44,7 @@ def _resolve(db: Session, filing_id: str) -> Filing:
 
 
 @router.get("/{filing_id}", response_model=FilingDetail)
-async def get_filing(filing_id: str, db: Session = _DB) -> FilingDetail:
+def get_filing(filing_id: str, db: Session = _DB) -> FilingDetail:
     filing = _resolve(db, filing_id)
     company = db.get(Company, filing.company_id)
     return FilingDetail(
@@ -61,7 +61,7 @@ async def get_filing(filing_id: str, db: Session = _DB) -> FilingDetail:
 
 
 @router.get("/{filing_id}/sections", response_model=FilingSectionsResponse)
-async def get_filing_sections(filing_id: str, db: Session = _DB) -> FilingSectionsResponse:
+def get_filing_sections(filing_id: str, db: Session = _DB) -> FilingSectionsResponse:
     filing = _resolve(db, filing_id)
     chunks = filing_repo.get_filing_sections(db, document_id=filing.document_id)
     sections: list[FilingSection] = []
@@ -125,7 +125,7 @@ def _to_item(item: DiffItem) -> FilingDiffItem:
 
 
 @router.get("/{filing_id}/diff", response_model=FilingDiffResponse)
-async def diff_filings(
+def diff_filings(
     filing_id: str,
     against: str | None = None,
     kind: Literal["risk_factor", "section"] | None = None,

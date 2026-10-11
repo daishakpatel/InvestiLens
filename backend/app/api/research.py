@@ -35,7 +35,7 @@ from app.schemas.research import ResearchReport
 
 router = APIRouter(prefix="/research", tags=["Research"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _USER = Depends(get_current_user_id)
 _JOB_TYPE = "research_report"
 
@@ -76,7 +76,7 @@ def _accepted(job: Job) -> ResearchAccepted:
 
 
 @router.post("", status_code=202, response_model=ResearchAccepted)
-async def create_research(
+def create_research(
     body: ResearchRequest,
     db: Session = _DB,
     user_id: int = _USER,  # anonymous users may not generate reports (ADR-0006)
@@ -134,7 +134,7 @@ async def create_research(
 
 
 @router.get("/jobs/{job_id}", response_model=JobState)
-async def get_job(job_id: int, db: Session = _DB) -> JobState:
+def get_job(job_id: int, db: Session = _DB) -> JobState:
     job = job_repo.get_job(db, job_id)
     if job is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "job not found")
@@ -147,7 +147,7 @@ async def get_job(job_id: int, db: Session = _DB) -> JobState:
 
 
 @router.get("/jobs/{job_id}/events")
-async def job_events(job_id: int, db: Session = _DB) -> StreamingResponse:
+def job_events(job_id: int, db: Session = _DB) -> StreamingResponse:
     """SSE stream of job progress (API-004). Emits the current state, then closes."""
     job = job_repo.get_job(db, job_id)
     if job is None:
@@ -163,7 +163,7 @@ async def job_events(job_id: int, db: Session = _DB) -> StreamingResponse:
 
 
 @router.get("/{research_id}", response_model=ResearchReportEnvelope)
-async def get_research(research_id: int, db: Session = _DB) -> ResearchReportEnvelope:
+def get_research(research_id: int, db: Session = _DB) -> ResearchReportEnvelope:
     report = report_repo.get_report(db, research_id)
     if report is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "report not found")
@@ -181,10 +181,10 @@ async def get_research(research_id: int, db: Session = _DB) -> ResearchReportEnv
 
 
 @router.get("/{research_id}/diff", response_model=None)
-async def diff_research(research_id: str, against: str) -> None:
+def diff_research(research_id: str, against: str) -> None:
     raise not_implemented("Research diff is a Phase 6 feature")
 
 
 @router.get("/{research_id}/export", response_model=None)
-async def export_research(research_id: str, format: str = "pdf") -> None:
+def export_research(research_id: str, format: str = "pdf") -> None:
     raise not_implemented("Report export lands in Phase 4d")

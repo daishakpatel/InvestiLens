@@ -17,12 +17,12 @@ from app.schemas.admin import EvalRunSummary, IngestionRunSummary, RefreshAccept
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _ADMIN = Depends(require_admin)
 
 
 @router.get("/ingestion-runs", response_model=list[IngestionRunSummary])
-async def list_ingestion_runs(
+def list_ingestion_runs(
     response: Response,
     limit: int | None = None,
     cursor: str | None = None,
@@ -48,7 +48,7 @@ async def list_ingestion_runs(
 
 
 @router.get("/eval-runs", response_model=list[EvalRunSummary])
-async def list_eval_runs(
+def list_eval_runs(
     response: Response,
     limit: int | None = None,
     cursor: str | None = None,
@@ -67,7 +67,7 @@ async def list_eval_runs(
 
 
 @router.post("/companies/{ticker}/refresh", status_code=202, response_model=RefreshAccepted)
-async def refresh_company(ticker: str, db: Session = _DB, _: int = _ADMIN) -> RefreshAccepted:
+def refresh_company(ticker: str, db: Session = _DB, _: int = _ADMIN) -> RefreshAccepted:
     """Enqueue a full re-ingest for a company; the interactive worker runs it (ADR-0017/0024)."""
     company = company_repo.get_by_ticker(db, ticker)
     if company is None:

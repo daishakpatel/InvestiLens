@@ -30,7 +30,7 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _CURRENT_USER = Depends(get_current_user)
 
 
@@ -64,14 +64,14 @@ def _token_response(issued: IssuedTokens) -> TokenResponse:
 
 
 @router.post("/register", status_code=201, response_model=UserProfile)
-async def register(body: RegisterRequest, db: Session = _DB) -> UserProfile:
+def register(body: RegisterRequest, db: Session = _DB) -> UserProfile:
     user = service.register(db, email=body.email, password=body.password)
     db.commit()
     return _profile(user)
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(
+def login(
     body: LoginRequest, request: Request, response: Response, db: Session = _DB
 ) -> TokenResponse:
     _, issued = service.login(
@@ -87,22 +87,28 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(request: Request, response: Response, db: Session = _DB) -> TokenResponse:
+def refresh(request: Request, response: Response, db: Session = _DB) -> TokenResponse:
     settings = get_settings()
     raw = request.cookies.get(settings.refresh_cookie_name)
-    _, issued = service.refresh(
-        db,
-        raw_refresh=raw,
-        user_agent=request.headers.get("user-agent"),
-        ip=request.client.host if request.client else None,
-    )
+    try:
+        _, issued = service.refresh(
+            db,
+            raw_refresh=raw,
+            user_agent=request.headers.get("user-agent"),
+            ip=request.client.host if request.client else None,
+        )
+    except service.InvalidToken:
+        # Rejecting a reused token revokes its family. That write has to outlive the 401, and
+        # committing it here also releases its row locks before the response goes out.
+        db.commit()
+        raise
     db.commit()
     _set_refresh_cookie(response, issued, settings)
     return _token_response(issued)
 
 
 @router.post("/logout", status_code=204)
-async def logout(request: Request, response: Response, db: Session = _DB) -> None:
+def logout(request: Request, response: Response, db: Session = _DB) -> None:
     settings = get_settings()
     service.logout(db, raw_refresh=request.cookies.get(settings.refresh_cookie_name))
     db.commit()
@@ -110,12 +116,12 @@ async def logout(request: Request, response: Response, db: Session = _DB) -> Non
 
 
 @router.get("/me", response_model=UserProfile)
-async def me(user: User = _CURRENT_USER) -> UserProfile:
+def me(user: User = _CURRENT_USER) -> UserProfile:
     return _profile(user)
 
 
 @router.delete("/me", status_code=204)
-async def delete_me(response: Response, db: Session = _DB, user: User = _CURRENT_USER) -> None:
+def delete_me(response: Response, db: Session = _DB, user: User = _CURRENT_USER) -> None:
     """Account + data deletion (LGL-007): soft-delete now, hard-delete via the retention job."""
     service.delete_account(db, user)
     db.commit()
@@ -123,21 +129,21 @@ async def delete_me(response: Response, db: Session = _DB, user: User = _CURRENT
 
 
 @router.post("/verify-email/request", status_code=202, response_model=AuthMessage)
-async def request_email_verification(db: Session = _DB, user: User = _CURRENT_USER) -> AuthMessage:
+def request_email_verification(db: Session = _DB, user: User = _CURRENT_USER) -> AuthMessage:
     service.request_email_verification(db, user)
     db.commit()
     return AuthMessage(detail="verification email sent if required")
 
 
 @router.post("/verify-email/confirm", response_model=UserProfile)
-async def confirm_email_verification(body: EmailVerifyConfirm, db: Session = _DB) -> UserProfile:
+def confirm_email_verification(body: EmailVerifyConfirm, db: Session = _DB) -> UserProfile:
     user = service.confirm_email_verification(db, raw=body.token)
     db.commit()
     return _profile(user)
 
 
 @router.post("/password-reset/request", status_code=202, response_model=AuthMessage)
-async def request_password_reset(body: PasswordResetRequest, db: Session = _DB) -> AuthMessage:
+def request_password_reset(body: PasswordResetRequest, db: Session = _DB) -> AuthMessage:
     service.request_password_reset(db, email=body.email)
     db.commit()
     # Neutral response regardless of whether the account exists (no user enumeration).
@@ -145,6 +151,6 @@ async def request_password_reset(body: PasswordResetRequest, db: Session = _DB) 
 
 
 @router.post("/password-reset/confirm", status_code=204)
-async def confirm_password_reset(body: PasswordResetConfirm, db: Session = _DB) -> None:
+def confirm_password_reset(body: PasswordResetConfirm, db: Session = _DB) -> None:
     service.confirm_password_reset(db, raw=body.token, new_password=body.new_password)
     db.commit()

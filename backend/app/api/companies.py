@@ -59,7 +59,7 @@ from app.schemas.sources import MetricResult
 
 router = APIRouter(prefix="/companies", tags=["Company"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 
 # Price-dependent valuation metrics (§12). Persisted once Phase 1d price-metric wiring lands; until
 # then this returns whichever of them exist, and an empty list otherwise (documented, not faked).
@@ -109,7 +109,7 @@ def _to_company(row: CompanyModel) -> Company:
 
 # --- literal path FIRST (must precede /{ticker}) -------------------------------------
 @router.get("/search", response_model=list[CompanySearchResult])
-async def search_companies(
+def search_companies(
     q: str = Query(min_length=1), limit: int | None = None, db: Session = _DB
 ) -> list[CompanySearchResult]:
     """Fuzzy company search by name or ticker (FR-001)."""
@@ -132,7 +132,7 @@ async def search_companies(
 
 
 @router.get("/{ticker}", response_model=CompanyResponse)
-async def get_company(ticker: str, db: Session = _DB) -> CompanyResponse:
+def get_company(ticker: str, db: Session = _DB) -> CompanyResponse:
     """Company profile (spec §25.3's cache example). Read-through Redis cache when enabled; the
     loader is the DB read, so a cache miss or outage is transparent (CACHE-005)."""
 
@@ -148,7 +148,7 @@ async def get_company(ticker: str, db: Session = _DB) -> CompanyResponse:
 
 
 @router.get("/{ticker}/financials", response_model=FinancialsResponse)
-async def get_financials(
+def get_financials(
     ticker: str,
     metrics: str = Query(default="revenue,net_income"),
     period_type: str = Query(default="FY"),
@@ -186,7 +186,7 @@ async def get_financials(
 
 
 @router.get("/{ticker}/metrics/{metric_name}/lineage", response_model=MetricResult)
-async def get_metric_lineage(
+def get_metric_lineage(
     ticker: str, metric_name: str, period: str = "FY2025", db: Session = _DB
 ) -> MetricResult:
     """Show how a derived metric was computed (CIT-003)."""
@@ -202,7 +202,7 @@ async def get_metric_lineage(
 
 
 @router.get("/{ticker}/valuation", response_model=ValuationResponse)
-async def get_valuation(ticker: str, db: Session = _DB) -> ValuationResponse:
+def get_valuation(ticker: str, db: Session = _DB) -> ValuationResponse:
     company = _resolve(db, ticker)
     rows = metric_repo.get_latest_metrics(
         db, company_id=company.id, metric_names=_VALUATION_METRICS
@@ -215,7 +215,7 @@ async def get_valuation(ticker: str, db: Session = _DB) -> ValuationResponse:
 
 
 @router.get("/{ticker}/prices", response_model=PricesResponse)
-async def get_prices(
+def get_prices(
     ticker: str,
     start: str | None = None,
     end: str | None = None,
@@ -247,21 +247,21 @@ async def get_prices(
 
 
 @router.get("/{ticker}/insiders", response_model=list[InsiderTransaction], tags=["Ownership"])
-async def get_insiders(ticker: str, db: Session = _DB) -> list[InsiderTransaction]:
+def get_insiders(ticker: str, db: Session = _DB) -> list[InsiderTransaction]:
     """Form 4 insider transactions. Not yet ingested (Appendix F #10, P2) → empty."""
     _resolve(db, ticker)
     return []
 
 
 @router.get("/{ticker}/ownership", response_model=list[OwnershipHolding], tags=["Ownership"])
-async def get_ownership(ticker: str, db: Session = _DB) -> list[OwnershipHolding]:
+def get_ownership(ticker: str, db: Session = _DB) -> list[OwnershipHolding]:
     """13F institutional holdings. Not yet ingested (Appendix F #10, P2) → empty."""
     _resolve(db, ticker)
     return []
 
 
 @router.get("/{ticker}/filings", response_model=list[FilingSummary], tags=["Filings"])
-async def list_company_filings(
+def list_company_filings(
     response: Response,
     ticker: str,
     type: str | None = None,
@@ -296,7 +296,7 @@ async def list_company_filings(
 
 
 @router.get("/{ticker}/earnings", response_model=EarningsResponse, tags=["Filings"])
-async def list_earnings_reactions(ticker: str, db: Session = _DB) -> EarningsResponse:
+def list_earnings_reactions(ticker: str, db: Session = _DB) -> EarningsResponse:
     """Deterministic price move around each earnings 8-K (Item 2.02), newest first (§37.3)."""
     company = _resolve(db, ticker)
     return EarningsResponse(
@@ -345,7 +345,7 @@ def _series(
 @router.get(
     "/{ticker}/management-language", response_model=ManagementLanguageResponse, tags=["Filings"]
 )
-async def get_management_language(
+def get_management_language(
     ticker: str,
     filing_type: str = Query(default="10-K", pattern="^10-[KQ]$"),
     limit: int = Query(default=8, ge=2, le=20),
@@ -393,7 +393,7 @@ async def get_management_language(
 
 
 @router.get("/{ticker}/news", response_model=NewsResponse, tags=["News"])
-async def list_company_news(
+def list_company_news(
     ticker: str,
     category: str | None = None,
     from_: str | None = Query(default=None, alias="from"),
@@ -449,7 +449,7 @@ async def list_company_news(
 
 
 @router.get("/{ticker}/research/latest", response_model=ResearchReportEnvelope, tags=["Research"])
-async def latest_research(ticker: str, db: Session = _DB) -> ResearchReportEnvelope:
+def latest_research(ticker: str, db: Session = _DB) -> ResearchReportEnvelope:
     company = _resolve(db, ticker)
     report = report_repo.get_latest_complete(db, company_id=company.id)
     if report is None:

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.auth import passwords, tokens
 from app.auth.ratelimit import LoginThrottle, login_throttle
 from app.config import Settings, get_settings
-from app.models import User
+from app.models import RefreshToken, User
 from app.repositories import auth_tokens as auth_token_repo
 from app.repositories import refresh_tokens as refresh_repo
 from app.repositories import users as user_repo
@@ -151,15 +151,22 @@ def refresh(
     ip: str | None,
     settings: Settings | None = None,
 ) -> tuple[User, IssuedTokens]:
-    """Rotate a refresh token. Reuse of a revoked token revokes the whole family (AUTH-002)."""
+    """Rotate a refresh token. Reuse of a revoked token revokes the whole family (AUTH-002).
+
+    A rejection can itself change state (the family revoked, an expired token marked). The
+    caller commits whether this returns or raises `InvalidToken`, or that change is lost.
+    """
     settings = settings or get_settings()
     if not raw_refresh:
         raise InvalidToken("missing refresh token")
     now = datetime.now(UTC)
-    row = refresh_repo.get_by_hash(session, tokens.hash_token(raw_refresh))
+    row = refresh_repo.get_by_hash(session, tokens.hash_token(raw_refresh), for_update=True)
     if row is None:
         raise InvalidToken("invalid refresh token")
-    if row.revoked_at is not None:
+    rotated_just_now = row.revoked_at is not None and _is_concurrent_refresh(
+        session, row, now=now, grace_seconds=settings.refresh_reuse_grace_seconds
+    )
+    if row.revoked_at is not None and not rotated_just_now:
         # Reuse of an already-rotated token → theft. Revoke the entire family (ADR-0005).
         refresh_repo.revoke_family(session, family_id=row.family_id, when=now)
         raise InvalidToken("refresh token reuse detected; session revoked")
@@ -175,9 +182,24 @@ def refresh(
     issued = _issue_tokens(
         session, user, settings=settings, family_id=row.family_id, user_agent=user_agent, ip=ip
     )
-    new_row = refresh_repo.get_by_hash(session, tokens.hash_token(issued.refresh_raw))
-    refresh_repo.revoke(row, when=now, replaced_by_id=new_row.id if new_row else None)
+    if not rotated_just_now:  # already rotated: leave its record, and its grace window, alone
+        new_row = refresh_repo.get_by_hash(session, tokens.hash_token(issued.refresh_raw))
+        refresh_repo.revoke(row, when=now, replaced_by_id=new_row.id if new_row else None)
     return user, issued
+
+
+def _is_concurrent_refresh(
+    session: Session, row: RefreshToken, *, now: datetime, grace_seconds: int
+) -> bool:
+    """True when a revoked token was rotated moments ago and its successor is still live: two
+    tabs restoring one session, each sending the cookie they both started with (ADR-0030).
+    A token revoked any other way (logout, reuse, a successor already used) never qualifies."""
+    if row.revoked_at is None or row.replaced_by_id is None:
+        return False
+    if now - row.revoked_at > timedelta(seconds=grace_seconds):
+        return False
+    successor = session.get(RefreshToken, row.replaced_by_id)
+    return successor is not None and successor.revoked_at is None
 
 
 def logout(session: Session, *, raw_refresh: str | None) -> None:

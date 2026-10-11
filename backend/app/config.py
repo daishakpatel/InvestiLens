@@ -105,6 +105,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
     access_token_ttl_seconds: int = Field(default=900)  # 15 min access token (AUTH-002)
     refresh_token_ttl_days: int = Field(default=14)  # rotating refresh token (AUTH-002)
+    # A token presented again this soon after it was rotated is a second tab restoring the same
+    # session, not theft: it gets a token of its own instead of revoking the family (ADR-0030).
+    # 0 turns the allowance off.
+    refresh_reuse_grace_seconds: int = Field(default=10, ge=0)
     password_min_length: int = Field(default=12)  # basic policy (AUTH-001)
     email_token_ttl_hours: int = Field(default=24)  # verify/reset tokens (AUTH-003)
     # Login throttle (AUTH-006): max failed attempts per (account|IP) within the window, then a

@@ -27,7 +27,7 @@ from app.schemas.chat import (
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _USER = Depends(get_current_user_id)
 
 
@@ -55,7 +55,7 @@ def _session_id(body: ChatRequest) -> int | None:
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(
+def chat(
     body: ChatRequest,
     db: Session = _DB,
     user_id: int = _USER,
@@ -73,9 +73,7 @@ async def chat(
 
 
 @router.post("/stream")
-async def chat_stream(
-    body: ChatRequest, db: Session = _DB, user_id: int = _USER
-) -> StreamingResponse:
+def chat_stream(body: ChatRequest, db: Session = _DB, user_id: int = _USER) -> StreamingResponse:
     """SSE token stream over a verified answer (API-004)."""
     turn = answer_question(
         db,
@@ -89,7 +87,7 @@ async def chat_stream(
 
 
 @router.get("/sessions/{session_id}", response_model=ChatSession)
-async def get_session(session_id: int, db: Session = _DB, user_id: int = _USER) -> ChatSession:
+def get_session(session_id: int, db: Session = _DB, user_id: int = _USER) -> ChatSession:
     row = chat_repo.get_session(db, session_id)
     if row is None or row.user_id != user_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "session not found")
@@ -112,7 +110,7 @@ async def get_session(session_id: int, db: Session = _DB, user_id: int = _USER) 
 
 
 @router.post("/messages/{message_id}/feedback", status_code=204)
-async def message_feedback(
+def message_feedback(
     message_id: int, body: FeedbackRequest, db: Session = _DB, user_id: int = _USER
 ) -> None:
     updated = chat_repo.set_feedback(

@@ -31,20 +31,22 @@ test("search → dashboard → report → chat → citation → source", async (
   if (await generate.isVisible().catch(() => false)) {
     await generate.click();
   }
-  await expect(page.getByText(/executive summary/i)).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByRole("heading", { name: "AI research" })).toBeVisible({ timeout: 120_000 });
 
-  // 4. Ask a question (the header's "Ask" action) and receive an answer carrying a citation chip.
-  await page.getByRole("link", { name: "Ask" }).click();
-  await page.getByRole("textbox", { name: "Ask a question" }).fill("What drove revenue growth?");
-  await page.getByRole("button", { name: /send|ask/i }).click();
-  const citation = page.getByRole("button", { name: /^Open source \d+$/ }).first();
+  // 4. Ask a question (the header's "Ask" opens the assistant beside the page) and receive an
+  //    answer carrying a citation. A figure question: mock mode answers those deterministically.
+  await page.getByRole("button", { name: "Ask" }).click();
+  const assistant = page.getByRole("dialog");
+  await assistant.getByRole("textbox", { name: "Ask a question" }).fill(`What was ${TICKER}'s revenue in the latest fiscal year?`);
+  await assistant.getByRole("button", { name: "Send question" }).click();
+  const citation = assistant.getByRole("button", { name: /^Open source \d+$/ }).first();
   await expect(citation).toBeVisible({ timeout: 30_000 });
 
-  // 5. Open the source: the citation view shows the supporting passage + link to the original.
+  // 5. Open the source: it replaces the conversation in the same panel, with a way back.
   await citation.click();
-  const source = page.getByRole("dialog");
-  await expect(source).toBeVisible();
-  await expect(source.getByRole("link", { name: /original/i })).toBeVisible();
+  await expect(assistant).toHaveAccessibleName("Source");
+  await expect(assistant.getByRole("heading", { level: 3 })).toBeVisible();
+  await expect(assistant.getByRole("button", { name: "Back to conversation" })).toBeVisible();
 });
 
 test("dashboard has no serious accessibility violations", async ({ page }) => {

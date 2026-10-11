@@ -45,8 +45,13 @@ def insert(
     return row
 
 
-def get_by_hash(session: Session, token_hash: str) -> RefreshToken | None:
-    return session.scalar(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
+def get_by_hash(
+    session: Session, token_hash: str, *, for_update: bool = False
+) -> RefreshToken | None:
+    """`for_update` locks the row until the transaction ends, so two requests rotating the same
+    token take turns and the second sees what the first did."""
+    stmt = select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+    return session.scalar(stmt.with_for_update() if for_update else stmt)
 
 
 def revoke(token: RefreshToken, *, when: datetime, replaced_by_id: int | None = None) -> None:

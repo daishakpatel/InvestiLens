@@ -18,7 +18,7 @@ from app.schemas.portfolio import PortfolioAnalysis, PortfolioRequest
 
 router = APIRouter(prefix="/portfolio", tags=["Portfolio"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 
 
 @router.post("/analyze", response_model=PortfolioAnalysis)

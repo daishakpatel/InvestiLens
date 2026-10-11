@@ -1,56 +1,72 @@
-import { useState } from "react";
-
-import { CitationChip } from "../citations/CitationChip";
-import { Section } from "../ui/Section";
-import { AsyncContent } from "../ui/States";
 import { formatDate } from "../../lib/format";
 import { useManagementLanguage } from "../../lib/queries";
 import type { LanguagePoint, LanguageSeries, ManagementLanguageResponse } from "../../types";
+import { useCitations } from "../citations/CitationContext";
+import { AsyncContent } from "../ui/States";
 
-interface Selection {
-  series: LanguageSeries;
-  index: number;
+type Period = ManagementLanguageResponse["periods"][number];
+
+const FLAG = { first_appearance: "first appears here", disappeared: "drops out here" } as const;
+
+function periodName(period: Period): string {
+  return `${period.filing_type} for the period ended ${formatDate(period.period_end)}`;
 }
-
-const FLAG = { first_appearance: "first appears", disappeared: "drops out" } as const;
 
 function Row({
   series,
+  periods,
   max,
-  selected,
-  onSelect,
+  unit,
 }: {
   series: LanguageSeries;
+  periods: Period[];
   max: number;
-  selected: Selection | null;
-  onSelect: (s: Selection) => void;
+  unit: string; // what is being counted, for the panel: "mentions" or "hedging words"
 }) {
+  const { openStatements } = useCitations();
   return (
-    <tr className="border-t border-border/60">
-      <th scope="row" className="px-4 py-2 text-left font-medium">
+    <tr>
+      <th scope="row" className="whitespace-nowrap py-px pr-4 text-left text-sm font-normal text-text">
         {series.label}
       </th>
       {series.points.map((point: LanguagePoint, index) => {
-        const active = selected?.series.topic === series.topic && selected.index === index;
-        // Shade encodes intensity; the number is always printed, so colour is never the only cue.
-        const shade = max > 0 ? Math.round((point.per_1k_words / max) * 45) : 0;
+        const period = periods[index];
+        if (!period) return null;
+        // Shade carries intensity; the figure is always printed, so colour is never the only cue.
+        const shade = max > 0 ? Math.round((point.per_1k_words / max) * 55) : 0;
+        const flag = point.flag ? FLAG[point.flag] : null;
+        const describe = `${series.label}, ${periodName(period)}: ${point.per_1k_words.toFixed(1)} per 1,000 words, ${point.count} ${point.count === 1 ? "mention" : "mentions"}${flag ? `, ${flag}` : ""}`;
         return (
-          <td key={point.filing_id} className="p-1 text-center">
+          <td key={point.filing_id} className="p-px">
             <button
               type="button"
               disabled={point.count === 0}
-              aria-pressed={active}
-              onClick={() => onSelect({ series, index })}
-              title={`${point.count} mention${point.count === 1 ? "" : "s"}`}
-              style={{
-                backgroundColor: `color-mix(in srgb, var(--primary) ${shade}%, transparent)`,
-              }}
-              className={`w-full rounded-control px-2 py-1.5 tnum ${
-                active ? "ring-2 ring-primary" : ""
-              } ${point.count === 0 ? "text-muted" : "hover:ring-1 hover:ring-primary"}`}
+              aria-label={point.count > 0 ? `${describe}. Show the statements counted.` : describe}
+              title={flag ? `${series.label} ${flag}` : undefined}
+              onClick={() =>
+                openStatements({
+                  kind: "statements",
+                  title: series.label,
+                  subtitle: `${point.count} ${unit} in the ${periodName(period)} (${point.per_1k_words.toFixed(1)} per 1,000 words of Management’s Discussion & Analysis)`,
+                  statements: point.statements,
+                })
+              }
+              style={{ backgroundColor: `color-mix(in srgb, var(--primary) ${shade}%, var(--surface))` }}
+              className={`tnum relative block h-9 w-full min-w-14 text-sm transition-shadow ${
+                point.count === 0
+                  ? "cursor-default text-subtle"
+                  : "text-text hover:shadow-[inset_0_0_0_1px_var(--primary)]"
+              }`}
             >
               {point.per_1k_words.toFixed(1)}
-              {point.flag && <span className="block text-[0.65rem]">{FLAG[point.flag]}</span>}
+              {point.flag && (
+                <span
+                  aria-hidden
+                  className={`absolute right-1.5 top-1.5 size-1.5 rounded-full ${
+                    point.flag === "first_appearance" ? "bg-text" : "border border-text"
+                  }`}
+                />
+              )}
             </button>
           </td>
         );
@@ -59,78 +75,74 @@ function Row({
   );
 }
 
-function Tracker({ data }: { data: ManagementLanguageResponse }) {
-  const [selected, setSelected] = useState<Selection | null>(null);
+function Grid({ data }: { data: ManagementLanguageResponse }) {
   const max = Math.max(0, ...data.topics.flatMap((t) => t.points.map((p) => p.per_1k_words)));
   const hedgingMax = Math.max(0, ...data.hedging.points.map((p) => p.per_1k_words));
-  const point = selected?.series.points[selected.index];
-  const period = selected ? data.periods[selected.index] : undefined;
+  const flagged = data.topics.some((topic) => topic.points.some((point) => point.flag));
 
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <caption className="px-4 py-2 text-left text-xs text-muted">
+        <table className="w-full border-separate border-spacing-0">
+          <caption className="pb-3 text-left text-caption text-muted">
             Mentions per 1,000 words of Management’s Discussion &amp; Analysis, by filing. Select a
-            cell to read the statements that were counted.
+            figure to read the statements that were counted.
           </caption>
-          <thead className="text-xs text-muted">
+          <thead>
             <tr>
-              <th scope="col" className="px-4 py-2 text-left font-medium">Topic</th>
-              {data.periods.map((p) => (
-                <th key={p.filing_id} scope="col" className="px-2 py-2 font-medium">
-                  {p.filing_type}
-                  <span className="block font-normal">ended {formatDate(p.period_end)}</span>
+              <th scope="col" className="pb-2 pr-4 text-left text-label font-medium text-muted">
+                Topic
+              </th>
+              {data.periods.map((period) => (
+                <th
+                  key={period.filing_id}
+                  scope="col"
+                  className="px-1 pb-2 text-center text-label font-medium text-muted"
+                >
+                  {period.filing_type}
+                  <span className="block whitespace-nowrap font-normal text-subtle">
+                    {formatDate(period.period_end)}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {data.topics.map((series) => (
-              <Row key={series.topic} series={series} max={max} selected={selected} onSelect={setSelected} />
+              <Row key={series.topic} series={series} periods={data.periods} max={max} unit="mentions" />
             ))}
           </tbody>
-          <tbody className="border-t-2 border-border">
-            <Row series={data.hedging} max={hedgingMax} selected={selected} onSelect={setSelected} />
+          {/* Hedging is a different measure on its own scale, so it sits apart from the topics. */}
+          <tbody>
+            <tr aria-hidden>
+              <td colSpan={data.periods.length + 1} className="h-3" />
+            </tr>
+            <Row series={data.hedging} periods={data.periods} max={hedgingMax} unit="hedging words" />
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-xs text-muted">
-        Hedging language counts words such as “may”, “could”, “expect” and “uncertain”. Both rows
-        are word counts from a fixed list ({data.taxonomy_version}, {data.hedging_lexicon_version}),
-        not an AI judgment and not a sentiment score.
+      <p className="mt-3 max-w-2xl text-caption text-subtle">
+        Hedging language counts words such as “may”, “could”, “expect” and “uncertain”. Every figure
+        here is a count against a fixed word list ({data.taxonomy_version},{" "}
+        {data.hedging_lexicon_version}): a measure of wording, not an AI judgment and not a
+        sentiment score.
+        {flagged && " A filled dot marks where a topic first appears; a hollow one, where it drops out."}
       </p>
-      {selected && point && period && (
-        <section aria-label="Counted statements" className="border-t border-border px-4 py-3">
-          <h3 className="text-sm font-semibold">
-            {selected.series.label} · {period.filing_type} ended {formatDate(period.period_end)} ·{" "}
-            {point.count} mention{point.count === 1 ? "" : "s"}
-          </h3>
-          <ul className="mt-2 max-h-80 space-y-2 overflow-auto text-sm">
-            {point.statements.map((s, i) => (
-              <li key={i}>
-                {s.text} <CitationChip number={i + 1} sourceId={s.source_id} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }
 
-/** Management language tracking (§37.5): topic intensity and hedging index across filings. */
+/** Management language tracking (§37.5): how often each topic comes up in MD&A, filing by filing,
+ *  as a heat table. Deterministic counts, each traceable to the sentences counted. */
 export function LanguageTracker({ ticker }: { ticker: string }) {
   const language = useManagementLanguage(ticker);
   return (
-    <Section id="management" title="Management language over time">
-      <AsyncContent
-        query={language}
-        isEmpty={(d) => d.periods.length === 0}
-        emptyMessage="No parsed annual reports with an MD&A section yet."
-      >
-        {(data) => <Tracker data={data} />}
-      </AsyncContent>
-    </Section>
+    <AsyncContent
+      query={language}
+      isEmpty={(data) => data.periods.length === 0}
+      emptyMessage="No parsed annual reports with a Management’s Discussion & Analysis section yet."
+    >
+      {(data) => <Grid data={data} />}
+    </AsyncContent>
   );
 }

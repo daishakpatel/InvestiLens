@@ -28,7 +28,7 @@ function TopBar() {
   // Home's hero is the search; a second field in the bar would compete with it.
   const showSearchField = pathname !== "/";
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md print:hidden">
       {/* Three columns from md up, so the search field is centred on the page rather than in
           whatever space the wordmark and links leave. */}
       <Container className="flex h-14 items-center justify-between gap-3 md:grid md:grid-cols-[1fr_minmax(0,24rem)_1fr] md:gap-6">

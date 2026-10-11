@@ -6,10 +6,12 @@ import { formatPercent, toNumber } from "../../lib/format";
 export function Delta({
   value,
   digits = 2,
+  points = false,
   className = "",
 }: {
   value: number | string | null | undefined; // ratio: 0.0123 = +1.23%
   digits?: number;
+  points?: boolean; // the value is a change in a ratio (a margin): print "+1.2 pts", not "%"
   className?: string;
 }) {
   const ratio = typeof value === "number" ? value : toNumber(value ?? null);
@@ -25,7 +27,7 @@ export function Delta({
     >
       {!flat && <Arrow aria-hidden className="size-[1em]" />}
       {up ? "+" : flat ? "" : "−"}
-      {formatPercent(Math.abs(ratio), digits)}
+      {points ? `${(Math.abs(ratio) * 100).toFixed(digits)} pts` : formatPercent(Math.abs(ratio), digits)}
     </span>
   );
 }

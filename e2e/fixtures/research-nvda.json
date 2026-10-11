@@ -1,0 +1,258 @@
+{
+  "research_id": "fixture-1",
+  "ticker": "NVDA",
+  "generated_at": "2026-10-09T15:30:00+00:00",
+  "model": "claude-sonnet-5-5",
+  "prompt_version": "report_v1",
+  "data_version": "0f13c23f6552fa07",
+  "report": {
+    "executive_summary": [
+      {
+        "claim_id": "executive_summary_0",
+        "text": "NVIDIA sells accelerated computing platforms used for applications that range from molecular simulation to climate forecasting.",
+        "source_ids": [
+          "15_1_3"
+        ],
+        "confidence_label": "strongly_supported",
+        "internal_confidence": null
+      },
+      {
+        "claim_id": "executive_summary_1",
+        "text": "Profitability stayed high in fiscal 2026: the operating margin was 60.4% and the net margin 55.6%.",
+        "source_ids": [
+          "derived:NVDA:operating_margin:FY2026",
+          "derived:NVDA:net_margin:FY2026"
+        ],
+        "confidence_label": "strongly_supported",
+        "internal_confidence": null
+      },
+      {
+        "claim_id": "executive_summary_2",
+        "text": "The latest annual report adds a risk factor about counterparty exposure in commercial arrangements.",
+        "source_ids": [
+          "15_1A_152"
+        ],
+        "confidence_label": "supported",
+        "internal_confidence": null
+      }
+    ],
+    "company_overview": [
+      {
+        "claim_id": "company_overview_0",
+        "text": "The company's networking products include interconnects, switches, adapters and the software that ties them into data-center-scale systems.",
+        "source_ids": [
+          "15_1_5"
+        ],
+        "confidence_label": "strongly_supported",
+        "internal_confidence": null
+      },
+      {
+        "claim_id": "company_overview_1",
+        "text": "Its computing platform is used by researchers and developers across thousands of applications.",
+        "source_ids": [
+          "15_1_3"
+        ],
+        "confidence_label": "supported",
+        "internal_confidence": null
+      }
+    ],
+    "revenue_analysis": [
+      {
+        "claim_id": "revenue_analysis_0",
+        "text": "Much of the company's revenue reaches it through OEMs, ODMs, system integrators and distributors rather than directly from end customers.",
+        "source_ids": [
+          "15_1A_152"
+        ],
+        "confidence_label": "supported",
+        "internal_confidence": null
+      },
+      {
+        "claim_id": "revenue_analysis_uncited",
+        "text": "This sentence has no source and must never be shown.",
+        "source_ids": [],
+        "confidence_label": "supported",
+        "internal_confidence": null
+      }
+    ],
+    "profitability_analysis": [
+      {
+        "claim_id": "profitability_analysis_0",
+        "text": "Gross margin was 71.1% in fiscal 2026, down from 75.0% a year earlier.",
+        "source_ids": [
+          "derived:NVDA:gross_margin:FY2026",
+          "derived:NVDA:gross_margin:FY2025"
+        ],
+        "confidence_label": "strongly_supported",
+        "internal_confidence": null
+      },
+      {
+        "claim_id": "profitability_analysis_1",
+        "text": "The filing does not break the margin change down by product line, so the cause of the decline is not established here.",
+        "source_ids": [
+          "derived:NVDA:gross_margin:FY2026"
+        ],
+        "confidence_label": "limited_evidence",
+        "internal_confidence": null
+      }
+    ],
+    "balance_sheet_analysis": [
+      {
+        "claim_id": "balance_sheet_analysis_0",
+        "text": "Total debt was $8.5 billion at the end of fiscal 2026, about 5% of shareholders' equity.",
+        "source_ids": [
+          "derived:NVDA:total_debt:FY2026",
+          "derived:NVDA:debt_to_equity:FY2026"
+        ],
+        "confidence_label": "strongly_supported",
+        "internal_confidence": null
+      }
+    ],
+    "cash_flow_analysis": [
+      {
+        "claim_id": "cash_flow_analysis_0",
+        "text": "Free cash flow was $96.7 billion in fiscal 2026.",
+        "source_ids": [
+          "derived:NVDA:free_cash_flow:FY2026"
+        ],
+        "confidence_label": "strongly_supported",
+        "internal_confidence": null
+      }
+    ],
+    "valuation_analysis": [],
+    "news_summary": [
+      {
+        "news_id": "news:15",
+        "summary": "Coverage focused on how the market reacted to the company's guidance.",
+        "category": "earnings",
+        "source_ids": [
+          "news:15"
+        ]
+      },
+      {
+        "news_id": "news:14",
+        "summary": "Margins were the main topic in reporting ahead of the earnings release.",
+        "category": "earnings",
+        "source_ids": [
+          "news:14"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "category": "counterparty",
+        "description": "Commercial arrangements expose the company to the risk that a counterparty does not perform.",
+        "source_ids": [
+          "15_1A_152"
+        ],
+        "change_status": "new",
+        "evidence_label": "supported"
+      },
+      {
+        "category": "competition",
+        "description": "Failing to keep up with fast changes in technology, customer requirements and industry standards could hurt results.",
+        "source_ids": [
+          "15_1A_60"
+        ],
+        "change_status": "reworded",
+        "evidence_label": "strongly_supported"
+      },
+      {
+        "category": "supply_chain",
+        "description": "The company depends on foundries to deliver advanced process technologies on time and at quality.",
+        "source_ids": [
+          "15_1A_100"
+        ],
+        "change_status": "unchanged",
+        "evidence_label": "limited_evidence"
+      }
+    ],
+    "management_commentary": [
+      {
+        "topic": "data_center",
+        "text": "Management describes its networking and computing products as one platform for data-center-scale systems.",
+        "period": "FY2026",
+        "speaker": null,
+        "source_ids": [
+          "15_1_5"
+        ]
+      }
+    ],
+    "bull_factors": [
+      {
+        "title": "Exceptional profitability",
+        "claims": [
+          {
+            "claim_id": "bull_0_0",
+            "text": "Return on equity was 76.3% in fiscal 2026, with a net margin of 55.6%.",
+            "source_ids": [
+              "derived:NVDA:roe:FY2026",
+              "derived:NVDA:net_margin:FY2026"
+            ],
+            "confidence_label": "strongly_supported",
+            "internal_confidence": null
+          }
+        ],
+        "counterpoint_source_ids": [
+          "derived:NVDA:gross_margin:FY2025"
+        ],
+        "monitoring_indicator": "Gross margin each quarter"
+      },
+      {
+        "title": "Little debt",
+        "claims": [
+          {
+            "claim_id": "bull_1_0",
+            "text": "Debt is small next to equity, which leaves room to invest through a downturn.",
+            "source_ids": [
+              "derived:NVDA:debt_to_equity:FY2026"
+            ],
+            "confidence_label": "supported",
+            "internal_confidence": null
+          }
+        ],
+        "counterpoint_source_ids": [],
+        "monitoring_indicator": null
+      }
+    ],
+    "bear_factors": [
+      {
+        "title": "Margins have started to slip",
+        "claims": [
+          {
+            "claim_id": "bear_0_0",
+            "text": "Gross margin fell about four points between fiscal 2025 and fiscal 2026.",
+            "source_ids": [
+              "derived:NVDA:gross_margin:FY2026",
+              "derived:NVDA:gross_margin:FY2025"
+            ],
+            "confidence_label": "strongly_supported",
+            "internal_confidence": null
+          }
+        ],
+        "counterpoint_source_ids": [
+          "derived:NVDA:operating_margin:FY2026"
+        ],
+        "monitoring_indicator": "Gross margin each quarter"
+      },
+      {
+        "title": "Dependence on partners",
+        "claims": [
+          {
+            "claim_id": "bear_1_0",
+            "text": "Revenue is concentrated in a limited number of indirect customers reached through channel partners.",
+            "source_ids": [
+              "15_1A_152"
+            ],
+            "confidence_label": "supported",
+            "internal_confidence": null
+          }
+        ],
+        "counterpoint_source_ids": [],
+        "monitoring_indicator": "Customer concentration disclosures"
+      }
+    ],
+    "insufficient_evidence_sections": [
+      "valuation_analysis"
+    ]
+  }
+}

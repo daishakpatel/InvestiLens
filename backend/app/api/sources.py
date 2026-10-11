@@ -16,11 +16,13 @@ from app.schemas.citations import SourceDetail
 
 router = APIRouter(prefix="/sources", tags=["Sources"])
 
-_DB = Depends(get_db)  # module-level so it is not a call in the argument default (ruff B008)
+_DB = Depends(
+    get_db, scope="function"
+)  # module-level so it is not a call in the argument default (ruff B008)
 
 
 @router.get("/{source_id}", response_model=SourceDetail)
-async def get_source(source_id: str, db: Session = _DB) -> SourceDetail:
+def get_source(source_id: str, db: Session = _DB) -> SourceDetail:
     detail = resolve_source(db, source_id)
     if detail is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="source not found")

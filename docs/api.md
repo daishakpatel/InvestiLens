@@ -110,7 +110,7 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 ### Chat
 | Method | Path | Notes |
 |--------|------|-------|
-| POST | `/chat` | Non-streaming answer + citations |
+| POST | `/chat` | Non-streaming answer + citations. `question` is 1 to 2,000 characters after trimming, else 422 (SEC-002) |
 | POST | `/chat/stream` | SSE token stream (API-004) |
 | GET | `/chat/sessions/{id}` | Session history |
 | POST | `/chat/messages/{id}/feedback` | Thumbs up/down |
@@ -126,7 +126,7 @@ and `message_id` (for feedback).
 |--------|------|-------|
 | POST | `/auth/register` | Argon2id hash, password policy (AUTH-001); 201 → profile |
 | POST | `/auth/login` | Access JWT in body + rotating refresh token in httpOnly/Secure/SameSite cookie; rate-limited (AUTH-006) |
-| POST | `/auth/refresh` | Rotates the refresh cookie; reuse of a revoked token revokes the family (AUTH-002) |
+| POST | `/auth/refresh` | Rotates the refresh cookie; reuse of a revoked token revokes the family (AUTH-002). A token rotated in the last 10 s whose successor is unused is a second tab, and gets its own token (ADR-0030) |
 | POST | `/auth/logout` | Revokes the token family and clears the cookie |
 | GET | `/auth/me` | Current profile (Bearer access token) |
 | DELETE | `/auth/me` | Soft-deletes the account + revokes sessions; hard-delete via a retention job (LGL-007) |

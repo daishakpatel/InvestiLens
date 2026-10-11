@@ -17,7 +17,7 @@ from app.schemas.health import DataFreshnessResponse, Health, Readiness
 
 router = APIRouter(tags=["Health"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 
 
 @router.get("/health", response_model=Health)
@@ -50,7 +50,7 @@ def _redis_ok() -> bool:
 
 
 @router.get("/ready", response_model=Readiness)
-async def ready(db: Session = _DB) -> Readiness:
+def ready(db: Session = _DB) -> Readiness:
     """Readiness probe: DB and (when in use) Redis are checked for real; `queue` stays a static
     `True` until the Phase 5d worker exists to report its own health."""
     checks = {"db": _db_ok(db), "redis": _redis_ok(), "queue": True}
@@ -59,7 +59,7 @@ async def ready(db: Session = _DB) -> Readiness:
 
 
 @router.get("/meta/data-freshness/{ticker}", response_model=DataFreshnessResponse, tags=["Meta"])
-async def data_freshness(ticker: str, db: Session = _DB) -> DataFreshnessResponse:
+def data_freshness(ticker: str, db: Session = _DB) -> DataFreshnessResponse:
     company = company_repo.get_by_ticker(db, ticker)
     if company is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"company {ticker.upper()} not ingested")

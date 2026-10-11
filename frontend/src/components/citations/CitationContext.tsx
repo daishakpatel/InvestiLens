@@ -1,29 +1,30 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useContext } from "react";
 
-import { CitationModal } from "./CitationModal";
+/** A counted sentence and the source it came from (management language tracking, §37.5). */
+export interface CountedStatement {
+  source_id: string;
+  text: string;
+  mentions: number;
+}
 
-interface CitationContextValue {
+/** What the evidence panel can show. */
+export type Evidence =
+  | { kind: "source"; sourceId: string }
+  | { kind: "statements"; title: string; subtitle: string; statements: CountedStatement[] };
+
+export interface CitationContextValue {
+  /** Show a source in the side panel (CIT-006). */
   open: (sourceId: string) => void;
+  /** Show a list of counted statements, each of which opens its own source. */
+  openStatements: (view: Extract<Evidence, { kind: "statements" }>) => void;
+  /** The source on show, so its chip can be highlighted in the text. */
+  activeSourceId: string | null;
 }
 
-const CitationContext = createContext<CitationContextValue | null>(null);
-
-/** Lets any citation chip (in a report card or a chat answer) open the shared source modal. */
-export function CitationProvider({ children }: { children: ReactNode }) {
-  const [sourceId, setSourceId] = useState<string | null>(null);
-  const open = useCallback((id: string) => setSourceId(id), []);
-  const value = useMemo<CitationContextValue>(() => ({ open }), [open]);
-  return (
-    <CitationContext value={value}>
-      {children}
-      <CitationModal sourceId={sourceId} onClose={() => setSourceId(null)} onOpenSource={open} />
-    </CitationContext>
-  );
-}
+export const CitationContext = createContext<CitationContextValue | null>(null);
 
 export function useCitations(): CitationContextValue {
   const ctx = useContext(CitationContext);
-  if (!ctx) throw new Error("useCitations must be used within CitationProvider");
+  if (!ctx) throw new Error("useCitations must be used within a company page (CompanyPanels)");
   return ctx;
 }

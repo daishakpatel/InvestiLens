@@ -130,20 +130,165 @@ rendering of full filing text (no endpoint exposes it). No backend changes.
 
 ## Definition of Done
 
-- [ ] Clicking a citation anywhere opens the drawer beside the content; the page behind remains
+- [x] Clicking a citation anywhere opens the drawer beside the content; the page behind remains
       scrollable; a second citation swaps content; focus returns to the chip on close
-- [ ] Research reads as one document with a working table of contents; exactly one AI mark heads
+- [x] Research reads as one document with a working table of contents; exactly one AI mark heads
       it (FR-010); every rendered claim still has at least one citation chip (FR-020)
-- [ ] Risks show change status and can be filtered to New and Reworded
-- [ ] The Changes view shows a plain-language summary and an inline word diff for NVDA's latest
+- [x] Risks show change status and can be filtered to New and Reworded
+- [x] The Changes view shows a plain-language summary and an inline word diff for NVDA's latest
       10-K; both filings' passages open in the drawer
-- [ ] The assistant opens from any company tab, survives tab changes, streams an answer with
+- [x] The assistant opens from any company tab, survives tab changes, streams an answer with
       working citations, and shows abstention and refusal as intentional states
-- [ ] There is never more than one side panel open at once
-- [ ] `ChatTab.tsx`, `RisksTab.tsx`, `ManagementTab.tsx`, and `CitationModal.tsx` are deleted
-- [ ] Research, Filings, News, and the assistant are usable at 360 px wide and by keyboard alone
-- [ ] `npm run screenshots` captures for Research, Filings (Changes), News, and the assistant
+- [x] There is never more than one side panel open at once
+- [x] `ChatTab.tsx`, `RisksTab.tsx`, `ManagementTab.tsx`, and `CitationModal.tsx` are deleted
+- [x] Research, Filings, News, and the assistant are usable at 360 px wide and by keyboard alone
+- [x] `npm run screenshots` captures for Research, Filings (Changes), News, and the assistant
       open, in both themes and widths, are listed in the hand-off
-- [ ] `make check` green (including `xssGuard.test.ts`: no `dangerouslySetInnerHTML` introduced)
+- [x] `make check` green (including `xssGuard.test.ts`: no `dangerouslySetInnerHTML` introduced)
       and `npm run build` succeeds
-- [ ] `## Hand-off` section appended to this file
+- [x] `## Hand-off` section appended to this file
+
+## Hand-off
+
+Done 2026-10-11. `make check` green (450 backend, 68 frontend tests, `xssGuard.test.ts` included);
+`npm run build` succeeds; `e2e/tests/reading.spec.ts` 15/15 (new), and the whole e2e suite passes
+with one worker (58/58). axe reports no serious or critical violations on Research, Research
+with a source open, Filings (Changes, a row expanded), News, and the assistant open, in both
+themes. Not split at 4b.
+
+**What shipped**
+
+- **One side panel (`components/panel/`).** `CompanyPanels` (wraps the company page, keyed per
+  ticker) owns both things that can open beside the page, the assistant and the evidence behind a
+  citation, and renders exactly one `SidePanel`. That is what makes "never two panels" structural
+  rather than a rule to remember. Three presentations:
+  - `docked`: the assistant at 1440 px and up. Part of the layout; the page narrows beside it.
+  - `overlay`: below 1440 px, and for evidence at any desktop width. Non-modal: the page scrolls,
+    other citations can be clicked, clicking outside does not dismiss.
+  - `sheet`: under 768 px. Full screen and modal.
+
+  A citation in the page (`useCitations().open(sourceId)`, unchanged API) replaces what the panel
+  shows and remembers the chip for focus return. A citation inside the panel (in an answer, in a
+  list of statements) pushes a view with Back. Escape goes back one level before it closes. Page
+  evidence closes when the reader changes tab, filing, or view; the assistant and anything open
+  inside it stay. `useAssistant()` gives `{ isOpen, open, toggle }`.
+- **Citations (`components/citations/`).** `CitationChip` is a superscript numeral, tinted while
+  its source is open. `SourceView` (kind, tier, date, the passage with the cited span marked,
+  section path, Open original, Copy citation; the derivation view for calculated figures),
+  `StatementsView`, `ReferenceList` (titles resolved as rows scroll into view).
+  `CitationModal.tsx` is deleted.
+- **Research (`components/research/ReportDocument.tsx`, `GenerateReport.tsx`).** A 720 px reading
+  column with a sticky contents list (scroll-spy, `lib/useActiveSection.ts`, now shared with
+  Financials) and a jump menu on phones. One AI mark. "Limited evidence" is the only strength
+  label shown. Bull and bear columns, risks with change status and an "All / New or reworded"
+  filter, management statements and the language table, "Not covered", References. Export
+  Markdown and Print (print styles force ink on white and hide the app chrome). A claim with no
+  source ids is not rendered, as a last check on FR-020. No report: what a report is and one
+  button; a report that exists but fails to load says so instead of "none yet".
+  `ReportView.tsx` is deleted.
+- **Management language (`components/filings/LanguageTracker.tsx`).** Heat table; a figure opens
+  the counted statements in the panel, and each statement opens its source.
+- **Filings (`pages/tabs/FilingsTab.tsx`, `components/filings/FilingDiffView.tsx`).** Sticky
+  300 px list with type chips and a text filter; the open filing and view live in the URL
+  (`?filing=&view=`). Changes: a summary sentence (`lib/diffSummary.ts`), baseline picker, "Risk
+  factors only", status chips with counts, expandable rows, inline word diff with "Show more
+  context", passage links for both filings. Outline: section list and filter. On a phone the
+  list is the page and a filing opens as its own view with a back link. The list is sorted by
+  filing date (the API pages by id).
+- **News (`pages/tabs/NewsTab.tsx`, `lib/newsFeed.ts`).** One feed under day headings; the same
+  event from several outlets folds into its best-sourced report with "+N more sources"; filters
+  in a popover with an active count; tier named only for tiers 4 and 5.
+- **Assistant (`components/assistant/`).** `useConversation` (state, streaming, stop, errors)
+  lives at provider level so the conversation survives tab changes. `Assistant.tsx`: suggested
+  questions, answers with the AI mark and superscript citations, "How this was answered", neutral
+  notes for abstention and refusal, thumbs, a composer (Enter sends, Shift+Enter is a new line,
+  stop while streaming), and a sign-in prompt for anonymous readers that returns to the open
+  panel. `/company/:ticker/chat` opens the panel and redirects to the company page.
+  `lib/chatStream.ts` and the `[n]` parsing are untouched. `ChatTab.tsx` is deleted.
+- **`lib/safeUrl.ts`.** Every link built from API data (news URLs, a filing's original, a
+  source's deep link) goes through `safeHttpUrl`, which accepts only absolute http(s). React does
+  not block `javascript:` hrefs, and these URLs come from third parties. A rejected URL renders
+  as plain text, never as a dead link.
+
+**Deviations from this file, and why**
+
+- The panel is 440 px in both roles (the file says 420 for citations, 440 for the assistant):
+  one panel that changes width when it changes content would jump.
+- Evidence overlays; it never docks. Docking would reflow the paragraph being read every time a
+  citation is clicked. The cost: below about 1500 px the panel covers the right edge of the
+  reading column while it is open.
+- "Open original" sits in the filing's header in both views, not only in Outline.
+- A reworded passage's sources show as numbered chips, one per stored excerpt, because a risk
+  factor spans several excerpts. NVDA's have about ten on each side.
+- Similarity is shown to one decimal above 99.5%, so a reworded passage never reads "100% same".
+- News loads the 25 most recent items and says so when there are more; no paging.
+- Filings and News are now lazy routes. Loading them eagerly took the entry bundle to 123 kB.
+
+**Bugs found and fixed along the way**
+
+- Old `/risks` and `/management` links redirected to `/research#…` but landed at the top of the
+  page: the scroll ran before the report had loaded. `useScrollToHash(ready)` now waits.
+- Arriving by `/company/:ticker/chat` and closing the panel before the tab behind it had loaded
+  reopened it: the route's effect depended on a callback whose identity changed on close.
+  `open` and `toggle` are now stable. `reading.spec.ts` holds the tab chunk back to cover it.
+
+**Backend findings, not fixed (frontend-only step)**
+
+> Update, later on 2026-10-11: the question length, the refresh-token reuse path, and the
+> connection-pool stall are fixed (ADR-0029, ADR-0030); e2e runs in parallel again. The other
+> two items below still stand.
+
+- `ChatRequest.question` has no maximum length. The composer caps at 2,000 characters, which is
+  a convenience, not a control.
+- Mock-mode answers are raw strings ("revenue FY2026 = 215938000000.00000000 USD."). The UI shows
+  answer text as issued; formatting belongs to the backend.
+- NVDA's newest 10-K in the dev database is a seed row with no parsed sections, so the Filings
+  tab opens on "risk factors could not be read" with "Compare all sections" offered. Real data
+  will not have this; the filing used in tests and captures is id 15.
+- Still open from earlier steps: the refresh-token reuse path and the connection-pool stall
+  (e2e runs with one worker because of it).
+
+**Test data**
+
+`make seed` was not run (it would re-run mock ingestion over the live-ingested data). Only its
+report half was: FakeLLM reports now exist for NVDA, AAPL, and JPM, so `/research/latest` returns
+200, but they are placeholder sentences with most sections under "Not covered". Tests and
+captures therefore mock that one endpoint with `e2e/fixtures/research-nvda.json`. Its claims
+quote the values of real source records and every source id in it resolves. **The research
+layout has not been seen against a real LLM report.**
+
+**Captures**
+
+`e2e/screenshots/{dark,light}/{1440,390}/` (29 per folder). New or changed this step:
+`company-research`, `company-research-source`, `company-research-statements`,
+`company-research-none` (AMD), `company-filings` (Changes, one row expanded),
+`company-filings-outline`, `company-filings-list`, `company-news`, `company-news-filter`,
+`company-assistant` (replaces `company-chat`). Looked at: Research full page in dark at 1440 and
+390, with a source open in dark and light, the statements view, the no-report state; Filings
+Changes in dark and light at 1440 and dark at 390; News and its filter in dark; the assistant
+signed out (dark 1440) and mid-conversation with a declined question and with a source pushed
+(dark 1440, light 1280, dark 390; throwaway captures, since the capture script is signed out).
+
+**Bundle (gzip), Step 3 → Step 4**
+
+| Chunk | Step 3 | Step 4 |
+|-------|--------|--------|
+| entry `index` | 91.41 kB | 93.16 kB |
+| CSS | 8.95 kB | 9.61 kB |
+| `CompanyDashboard` | 2.60 kB | 1.91 kB |
+| `CompanyPanels` (panel, assistant, source views) | n/a | 7.29 kB |
+| `ResearchTab` | n/a | 6.34 kB |
+| `FilingsTab` (now lazy) | in entry | 5.10 kB |
+| `NewsTab` (now lazy) | in entry | 2.44 kB |
+
+The assistant ships in the company page's chunk, not the entry bundle and not a chunk of its own.
+Splitting it further would save about 3 kB and cost the composer its focus on first open.
+
+**Left for Step 5**
+
+- Light-theme pass on the diff tints and the heat table; both pass axe but were tuned in dark.
+- The assistant as its own chunk, if Step 5's "loads on demand" is read strictly.
+- Print was checked under emulated print media (ink on white, chrome hidden), not in a
+  browser's print preview: page breaks are unreviewed.
+- The mid-stream state and the stop control were not exercised: mock-mode answers complete
+  almost at once. They are covered by reading the code, not by a test.

@@ -10,12 +10,13 @@ Refs: §26, AUTH-001…006, SEC-007, ADR-0005/0006, LGL-007.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import timedelta
 
 import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, select, update
 from sqlalchemy.orm import Session
 
 from app.auth import passwords, service
@@ -70,6 +71,29 @@ def client(session: Session, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestCl
         app.dependency_overrides.clear()
 
 
+@pytest.fixture
+def real_client(
+    _migrated: None, test_engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[TestClient]:
+    """Each request gets its own session, as in production: what a handler does not commit is
+    rolled back when the request ends. The shared-session `client` cannot show that."""
+    from tests.integration.conftest import truncate_all
+
+    monkeypatch.setattr(service, "login_throttle", LoginThrottle())
+    monkeypatch.setattr(get_settings(), "refresh_cookie_secure", False)
+
+    def _db() -> Iterator[Session]:
+        with Session(test_engine) as s:
+            yield s
+
+    app.dependency_overrides[get_db] = _db
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+        truncate_all(test_engine)
+
+
 def _register_and_login(client: TestClient, email: str) -> str:
     assert (
         client.post(f"{_P}/auth/register", json={"email": email, "password": _PW}).status_code
@@ -110,8 +134,11 @@ def test_registration_sets_default_ai_budget(client: TestClient, session: Sessio
     assert user.ai_budget_month_usd == get_settings().default_ai_budget_month_usd
 
 
-def test_refresh_reuse_revokes_family(client: TestClient, session: Session) -> None:
+def test_refresh_reuse_revokes_family(
+    client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A rotated-then-reused refresh token revokes the whole family (theft detection, AUTH-002)."""
+    monkeypatch.setattr(get_settings(), "refresh_reuse_grace_seconds", 0)
     user = service.register(session, email="reuse@example.com", password=_PW)
     _, issued = service.login(
         session, email="reuse@example.com", password=_PW, user_agent=None, ip=None
@@ -269,3 +296,65 @@ def test_email_verification_and_password_reset(client: TestClient, session: Sess
     assert passwords.verify_password("a brand new password 1", refreshed.password_hash)
     # No account → neutral None (no user enumeration).
     assert service.request_password_reset(session, email="nobody@example.com") is None
+
+
+def _refresh_with(client: TestClient, token: str) -> int:
+    """POST /auth/refresh presenting `token`, whatever cookie the client currently holds."""
+    client.cookies.clear()
+    cookie = f"{get_settings().refresh_cookie_name}={token}"
+    return int(client.post(f"{_P}/auth/refresh", headers={"Cookie": cookie}).status_code)
+
+
+def test_reuse_revocation_outlives_the_rejected_request(
+    real_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AUTH-002: replaying a rotated token ends the session for good. The revocation is written
+    by the request that is rejected, so it must be committed, not rolled back with the 401."""
+    monkeypatch.setattr(get_settings(), "refresh_reuse_grace_seconds", 0)
+    name = get_settings().refresh_cookie_name
+    _register_and_login(real_client, "durable@example.com")
+    stolen = real_client.cookies[name]
+    assert real_client.post(f"{_P}/auth/refresh").status_code == 200
+    rotated = real_client.cookies[name]
+
+    assert _refresh_with(real_client, stolen) == 401  # reuse detected
+    assert _refresh_with(real_client, rotated) == 401  # and the family stays revoked
+
+
+def test_two_tabs_refreshing_at_once_both_stay_signed_in(
+    real_client: TestClient, test_engine: Engine
+) -> None:
+    """AUTH-002, ADR-0030: tabs restoring a session together present the same cookie. The second
+    arrives just after the first has rotated it; within the grace window that is not theft."""
+    name = get_settings().refresh_cookie_name
+    _register_and_login(real_client, "tabs@example.com")
+    shared = real_client.cookies[name]
+    assert real_client.post(f"{_P}/auth/refresh").status_code == 200  # first tab
+    first_tab = real_client.cookies[name]
+
+    assert _refresh_with(real_client, shared) == 200  # second tab, same cookie
+    second_tab = real_client.cookies[name]
+    assert second_tab not in (shared, first_tab)
+    assert _refresh_with(real_client, first_tab) == 200  # the first tab's session still works
+
+    # The window is short: the same replay once it has passed is reuse, and ends every session.
+    with Session(test_engine) as s:
+        s.execute(
+            update(RefreshToken)
+            .where(RefreshToken.replaced_by_id.is_not(None))
+            .values(revoked_at=RefreshToken.revoked_at - timedelta(minutes=1))
+        )
+        s.commit()
+    assert _refresh_with(real_client, shared) == 401
+    assert _refresh_with(real_client, second_tab) == 401
+
+
+def test_a_rotated_token_cannot_revive_a_logged_out_session(real_client: TestClient) -> None:
+    """AUTH-002: the grace window never outlives the session. After logout the family is
+    revoked, and a token rotated a moment earlier gets nothing."""
+    name = get_settings().refresh_cookie_name
+    _register_and_login(real_client, "bye@example.com")
+    old = real_client.cookies[name]
+    assert real_client.post(f"{_P}/auth/refresh").status_code == 200
+    assert real_client.post(f"{_P}/auth/logout").status_code == 204
+    assert _refresh_with(real_client, old) == 401

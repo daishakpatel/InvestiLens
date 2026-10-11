@@ -44,17 +44,25 @@ export function formatMetricValue(
   if (toNumber(value ?? null) === null) return "—";
   const u = (unit ?? "").toLowerCase();
   if (u === "usd") return formatUsdCompact(value ?? null);
+  if (u === "usd/shares") return formatUsd(value ?? null);
   if (u === "ratio") return formatPercent(value ?? null);
   if (u === "shares") return formatNumber(value ?? null, 0);
   return formatNumber(value ?? null);
 }
 
-const dateFmt = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric" });
+const DATE_PARTS = { year: "numeric", month: "short", day: "numeric" } as const;
+const dateFmt = new Intl.DateTimeFormat("en-US", DATE_PARTS);
+const calendarDateFmt = new Intl.DateTimeFormat("en-US", { ...DATE_PARTS, timeZone: "UTC" });
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Timestamps are shown in the reader's time zone. A date-only value (a filing date, a period
+ *  end, a trading day) is a calendar date, not an instant: it is printed as written. Parsing
+ *  "2026-01-25" as a timestamp makes it midnight UTC, which is still the 24th in the Americas. */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : dateFmt.format(d);
+  if (Number.isNaN(d.getTime())) return "—";
+  return CALENDAR_DATE.test(iso) ? calendarDateFmt.format(d) : dateFmt.format(d);
 }
 
 export function freshnessLabel(asOf: string | null | undefined): string {

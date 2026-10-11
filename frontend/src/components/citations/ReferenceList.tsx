@@ -1,7 +1,8 @@
+import { useEffect, useRef, useState } from "react";
+
 import { useSource } from "../../lib/queries";
-import { Badge } from "../ui/Badge";
 import { useCitations } from "./CitationContext";
-import { sourceTitle } from "./sourceTitle";
+import { sourceTitle, tierLabel } from "./sourceTitle";
 
 export interface ReferenceEntry {
   number: number;
@@ -10,39 +11,56 @@ export interface ReferenceEntry {
   tier?: number | null;
 }
 
-/** Numbered reference list with tier badges (§13.7). Entries missing a title/tier resolve lazily. */
-export function ReferenceList({ entries }: { entries: ReferenceEntry[] }) {
-  if (entries.length === 0) return null;
-  return (
-    <section aria-label="References" className="mt-4 border-t border-border pt-3">
-      <h3 className="mb-2 text-xs font-semibold text-muted">References</h3>
-      <ol className="space-y-1 text-sm">
-        {entries.map((e) => (
-          <ReferenceRow key={e.number} entry={e} />
-        ))}
-      </ol>
-    </section>
-  );
+/** True once the element has been on screen. References resolve their titles one request each,
+ *  so a long list does not ask for all of them until the reader actually reaches it. */
+function useSeen<T extends Element>(): [React.RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || seen) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) setSeen(true);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [seen]);
+  return [ref, seen];
 }
 
 function ReferenceRow({ entry }: { entry: ReferenceEntry }) {
-  const { open } = useCitations();
+  const { open, activeSourceId } = useCitations();
+  const [ref, seen] = useSeen<HTMLLIElement>();
   const needsResolve = entry.title == null || entry.tier == null;
-  const source = useSource(needsResolve ? entry.sourceId : null);
-  const title = entry.title ?? (source.data ? sourceTitle(source.data.source) : entry.sourceId);
-  const tier = entry.tier ?? source.data?.source.tier ?? null;
+  const source = useSource(needsResolve && seen ? entry.sourceId : null);
+  const title = entry.title ?? (source.data ? sourceTitle(source.data.source) : null);
+  const tier = tierLabel(entry.tier ?? source.data?.source.tier);
 
   return (
-    <li className="flex items-center gap-2">
+    <li ref={ref}>
       <button
         type="button"
         onClick={() => open(entry.sourceId)}
-        className="font-medium text-primary hover:underline"
+        aria-pressed={activeSourceId === entry.sourceId}
+        className="-mx-2 flex w-[calc(100%+1rem)] items-baseline gap-3 rounded-control px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface aria-pressed:bg-surface-2"
       >
-        [{entry.number}]
+        <span className="tnum w-6 shrink-0 text-right text-primary">{entry.number}</span>
+        <span className="min-w-0 flex-1 truncate">{title ?? "Source"}</span>
+        {tier && <span className="hidden shrink-0 text-caption text-subtle sm:inline">{tier}</span>}
       </button>
-      <span className="truncate">{title}</span>
-      {tier != null && <Badge tone="neutral">Tier {tier}</Badge>}
     </li>
+  );
+}
+
+/** The numbered sources behind a document or an answer (§13.7): quiet, in citation order, each
+ *  opening the same source view as its chip. */
+export function ReferenceList({ entries }: { entries: ReferenceEntry[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <ol aria-label="References">
+      {entries.map((entry) => (
+        <ReferenceRow key={entry.number} entry={entry} />
+      ))}
+    </ol>
   );
 }

@@ -4,20 +4,36 @@ The engine is created lazily so importing the models (e.g. for Alembic autogener
 test that builds its own engine) never opens a connection as a side effect.
 """
 
-from collections.abc import Iterator
+import asyncio
+from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
 from functools import lru_cache
+from weakref import WeakKeyDictionary
 
+import anyio
+import anyio.to_thread
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
 
+# How many requests may hold a session at once: the pool's permanent size, so a request that is
+# let through never has to wait for a connection (ADR-0029). The overflow is for sessions opened
+# outside a request.
+_REQUEST_SLOTS = 10
+_POOL_OVERFLOW = 5
+
 
 @lru_cache
 def get_engine() -> Engine:
     """Return the process-wide SQLAlchemy engine."""
-    return create_engine(get_settings().database_url, pool_pre_ping=True, future=True)
+    return create_engine(
+        get_settings().database_url,
+        pool_pre_ping=True,
+        pool_size=_REQUEST_SLOTS,
+        max_overflow=_POOL_OVERFLOW,
+        future=True,
+    )
 
 
 @lru_cache
@@ -39,10 +55,37 @@ def session_scope() -> Iterator[Session]:
         session.close()
 
 
-def get_db() -> Iterator[Session]:
-    """FastAPI dependency: a read session that always closes (overridable in tests)."""
-    session = _session_factory()()
-    try:
-        yield session
-    finally:
-        session.close()
+# One gate per event loop: asyncio primitives cannot be shared between loops, and tests run several.
+_gates: WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = WeakKeyDictionary()
+
+
+def _request_gate() -> asyncio.Semaphore:
+    loop = asyncio.get_running_loop()
+    gate = _gates.get(loop)
+    if gate is None:
+        gate = _gates[loop] = asyncio.Semaphore(_REQUEST_SLOTS)
+    return gate
+
+
+async def get_db() -> AsyncIterator[Session]:
+    """FastAPI dependency: a session that always closes (overridable in tests).
+
+    A request works in several steps, each on a borrowed worker thread (its dependencies, the
+    handler, serialising the response), and keeps its connection across all of them. If it could
+    also wait for a connection, requests holding a thread would wait for connections while
+    requests holding connections wait for threads, and the API would freeze. So the wait happens
+    here instead, on the event loop, before the request holds either (ADR-0029).
+
+    Declare it as `Depends(get_db, scope="function")`, which ends the session before the
+    response is sent: a client that reads slowly then does not keep a slot. Handlers return
+    schema objects, never ORM rows.
+    """
+    async with _request_gate():
+        session = _session_factory()()  # no I/O yet: the connection is taken by the first query
+        try:
+            yield session
+        finally:
+            # Closing rolls back over the network, so it runs off the loop; shielded, because a
+            # client hanging up must not leave the connection checked out.
+            with anyio.CancelScope(shield=True):
+                await anyio.to_thread.run_sync(session.close)

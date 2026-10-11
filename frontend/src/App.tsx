@@ -7,18 +7,19 @@ import { CommandPaletteProvider } from "./components/CommandPaletteContext";
 import { RouteProgress } from "./components/RouteProgress";
 import { Container } from "./components/ui/Container";
 import { NotFound } from "./pages/NotFoundPage";
-import OverviewTab from "./pages/tabs/OverviewTab";
-import FilingsTab from "./pages/tabs/FilingsTab";
-import NewsTab from "./pages/tabs/NewsTab";
 
 // Route-level code splitting (UI-004). Recharts (Financials) and the report/chat views each get
 // their own chunk, out of the initial bundle.
 const HomePage = lazy(() => import("./pages/HomePage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const CompanyDashboard = lazy(() => import("./pages/CompanyDashboard"));
+// Overview draws charts, so it is lazy too: Recharts must stay out of the entry bundle.
+const OverviewTab = lazy(() => import("./pages/tabs/OverviewTab"));
 const FinancialsTab = lazy(() => import("./pages/tabs/FinancialsTab"));
 const ResearchTab = lazy(() => import("./pages/tabs/ResearchTab"));
-const ChatTab = lazy(() => import("./pages/tabs/ChatTab"));
+const FilingsTab = lazy(() => import("./pages/tabs/FilingsTab"));
+const NewsTab = lazy(() => import("./pages/tabs/NewsTab"));
+const OpenAssistant = lazy(() => import("./components/panel/OpenAssistant"));
 const ComparePage = lazy(() => import("./pages/ComparePage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
 // Design-system review surface: dev server only, so it never ships in the production bundle.
@@ -72,8 +73,8 @@ export function App() {
             <Route path="research" element={<ResearchTab />} />
             <Route path="filings" element={<FilingsTab />} />
             <Route path="news" element={<NewsTab />} />
-            {/* Not a tab: the header's "Ask" action. UI plan Step 4 turns it into a docked panel. */}
-            <Route path="chat" element={<ChatTab />} />
+            {/* Not a tab: a link that opens the assistant panel over the company page. */}
+            <Route path="chat" element={<OpenAssistant />} />
 
             {/* Pre-rebuild tab URLs keep working: each redirects to where its content now lives. */}
             <Route path="overview" element={<Navigate to=".." replace />} />

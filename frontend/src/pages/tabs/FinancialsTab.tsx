@@ -1,181 +1,288 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { MetricChart } from "../../charts/MetricChart";
+import { formatValue } from "../../charts/series";
+import { StatementTable } from "../../components/company/StatementTable";
+import { FreshnessBadge } from "../../components/ui/Badge";
 import { Section } from "../../components/ui/Section";
-import { AsyncContent } from "../../components/ui/States";
-import { Tooltip } from "../../components/ui/Tooltip";
-import { downloadCsv, toCsv } from "../../lib/format";
-import { useFinancials, useMetricLineage } from "../../lib/queries";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { Stat } from "../../components/ui/Stat";
+import { ErrorState } from "../../components/ui/States";
+import { Switch } from "../../components/ui/Switch";
+import { useApiStatus } from "../../lib/apiStatus";
+import { toNumber } from "../../lib/format";
+import { useActiveSection } from "../../lib/useActiveSection";
+import {
+  ALL_FINANCIAL_METRICS,
+  FINANCIAL_SECTIONS,
+  metricDisplay,
+  metricLabel,
+  reasonText,
+} from "../../lib/metricCatalog";
+import type { FinancialSection } from "../../lib/metricCatalog";
+import { useFinancials, useMetricLineage, useValuation } from "../../lib/queries";
 import { useScrollToHash } from "../../lib/useScrollToHash";
-import ValuationTab from "./ValuationTab";
-import type { FinancialsResponse, MetricSeries } from "../../types";
+import type { MetricSeries } from "../../types";
 
-interface ChartConfig {
+type Period = "FY" | "Q" | "TTM";
+
+const PERIODS: { value: Period; label: string; noun: string; missing: string }[] = [
+  { value: "FY", label: "Annual", noun: "Fiscal years", missing: "" },
+  {
+    value: "Q",
+    label: "Quarterly",
+    noun: "Fiscal quarters",
+    missing: "Quarterly figures are not available for this company yet.",
+  },
+  {
+    value: "TTM",
+    label: "TTM",
+    noun: "Trailing twelve months",
+    missing: "Trailing-twelve-month figures are not computed yet.",
+  },
+];
+
+const NAV = [...FINANCIAL_SECTIONS.map(({ id, title }) => ({ id, title })), { id: "valuation", title: "Valuation" }];
+// Sections clear the pinned controls row (md and up, where it is sticky) when jumped to.
+const ANCHOR = "md:scroll-mt-14";
+
+const hasPoints = (series: MetricSeries | undefined) => (series?.points.length ?? 0) > 0;
+
+function SectionNav() {
+  const active = useActiveSection(NAV.map((item) => item.id));
+  const navigate = useNavigate();
+  return (
+    <nav aria-label="Financial sections" className="min-w-0">
+      <ul className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
+        {NAV.map((item) => (
+          <li key={item.id}>
+            <a
+              href={`#${item.id}`}
+              aria-current={active === item.id ? "location" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                document.getElementById(item.id)?.scrollIntoView();
+                void navigate({ hash: item.id }, { replace: true });
+              }}
+              className={`flex h-7 items-center whitespace-nowrap rounded-full px-3 text-label font-medium transition-colors ${
+                active === item.id ? "bg-surface-2 text-text" : "text-muted hover:text-text"
+              }`}
+            >
+              {item.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** One chart, or the reason there is none. A metric that is N/A in every period asks the API
+ *  why (DR-041) and says so, instead of drawing an empty plot. */
+function MetricPanel({
+  ticker,
+  name,
+  series,
+  period,
+  showChange,
+  loading,
+}: {
+  ticker: string;
   name: string;
-  title: string;
-  kind: "bar" | "line";
+  series: MetricSeries | undefined;
+  period: Period;
+  showChange: boolean;
+  loading: boolean;
+}) {
+  const points = series?.points ?? [];
+  const allNull = points.length > 0 && points.every((point) => toNumber(point.value) === null);
+  const reason = useMetricLineage(ticker, name, points.at(-1)?.period ?? "", allNull);
+  const emptyMessage = allNull
+    ? `${reasonText(reason.data?.warnings[0])}.`
+    : `${metricLabel(name)} has not been reported in the filings we hold.`;
+  return (
+    <MetricChart
+      name={name}
+      points={points}
+      csvName={`${ticker}_${name}_${period}`}
+      showChange={showChange}
+      loading={loading}
+      emptyMessage={emptyMessage}
+    />
+  );
 }
 
-const CHARTS: ChartConfig[] = [
-  { name: "revenue", title: "Revenue", kind: "bar" },
-  { name: "gross_margin", title: "Gross Margin", kind: "line" },
-  { name: "operating_income", title: "Operating Income", kind: "bar" },
-  { name: "net_income", title: "Net Income", kind: "bar" },
-  { name: "fcf", title: "Free Cash Flow", kind: "bar" },
-  { name: "eps", title: "EPS", kind: "line" },
-];
-const METRIC_NAMES = CHARTS.map((c) => c.name);
-
-const PERIODS: { value: string; label: string }[] = [
-  { value: "FY", label: "Annual" },
-  { value: "Q", label: "Quarterly" },
-  { value: "TTM", label: "TTM" },
-];
-
-function seriesUnit(series: MetricSeries | undefined): string {
-  return series?.points[0]?.unit ?? "USD";
-}
-
-function LineageTooltip({ ticker, series }: { ticker: string; series: MetricSeries }) {
-  const [open, setOpen] = useState(false);
-  const latest = series.points.at(-1)?.period ?? "";
-  const lineage = useMetricLineage(ticker, series.metric_name, latest, open && latest !== "");
+function StatementSection({
+  ticker,
+  section,
+  series,
+  period,
+  showChange,
+  loading,
+}: {
+  ticker: string;
+  section: FinancialSection;
+  series: MetricSeries[];
+  period: Period;
+  showChange: boolean;
+  loading: boolean;
+}) {
+  const find = (name: string) => series.find((s) => s.metric_name === name);
+  // Annual shows every chart, explaining any that is N/A. Other period types hold far fewer
+  // metrics, so only the ones with data are drawn rather than a grid of apologies.
+  const charts = period === "FY" || loading ? section.charts : section.charts.filter((name) => hasPoints(find(name)));
+  const noun = PERIODS.find((p) => p.value === period)?.noun ?? "";
+  const empty = !loading && charts.length === 0 && !section.table.some((name) => hasPoints(find(name)));
 
   return (
-    <span
-      onMouseEnter={() => setOpen(true)}
-      onFocus={() => setOpen(true)}
-      className="text-xs text-muted hover:text-text"
-    >
-      <Tooltip
-        label={
-          lineage.isPending ? (
-            "Loading lineage…"
-          ) : lineage.data && lineage.data.inputs.length > 0 ? (
-            <div>
-              <div className="font-medium">{lineage.data.formula_id}</div>
-              <ul className="mt-1 space-y-0.5">
-                {lineage.data.inputs.map((i) => (
-                  <li key={i.name} className="text-muted">
-                    {i.name}
-                    {i.value ? `: ${i.value}` : ""}
-                  </li>
-                ))}
-              </ul>
+    <div id={section.id} className={ANCHOR}>
+      <Section title={section.title}>
+        {empty ? (
+          <p className="pt-4 text-sm text-muted">
+            No {noun.toLowerCase()} figures for this section yet. Switch to Annual to see them.
+          </p>
+        ) : (
+          <div className="space-y-10 pt-6">
+            <div className="grid gap-x-12 gap-y-10 md:grid-cols-2">
+              {charts.map((name) => (
+                <MetricPanel
+                  key={name}
+                  ticker={ticker}
+                  name={name}
+                  series={find(name)}
+                  period={period}
+                  showChange={showChange}
+                  loading={loading}
+                />
+              ))}
             </div>
-          ) : (
-            "As-reported value (no derivation)."
-          )
-        }
-      >
-        ⓘ lineage
-      </Tooltip>
-    </span>
-  );
-}
-
-function exportCsv(ticker: string, periodType: string, data: FinancialsResponse): void {
-  const rows = data.series.flatMap((s) =>
-    s.points.map((p) => [s.metric_name, p.period, p.period_end, p.value, p.unit]),
-  );
-  const csv = toCsv(["metric", "period", "period_end", "value", "unit"], rows);
-  downloadCsv(`${ticker}_financials_${periodType}.csv`, csv);
-}
-
-function Statements() {
-  const { ticker = "" } = useParams();
-  const [periodType, setPeriodType] = useState("FY");
-  const [showYoY, setShowYoY] = useState(false);
-  const financials = useFinancials(ticker, METRIC_NAMES, periodType);
-
-  return (
-    <Section
-      title="Financials"
-      freshness={financials.data?.freshness}
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <div role="group" aria-label="Period type" className="flex rounded-control border border-border">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                aria-pressed={periodType === p.value}
-                onClick={() => setPeriodType(p.value)}
-                className={`px-2 py-1 text-xs ${
-                  periodType === p.value ? "bg-primary text-primary-contrast" : "hover:bg-surface-2"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <label className="flex items-center gap-1 text-xs">
-            <input type="checkbox" checked={showYoY} onChange={(e) => setShowYoY(e.target.checked)} />
-            YoY overlay
-          </label>
-          <button
-            type="button"
-            disabled={!financials.data}
-            onClick={() => financials.data && exportCsv(ticker, periodType, financials.data)}
-            className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-50"
-          >
-            Export CSV
-          </button>
-        </div>
-      }
-    >
-      <AsyncContent
-        query={financials}
-        isEmpty={(d) => d.series.every((s) => s.points.length === 0)}
-        emptyMessage={`No ${periodType} data available for these metrics.`}
-      >
-        {(data) => (
-          <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-2">
-            {CHARTS.map((cfg) => {
-              const series = data.series.find((s) => s.metric_name === cfg.name);
-              const points = series?.points ?? [];
-              return (
-                <div key={cfg.name} className="rounded-control border border-border p-3">
-                  {points.length === 0 ? (
-                    <div className="text-sm text-muted">
-                      <div className="mb-1 font-medium text-text">{cfg.title}</div>
-                      Not available for this period type.
-                    </div>
-                  ) : (
-                    <>
-                      <MetricChart
-                        title={cfg.title}
-                        points={points}
-                        unit={seriesUnit(series)}
-                        kind={cfg.kind}
-                        showYoY={showYoY}
-                      />
-                      {series && (
-                        <div className="mt-1 flex justify-end">
-                          <LineageTooltip ticker={ticker} series={series} />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+            {!loading && (
+              <StatementTable
+                ticker={ticker}
+                title={section.title}
+                names={section.table}
+                series={series}
+                periodNoun={noun}
+              />
+            )}
           </div>
         )}
-      </AsyncContent>
-    </Section>
+      </Section>
+    </div>
   );
 }
 
-/** Financials tab: statements and charts, then valuation (formerly its own tab; `/valuation`
- *  redirects to `#valuation` here). UI plan Step 3 merges the two properly. */
-export default function FinancialsTab() {
-  useScrollToHash();
+function Valuation({ ticker }: { ticker: string }) {
+  const valuation = useValuation(ticker);
+  const metrics = (valuation.data?.metrics ?? []).flatMap((metric) => {
+    const value = toNumber(metric.value);
+    return value === null ? [] : [{ name: metric.formula_id, value, unit: metric.unit }];
+  });
   return (
-    <div className="space-y-12">
-      <Statements />
-      <ValuationTab />
+    <div id="valuation" className={ANCHOR}>
+      <Section title="Valuation" freshness={valuation.data?.freshness}>
+        {metrics.length > 0 ? (
+          <div className="grid grid-cols-2 gap-x-8 gap-y-5 pt-6 sm:flex sm:flex-wrap sm:gap-x-12">
+            {metrics.map((metric) => (
+              <Stat
+                key={metric.name}
+                label={metricLabel(metric.name)}
+                value={formatValue(metric.value, metricDisplay(metric.name, metric.unit))}
+                meta={{ source: "Market data and SEC filings" }}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="max-w-2xl pt-4 text-sm text-muted">
+            {valuation.isPending
+              ? "Loading valuation…"
+              : "Price-based ratios such as market cap, P/E and EV/EBITDA are not computed yet, so there is nothing to show here. Everything above comes straight from the filings."}
+          </p>
+        )}
+      </Section>
+    </div>
+  );
+}
+
+/** Financials: one row of controls that scopes everything below it, then the statements as
+ *  sections of charts with the full table beneath each, and valuation last. */
+export default function FinancialsTab() {
+  const { ticker = "" } = useParams();
+  const [period, setPeriod] = useState<Period>("FY");
+  const [showChange, setShowChange] = useState(false);
+  const financials = useFinancials(ticker, ALL_FINANCIAL_METRICS, period);
+  // Which period types hold anything at all for this company, so the others can say so up front.
+  const quarterly = useFinancials(ticker, ["revenue"], "Q");
+  const trailing = useFinancials(ticker, ["revenue"], "TTM");
+  const { online, reachable } = useApiStatus();
+  useScrollToHash();
+
+  const available: Record<Period, boolean | undefined> = {
+    FY: true,
+    Q: quarterly.data ? quarterly.data.series.some(hasPoints) : undefined,
+    TTM: trailing.data ? trailing.data.series.some(hasPoints) : undefined,
+  };
+  const loading = financials.isPending;
+  const series = financials.data?.series ?? [];
+
+  return (
+    <div>
+      <div className="z-10 mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border bg-bg/85 py-2.5 backdrop-blur-md md:sticky md:top-[6.5rem]">
+        <SectionNav />
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <SegmentedControl
+            label="Period"
+            value={period}
+            onValueChange={setPeriod}
+            options={PERIODS.map((p) => ({
+              value: p.value,
+              label: p.label,
+              disabled: available[p.value] !== true,
+              ...(available[p.value] === false ? { hint: p.missing } : {}),
+            }))}
+          />
+          <Switch checked={showChange} onCheckedChange={setShowChange}>
+            Show growth
+          </Switch>
+        </div>
+      </div>
+
+      {financials.isError && online && reachable ? (
+        <ErrorState
+          message={financials.error instanceof Error ? financials.error.message : "The financials could not be loaded."}
+          onRetry={() => void financials.refetch()}
+        />
+      ) : (
+        // While another period type loads, the previous figures stay in place, dimmed.
+        <div
+          aria-busy={financials.isPlaceholderData}
+          className={`transition-opacity ${financials.isPlaceholderData ? "opacity-50" : ""}`}
+        >
+          <p className="mb-10 flex flex-wrap items-center gap-x-3 text-caption text-subtle">
+            <span>
+              {period === "Q"
+                ? "Only fiscal fourth quarters are available so far, so quarterly charts show one point a year."
+                : "Figures as reported in SEC filings; ratios are computed from them."}
+            </span>
+            {financials.data && <FreshnessBadge freshness={financials.data.freshness} />}
+          </p>
+          <div className="space-y-16">
+            {FINANCIAL_SECTIONS.map((section) => (
+              <StatementSection
+                key={section.id}
+                ticker={ticker}
+                section={section}
+                series={series}
+                period={period}
+                showChange={showChange}
+                loading={loading}
+              />
+            ))}
+            <Valuation ticker={ticker} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

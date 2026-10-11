@@ -1,6 +1,7 @@
+import { metricLabel } from "../../lib/metricCatalog";
 import type { SourceRecord } from "../../types";
 
-/** A human label for a source record, by type (powers the citation modal + reference list). */
+/** A human label for a source record, by type (the evidence panel and the reference list). */
 export function sourceTitle(source: SourceRecord): string {
   switch (source.source_type) {
     case "text_chunk":
@@ -10,7 +11,7 @@ export function sourceTitle(source: SourceRecord): string {
     case "xbrl_fact":
       return `${source.concept_tag} (${source.accession_number})`;
     case "derived_metric":
-      return `${source.formula_id}${source.period ? ` · ${source.period}` : ""}`;
+      return `${metricLabel(source.formula_id)}${source.period ? ` · ${source.period}` : ""}`;
     case "news_item":
       return source.publisher ? `${source.publisher} article` : "News article";
     case "earnings_release":
@@ -25,11 +26,24 @@ export function sourceKindLabel(source: SourceRecord): string {
   const map: Record<SourceRecord["source_type"], string> = {
     text_chunk: "Filing text",
     table_chunk: "Filing table",
-    xbrl_fact: "XBRL fact",
-    derived_metric: "Derived metric",
+    xbrl_fact: "Reported figure (XBRL)",
+    derived_metric: "Calculated metric",
     news_item: "News",
     earnings_release: "Earnings release",
     transcript: "Transcript",
   };
   return map[source.source_type];
+}
+
+// The source-quality hierarchy (§15): lower is closer to the primary record.
+const TIERS: Record<number, string> = {
+  1: "SEC filing",
+  2: "Company earnings release",
+  3: "Investor-relations material",
+  4: "Reputable financial news",
+  5: "Other source",
+};
+
+export function tierLabel(tier: number | null | undefined): string | null {
+  return tier != null && TIERS[tier] ? `Tier ${tier} · ${TIERS[tier]}` : null;
 }

@@ -8,21 +8,25 @@ export function Tooltip({
   children,
   asChild = false,
   plain = false,
+  focusable = true,
+  onOpenChange,
 }: {
   label: ReactNode;
   children: ReactNode;
   asChild?: boolean;
   plain?: boolean; // no dotted underline (the trigger is already visually distinct)
+  focusable?: boolean; // false keeps it out of the tab order (dense grids offer another route)
+  onOpenChange?: (open: boolean) => void; // e.g. to fetch the content only when first shown
 }) {
   return (
     <RadixTooltip.Provider delayDuration={150}>
-      <RadixTooltip.Root>
+      <RadixTooltip.Root {...(onOpenChange ? { onOpenChange } : {})}>
         <RadixTooltip.Trigger asChild>
           {asChild ? (
             children
           ) : (
             <span
-              tabIndex={0}
+              tabIndex={focusable ? 0 : -1}
               className={`cursor-help rounded-[2px] ${
                 plain ? "" : "underline decoration-border-strong decoration-dotted underline-offset-4"
               }`}

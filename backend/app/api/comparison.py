@@ -27,7 +27,7 @@ from app.schemas.comparison import (
 
 router = APIRouter(prefix="/compare", tags=["Comparison"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _USER = Depends(get_current_user)
 _MIN_TICKERS = 2
 _MAX_TICKERS = 6

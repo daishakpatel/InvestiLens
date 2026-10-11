@@ -137,6 +137,8 @@
             "type": "string"
           },
           "question": {
+            "maxLength": 2000,
+            "minLength": 1,
             "title": "Question",
             "type": "string"
           },

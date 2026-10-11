@@ -16,7 +16,7 @@ from app.db import get_db
 from app.models import User
 from app.repositories import users as user_repo
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _UNAUTHENTICATED = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="authentication required",

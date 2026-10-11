@@ -31,12 +31,12 @@ from app.schemas.watchlist import (
 
 router = APIRouter(tags=["Watchlist & Alerts"])
 
-_DB = Depends(get_db)
+_DB = Depends(get_db, scope="function")
 _USER = Depends(get_current_user_id)
 
 
 @router.get("/watchlists", response_model=list[Watchlist])
-async def list_watchlists(db: Session = _DB, user_id: int = _USER) -> list[Watchlist]:
+def list_watchlists(db: Session = _DB, user_id: int = _USER) -> list[Watchlist]:
     rows = watchlist_repo.list_for_user(db, user_id=user_id)
     return [
         Watchlist(
@@ -51,23 +51,21 @@ async def list_watchlists(db: Session = _DB, user_id: int = _USER) -> list[Watch
 
 
 @router.post("/watchlists", status_code=201, response_model=Watchlist)
-async def create_watchlist(
-    body: WatchlistCreate, db: Session = _DB, user_id: int = _USER
-) -> Watchlist:
+def create_watchlist(body: WatchlistCreate, db: Session = _DB, user_id: int = _USER) -> Watchlist:
     row = watchlist_repo.create(db, user_id=user_id, name=body.name)
     db.commit()
     return Watchlist(id=str(row.id), name=row.name, items=[])
 
 
 @router.delete("/watchlists/{watchlist_id}", status_code=204)
-async def delete_watchlist(watchlist_id: int, db: Session = _DB, user_id: int = _USER) -> None:
+def delete_watchlist(watchlist_id: int, db: Session = _DB, user_id: int = _USER) -> None:
     if not watchlist_repo.delete_for_user(db, user_id=user_id, watchlist_id=watchlist_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "watchlist not found")
     db.commit()
 
 
 @router.get("/alerts", response_model=list[Alert])
-async def list_alerts(db: Session = _DB, user_id: int = _USER) -> list[Alert]:
+def list_alerts(db: Session = _DB, user_id: int = _USER) -> list[Alert]:
     out: list[Alert] = []
     for a in alert_repo.list_for_user(db, user_id=user_id):
         company = db.get(Company, a.company_id)
@@ -84,7 +82,7 @@ async def list_alerts(db: Session = _DB, user_id: int = _USER) -> list[Alert]:
 
 
 @router.post("/alerts", status_code=201, response_model=Alert)
-async def create_alert(body: AlertCreate, db: Session = _DB, user_id: int = _USER) -> Alert:
+def create_alert(body: AlertCreate, db: Session = _DB, user_id: int = _USER) -> Alert:
     company = company_repo.get_by_ticker(db, body.ticker)
     if company is None:
         raise HTTPException(
@@ -108,14 +106,14 @@ async def create_alert(body: AlertCreate, db: Session = _DB, user_id: int = _USE
 
 
 @router.delete("/alerts/{alert_id}", status_code=204)
-async def delete_alert(alert_id: int, db: Session = _DB, user_id: int = _USER) -> None:
+def delete_alert(alert_id: int, db: Session = _DB, user_id: int = _USER) -> None:
     if not alert_repo.delete_for_user(db, user_id=user_id, alert_id=alert_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "alert not found")
     db.commit()
 
 
 @router.get("/notifications", response_model=list[Notification], tags=["Notifications"])
-async def list_notifications(
+def list_notifications(
     response: Response,
     limit: int | None = None,
     cursor: str | None = None,
@@ -146,16 +144,14 @@ async def list_notifications(
 
 
 @router.post("/notifications/{notification_id}/read", status_code=204, tags=["Notifications"])
-async def mark_notification_read(
-    notification_id: int, db: Session = _DB, user_id: int = _USER
-) -> None:
+def mark_notification_read(notification_id: int, db: Session = _DB, user_id: int = _USER) -> None:
     if not notif_repo.mark_read(db, user_id=user_id, notification_id=notification_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "notification not found")
     db.commit()
 
 
 @router.post("/feedback/report", status_code=204, tags=["Feedback"])
-async def report_feedback(body: FeedbackRequest) -> None:
+def report_feedback(body: FeedbackRequest) -> None:
     """Report-level feedback. Persisting it needs a report_id the v1 contract does not carry;
     stored feedback lands with the report UI (Phase 4d). Accepted as a no-op meanwhile."""
     return None

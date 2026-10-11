@@ -7,13 +7,19 @@ and the request-ID echo (API-007).
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
+from app.db import get_db
 from app.main import API_V1_PREFIX, REQUEST_ID_HEADER, app
+from app.schemas.chat import MAX_QUESTION_LENGTH, ChatRequest
 
 _OPENAPI_PATH = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
 
@@ -96,3 +102,37 @@ def test_validation_error_is_problem_json(client: TestClient) -> None:
 def test_request_id_is_echoed(client: TestClient) -> None:
     resp = client.get(f"{API_V1_PREFIX}/health", headers={REQUEST_ID_HEADER: "test-123"})
     assert resp.headers[REQUEST_ID_HEADER] == "test-123"  # API-007
+
+
+def _session_dependencies(dependant: Any) -> list[Any]:
+    """Every place in a route's dependency tree where `get_db` is requested."""
+    own = [dependant] if dependant.call is get_db else []
+    return own + [d for sub in dependant.dependencies for d in _session_dependencies(sub)]
+
+
+def test_database_handlers_cannot_stall_the_api() -> None:
+    """NFR-001, ADR-0029: sessions are synchronous and connections are few, so a handler that
+    takes a session must (a) be a plain function, which FastAPI runs in a worker thread rather
+    than on the event loop, and (b) give the session back when it returns
+    (`scope="function"`), not while the request waits for a thread to serialise its response.
+    Either mistake lets one resource be held while waiting for the other, and the API freezes."""
+    on_the_loop, held_too_long = [], []
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        sessions = _session_dependencies(route.dependant)
+        name = f"{sorted(route.methods or [])} {route.path}"
+        if sessions and inspect.iscoroutinefunction(route.endpoint):
+            on_the_loop.append(name)
+        if any(d.scope != "function" for d in sessions):
+            held_too_long.append(name)
+    assert on_the_loop == [], "declare these handlers with `def`, not `async def`"
+    assert held_too_long == [], 'declare the session as `Depends(get_db, scope="function")`'
+
+
+def test_chat_question_length_is_bounded() -> None:
+    """SEC-002, SEC-008: the question goes to the model, so its size is capped at the API."""
+    assert ChatRequest(company="NVDA", question="x" * MAX_QUESTION_LENGTH).question
+    for bad in ["", "   ", "x" * (MAX_QUESTION_LENGTH + 1)]:
+        with pytest.raises(ValidationError):
+            ChatRequest(company="NVDA", question=bad)
