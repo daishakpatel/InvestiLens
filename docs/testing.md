@@ -149,6 +149,16 @@ cd e2e && npm install && npm run install-browsers && npm test
 Or run `e2e.yml` via "Run workflow". A full run needs a completed report + chat, which require an
 LLM key (ADR-0006/ADR-0009) or the Fake-LLM seed.
 
+The suite has three specs:
+
+| Spec | What it covers | Needs |
+|------|----------------|-------|
+| `tests/happy-path.spec.ts` | The §30.3 happy path and the axe scan of the company page. Creates its own account through the sign-in form. | A completed research report for the ticker and an LLM or Fake-LLM that answers with citations. The axe test alone needs only the seed companies. |
+| `tests/shell.spec.ts` | The app shell (UI plan Step 2): command palette shortcuts and §9.2 disambiguation, the five company tabs and old-URL redirects, the pinned sub-header, the outage banner and its recovery, no horizontal scroll at 360 px, theme switch, sign-in validation and return-to-page. | Seed companies only. Creates a few throwaway `e2e-…@example.com` users per run. |
+| `tests/screenshots.spec.ts` | Not assertions: writes full-page captures of every key screen, dark and light, at 1440 px and 390 px, to `e2e/screenshots/` for visual review. Run with `npm run screenshots`. | Seed companies and the dev server (`/_ui` exists only there). |
+
+Run one spec with `npx playwright test tests/shell.spec.ts`.
+
 ## Tier 3 — Load (`load/locustfile.py`)
 
 Drives the hot read endpoints (search, company, financials) and, with a token, authenticated chat,
