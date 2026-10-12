@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, iter_route_contexts
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -72,14 +72,12 @@ def test_every_spec_endpoint_group_is_registered() -> None:
 
 
 def test_search_resolves_before_ticker(client: TestClient) -> None:
-    """`/companies/search` must hit the search handler, not the `{ticker}` handler."""
-    search = client.get(f"{API_V1_PREFIX}/companies/search", params={"q": "nvidia"})
-    assert search.status_code == 200
-    assert isinstance(search.json(), list)  # search returns a list of hits
-
-    company = client.get(f"{API_V1_PREFIX}/companies/NVDA")
-    assert company.status_code == 200
-    assert "company" in company.json()  # ticker returns a single company envelope
+    """`/companies/search` must hit the search handler, not the `{ticker}` handler. Only search
+    requires `q`, so its validation error proves which handler matched without touching the DB;
+    the responses themselves are covered in integration/test_api_endpoints."""
+    resp = client.get(f"{API_V1_PREFIX}/companies/search")
+    assert resp.status_code == 422
+    assert resp.json()["errors"][0]["field"] == "query.q"
 
 
 def test_error_uses_rfc7807_shape(client: TestClient) -> None:
@@ -117,9 +115,10 @@ def test_database_handlers_cannot_stall_the_api() -> None:
     (`scope="function"`), not while the request waits for a thread to serialise its response.
     Either mistake lets one resource be held while waiting for the other, and the API freezes."""
     on_the_loop, held_too_long = [], []
-    for route in app.routes:
-        if not isinstance(route, APIRoute):
-            continue
+    # Included routers are nested, not flattened into `app.routes`, so walk them.
+    routes = [c.route for c in iter_route_contexts(app.routes) if isinstance(c.route, APIRoute)]
+    assert any(_session_dependencies(r.dependant) for r in routes), "no handlers were checked"
+    for route in routes:
         sessions = _session_dependencies(route.dependant)
         name = f"{sorted(route.methods or [])} {route.path}"
         if sessions and inspect.iscoroutinefunction(route.endpoint):

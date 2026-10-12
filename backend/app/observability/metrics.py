@@ -169,7 +169,7 @@ _DB = Depends(get_db, scope="function")
 
 
 @router.get("/metrics", include_in_schema=False)
-async def metrics(db: Session = _DB) -> Response:
+def metrics(db: Session = _DB) -> Response:
     """Prometheus scrape endpoint. No auth (standard scrape convention; not linked from the UI)."""
     refresh_gauges(db)
     return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
