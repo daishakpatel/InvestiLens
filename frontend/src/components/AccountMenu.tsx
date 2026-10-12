@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import { DESKTOP_QUERY, useMediaQuery } from "../lib/useMediaQuery";
 import { IconButton } from "./ui/Button";
+import { NotificationsBell } from "./watch/NotificationsBell";
 import {
   DropdownMenu,
   MenuItem,
@@ -35,6 +36,7 @@ export default function AccountMenu() {
 
   return (
     <div className="flex items-center gap-2">
+      {user && <NotificationsBell userId={user.id} />}
       {!user && desktop && (
         <Link to={signIn} state={from} className={SIGN_IN}>
           Sign in

@@ -11,7 +11,7 @@ export const POSITIVE = "var(--positive)";
 export const NEGATIVE = "var(--negative)";
 export const SURFACE = "var(--bg)"; // rings and gaps are drawn in the canvas colour
 
-export const AXIS_TICK = {
+const AXIS_TICK = {
   fill: "var(--text-subtle)",
   fontSize: 12,
   style: { fontVariantNumeric: "tabular-nums" },

@@ -8,7 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { POPULAR_COMPANIES } from "../lib/config";
 import { useCompanySearch } from "../lib/queries";
 import { addRecentSearch, getRecentSearches } from "../lib/recentSearches";
-import { useReturnFocus } from "./ui/Dialog";
+import type { PickRequest } from "./CommandPaletteContext";
+import { useReturnFocus } from "./ui/useReturnFocus";
 import { Skeleton } from "./ui/Skeleton";
 
 const DEBOUNCE_MS = 150;
@@ -59,7 +60,7 @@ function CompanyItem({
   );
 }
 
-function PaletteBody({ close }: { close: () => void }) {
+function PaletteBody({ close, pick }: { close: () => void; pick: PickRequest | null }) {
   const navigate = useNavigate();
   const [text, setText] = useState("");
   const typed = text.trim();
@@ -74,38 +75,48 @@ function PaletteBody({ close }: { close: () => void }) {
   const settled = typed !== "" && query === typed && search.isSuccess;
   const failed = typed !== "" && query === typed && search.isError;
   const loading = typed !== "" && !settled && !failed;
-  const results = settled ? search.data : [];
+  // Picking for a page: companies it already has are not offered again, and neither are tools.
+  const taken = new Set(pick?.exclude ?? []);
+  const offered = <T extends { ticker: string }>(items: readonly T[]) =>
+    items.filter((item) => !taken.has(item.ticker));
+  const results = offered(settled ? search.data : []);
+  const shownRecents = offered(recents);
 
   const recentTickers = new Set(recents.map((r) => r.ticker));
-  const popular = POPULAR_COMPANIES.filter((c) => !recentTickers.has(c.ticker));
-  const actions = ACTIONS.filter((a) => a.label.toLowerCase().includes(typed.toLowerCase()));
+  const popular = offered(POPULAR_COMPANIES.filter((c) => !recentTickers.has(c.ticker)));
+  const actions = pick ? [] : ACTIONS.filter((a) => a.label.toLowerCase().includes(typed.toLowerCase()));
+  const label = pick?.title ?? "Search companies";
 
   const go = (to: string) => {
     close();
     navigate(to);
   };
   const openCompany = (ticker: string, name: string) => {
+    if (pick) {
+      close();
+      return pick.onPick({ ticker, name });
+    }
     addRecentSearch({ ticker, name });
     go(`/company/${ticker}`);
   };
 
   return (
-    <Command label="Search companies" shouldFilter={false} loop>
+    <Command label={label} shouldFilter={false} loop>
       <div className="flex items-center gap-3 border-b border-border px-4">
         <Search aria-hidden className="size-4 shrink-0 text-subtle" />
         <Command.Input
           autoFocus
           value={text}
           onValueChange={setText}
-          placeholder="Search a company or ticker"
+          placeholder={pick ? pick.title : "Search a company or ticker"}
           className="h-13 w-full bg-transparent text-body text-text outline-none placeholder:text-subtle focus-visible:outline-none"
         />
       </div>
 
       <Command.List className="max-h-[min(26rem,60vh)] overflow-auto p-1.5">
-        {typed === "" && recents.length > 0 && (
+        {typed === "" && shownRecents.length > 0 && (
           <Command.Group heading="Recent" className={GROUP}>
-            {recents.map((c) => (
+            {shownRecents.map((c) => (
               <CompanyItem key={c.ticker} prefix="recent" icon={Clock} onPick={openCompany} {...c} />
             ))}
           </Command.Group>
@@ -171,7 +182,7 @@ function PaletteBody({ close }: { close: () => void }) {
 
       <div className="hidden items-center gap-4 border-t border-border px-4 py-2 text-caption text-subtle sm:flex">
         <span>↑↓ to move</span>
-        <span>↵ to open</span>
+        <span>↵ to {pick ? "add" : "open"}</span>
         <span>esc to close</span>
       </div>
     </Command>
@@ -183,22 +194,24 @@ function PaletteBody({ close }: { close: () => void }) {
 export default function CommandPalette({
   open,
   onOpenChange,
+  pick,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pick: PickRequest | null;
 }) {
   const returnFocus = useReturnFocus();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-scrim data-[state=open]:animate-fade-in" />
         <Dialog.Content
           {...returnFocus}
           aria-describedby={undefined}
-          className="fixed left-1/2 top-[12vh] z-50 w-[min(40rem,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-surface border border-border-strong bg-surface shadow-float"
+          className="fixed left-1/2 top-[12vh] z-50 w-[min(40rem,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-surface border border-border-strong bg-surface shadow-float data-[state=open]:animate-fade-in"
         >
-          <Dialog.Title className="sr-only">Search companies</Dialog.Title>
-          <PaletteBody close={() => onOpenChange(false)} />
+          <Dialog.Title className="sr-only">{pick?.title ?? "Search companies"}</Dialog.Title>
+          <PaletteBody close={() => onOpenChange(false)} pick={pick} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

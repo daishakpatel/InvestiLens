@@ -51,7 +51,7 @@ export function toStories(items: readonly NewsItem[]): Story[] {
 }
 
 /** The local calendar day a story was published, as a sortable key; "" when undated. */
-export function dayKey(item: NewsItem): string {
+function dayKey(item: NewsItem): string {
   if (!item.published_at) return "";
   const date = new Date(item.published_at);
   if (Number.isNaN(date.getTime())) return "";

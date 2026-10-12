@@ -14,10 +14,10 @@ export type PanelMode = "docked" | "overlay" | "sheet";
 
 const FRAME: Record<PanelMode, string> = {
   docked:
-    "sticky top-14 flex h-[calc(100dvh-3.5rem)] w-[440px] shrink-0 flex-col self-start border-l border-border bg-bg print:hidden",
+    "sticky top-14 flex h-[calc(100dvh-3.5rem)] w-[440px] shrink-0 flex-col self-start border-l border-border bg-bg animate-fade-in print:hidden",
   overlay:
-    "fixed bottom-0 right-0 top-14 z-30 flex w-[440px] max-w-[calc(100vw-3rem)] flex-col border-l border-border-strong bg-surface shadow-float print:hidden",
-  sheet: "fixed inset-0 z-50 flex flex-col bg-bg print:hidden",
+    "fixed bottom-0 right-0 top-14 z-30 flex w-[440px] max-w-[calc(100vw-3rem)] flex-col border-l border-border-strong bg-surface shadow-float animate-slide-in print:hidden",
+  sheet: "fixed inset-0 z-50 flex flex-col bg-bg animate-slide-in print:hidden",
 };
 
 interface SidePanelProps {

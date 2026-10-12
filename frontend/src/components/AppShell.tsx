@@ -76,7 +76,9 @@ export function AppShell() {
         Skip to content
       </a>
       <TopBar />
-      <main id="main" className="flex-1">
+      {/* At least a screenful: the footer then starts below the fold on every page, instead of
+          being visible under a loading state and pushed away when the content arrives. */}
+      <main id="main" className="min-h-svh flex-1">
         <Suspense fallback={<PageSkeleton />}>
           <Outlet />
         </Suspense>

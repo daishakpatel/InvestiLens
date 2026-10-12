@@ -1,11 +1,14 @@
 // React Query hooks over the typed API client. Each query validates its payload with Zod
 // (schemas.ts) before it reaches a component, so a malformed response fails fast and visibly.
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 
 import { apiRequest } from "./apiClient";
 import { parse } from "./schemas";
 import type {
+  Alert,
+  AlertType,
+  AppNotification,
   CompanyResponse,
   CompanySearchResult,
   ComparisonResponse,
@@ -27,6 +30,7 @@ import type {
   SourceDetail,
   ValuationResponse,
   VerifiedOutput,
+  Watchlist,
 } from "../types";
 
 const MINUTE = 60_000;
@@ -185,18 +189,6 @@ export function useLatestResearch(ticker: string): UseQueryResult<ResearchReport
     staleTime: MINUTE,
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/research/latest`, { signal });
-      return parse.researchEnvelope(data);
-    },
-  });
-}
-
-export function useResearchReport(researchId: string | null): UseQueryResult<ResearchReportEnvelope> {
-  return useQuery({
-    queryKey: ["research", researchId],
-    enabled: researchId !== null,
-    staleTime: MINUTE,
-    queryFn: async ({ signal }) => {
-      const { data } = await apiRequest<unknown>(`/research/${researchId}`, { signal });
       return parse.researchEnvelope(data);
     },
   });
@@ -370,5 +362,107 @@ export function usePortfolioAnalysis(): UseMutationResult<
       });
       return parse.portfolio(data);
     },
+  });
+}
+
+// --- Watchlists, alerts & notifications (§26.2) ---
+// All three belong to the signed-in user: pass their id (it scopes the cache, so one account's
+// data is never shown to the next) or null when signed out, which disables the query.
+
+export function useWatchlists(userId: string | null): UseQueryResult<Watchlist[]> {
+  return useQuery({
+    queryKey: ["watchlists", userId],
+    enabled: userId !== null,
+    staleTime: MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>("/watchlists", { signal });
+      return parse.watchlists(data);
+    },
+  });
+}
+
+export function useCreateWatchlist(): UseMutationResult<Watchlist, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { data } = await apiRequest<unknown>("/watchlists", { method: "POST", body: { name } });
+      return parse.watchlist(data);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["watchlists"] }),
+  });
+}
+
+export function useDeleteWatchlist(): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest<unknown>(`/watchlists/${id}`, { method: "DELETE" });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["watchlists"] }),
+  });
+}
+
+export function useAlerts(userId: string | null): UseQueryResult<Alert[]> {
+  return useQuery({
+    queryKey: ["alerts", userId],
+    enabled: userId !== null,
+    staleTime: MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>("/alerts", { signal });
+      return parse.alerts(data);
+    },
+  });
+}
+
+export function useCreateAlert(): UseMutationResult<
+  Alert,
+  Error,
+  { ticker: string; alert_type: AlertType }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body) => {
+      const { data } = await apiRequest<unknown>("/alerts", { method: "POST", body });
+      return parse.alert(data);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["alerts"] }),
+  });
+}
+
+export function useDeleteAlert(): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest<unknown>(`/alerts/${id}`, { method: "DELETE" });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["alerts"] }),
+  });
+}
+
+/** Newest first. Polled slowly and on returning to the tab: alerts are dispatched by a batch
+ *  job, so nothing here is worth a faster cadence. */
+export function useNotifications(userId: string | null): UseQueryResult<AppNotification[]> {
+  return useQuery({
+    queryKey: ["notifications", userId],
+    enabled: userId !== null,
+    staleTime: 30_000,
+    refetchInterval: MINUTE,
+    refetchOnWindowFocus: true,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>("/notifications", { query: { limit: 20 }, signal });
+      return parse.notifications(data);
+    },
+  });
+}
+
+export function useMarkNotificationsRead(): UseMutationResult<void, Error, string[]> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(
+        ids.map((id) => apiRequest<unknown>(`/notifications/${id}/read`, { method: "POST" })),
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 }

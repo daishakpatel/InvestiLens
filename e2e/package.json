@@ -5,9 +5,11 @@
   "type": "module",
   "description": "Playwright end-to-end + accessibility tests (spec \u00a730.3, \u00a730 a11y). Tier-2 suite: runs against a running, seeded stack \u2014 not part of the per-PR `make check`. See docs/testing.md.",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --grep-invert @visual",
     "install-browsers": "playwright install --with-deps chromium",
-    "screenshots": "playwright test tests/screenshots.spec.ts"
+    "screenshots": "playwright test tests/screenshots.spec.ts",
+    "visual": "playwright test tests/visual.spec.ts",
+    "visual:record": "VISUAL_RECORD=1 playwright test tests/visual.spec.ts --workers=1 && node fixtures/compact-har.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",

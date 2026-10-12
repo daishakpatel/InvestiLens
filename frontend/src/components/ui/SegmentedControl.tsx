@@ -2,7 +2,7 @@ import { ToggleGroup } from "radix-ui";
 
 import { Tooltip } from "./Tooltip";
 
-const ITEM = "h-7 rounded-[4px] px-2.5 text-label font-medium transition-colors";
+const ITEM = "h-7 rounded-[4px] px-2.5 text-label font-medium transition-colors pointer-coarse:min-w-10";
 
 /** A single-choice row of text buttons: chart ranges, Annual / Quarterly. One is always selected.
  *  An option that cannot be chosen stays visible and says why (`hint`), rather than vanishing or

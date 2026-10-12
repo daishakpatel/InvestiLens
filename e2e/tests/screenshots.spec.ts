@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import report from "../fixtures/research-nvda.json" with { type: "json" };
+import { settled, signUp } from "./helpers";
 
 // Review captures for the UI rebuild (Instructions/UI_plan): every key screen, dark and light,
 // desktop and phone width. Not an assertion suite — it writes PNGs to e2e/screenshots/ for a human
@@ -139,7 +140,95 @@ const SHOTS: Shot[] = [
   { name: "company-not-found", path: "/company/ZZZZ" },
   { name: "not-found", path: "/no/such/page" },
   { name: "compare", path: "/compare" },
+  {
+    // The search palette in pick mode: it adds to the page instead of navigating.
+    name: "compare-add",
+    path: "/compare",
+    viewport: true,
+    prepare: async (page) => {
+      await page.getByRole("button", { name: "Add company" }).click();
+      await expect(page.getByRole("dialog", { name: "Add a company to compare" })).toBeVisible();
+    },
+  },
+  { name: "compare-bank", path: "/compare?tickers=NVDA,JPM&metric=roe" },
   { name: "portfolio", path: "/portfolio" },
+  {
+    // Weights that do not add up, and a holding with no price history.
+    name: "portfolio-uneven",
+    path: "/portfolio",
+    prepare: async (page) => {
+      await page.getByRole("spinbutton", { name: "NVDA weight, percent" }).fill("70");
+      await page.getByRole("button", { name: "Add holding" }).click();
+      await page.getByRole("combobox").fill("amd");
+      await page.getByRole("option", { name: /AMD/ }).first().click();
+      await expect(page.getByText(/no price history for AMD/)).toBeVisible();
+    },
+  },
+];
+
+// Screens that only exist for a signed-in reader. Captured after the rest, with a throwaway
+// account that watches two companies.
+const SIGNED_IN_SHOTS: Shot[] = [
+  { name: "home-watchlist", path: "/" },
+  {
+    name: "company-alerts",
+    path: "/company/NVDA",
+    viewport: true,
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /^Alerts for NVDA/ }).click();
+      await expect(page.getByRole("switch").first()).toBeVisible();
+    },
+  },
+  {
+    name: "notifications",
+    path: "/company/NVDA/news",
+    viewport: true,
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /^Notifications/ }).click();
+      await expect(page.getByText("NVDA: new risk factor in the latest 10-K")).toBeVisible();
+    },
+  },
+  {
+    // The assistant mid-conversation: a cited answer, then a question it declines.
+    name: "company-assistant-chat",
+    path: "/company/NVDA/financials",
+    viewport: true,
+    prepare: async (page) => {
+      await page.getByRole("button", { name: "Ask" }).click();
+      const box = page.getByRole("textbox", { name: /^Ask a question/ });
+      await box.fill("What was NVDA’s revenue in the latest fiscal year?");
+      await box.press("Enter");
+      await expect(page.getByRole("dialog").getByRole("button", { name: /^Open source/ }).first()).toBeVisible({
+        timeout: 30_000,
+      });
+      await box.fill("Should I buy NVDA stock right now?");
+      await box.press("Enter");
+      await expect(page.getByRole("dialog").getByText("Outside what InvestiLens covers")).toBeVisible({
+        timeout: 30_000,
+      });
+    },
+  },
+];
+
+const NOTIFICATIONS = [
+  {
+    id: "501",
+    title: "NVDA: new risk factor in the latest 10-K",
+    body: "Commercial arrangements expose us to counterparty risks.",
+    channel: "in_app",
+    company_id: "1",
+    read: false,
+    created_at: "2026-10-11T15:00:00+00:00",
+  },
+  {
+    id: "500",
+    title: "AAPL filed a 10-Q",
+    body: null,
+    channel: "in_app",
+    company_id: "2",
+    read: true,
+    created_at: "2026-10-08T21:10:00+00:00",
+  },
 ];
 
 for (const theme of ["dark", "light"] as const) {
@@ -157,7 +246,7 @@ for (const theme of ["dark", "light"] as const) {
       }, theme);
       await context.route("**/companies/NVDA/research/latest", (route) => route.fulfill({ json: report }));
       const page = await context.newPage();
-      for (const shot of SHOTS) {
+      const capture = async (shot: Shot) => {
         // A blank page first: two shots that differ only by hash would otherwise share a
         // document, and the second would inherit whatever the first left open.
         await page.goto("about:blank");
@@ -165,11 +254,24 @@ for (const theme of ["dark", "light"] as const) {
         await page.waitForLoadState("networkidle");
         await page.evaluate(() => document.fonts.ready);
         await shot.prepare?.(page);
+        await settled(page);
         await page.screenshot({
           path: `screenshots/${theme}/${width}/${shot.name}.png`,
           fullPage: !shot.viewport,
         });
+      };
+      for (const shot of SHOTS) await capture(shot);
+
+      await signUp(page);
+      for (const ticker of ["NVDA", "AAPL"]) {
+        await page.goto(`/company/${ticker}`);
+        await page.getByRole("button", { name: "Watch", exact: true }).click();
+        await expect(page.getByRole("button", { name: "Watching" })).toBeVisible();
       }
+      // Alerts are dispatched by a batch job, so the bell's contents are stood in for here.
+      await context.route("**/api/v1/notifications?*", (route) => route.fulfill({ json: NOTIFICATIONS }));
+      await context.route("**/api/v1/notifications/*/read", (route) => route.fulfill({ status: 204 }));
+      for (const shot of SIGNED_IN_SHOTS) await capture(shot);
       await context.close();
     });
   }

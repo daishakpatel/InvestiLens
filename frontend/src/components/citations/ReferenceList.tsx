@@ -42,7 +42,7 @@ function ReferenceRow({ entry }: { entry: ReferenceEntry }) {
         type="button"
         onClick={() => open(entry.sourceId)}
         aria-pressed={activeSourceId === entry.sourceId}
-        className="-mx-2 flex w-[calc(100%+1rem)] items-baseline gap-3 rounded-control px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface aria-pressed:bg-surface-2"
+        className="-mx-2 flex w-[calc(100%+1rem)] items-baseline gap-3 rounded-control px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface aria-pressed:bg-surface-2 pointer-coarse:py-2.5"
       >
         <span className="tnum w-6 shrink-0 text-right text-primary">{entry.number}</span>
         <span className="min-w-0 flex-1 truncate">{title ?? "Source"}</span>

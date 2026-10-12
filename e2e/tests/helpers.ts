@@ -28,3 +28,17 @@ export async function openPalette(page: Page, key = "ControlOrMeta+k") {
   }).toPass();
   return dialog;
 }
+
+/** Wait for entrance animations (a panel sliding in, a menu fading in) to finish. Measurements
+ *  taken mid-animation are wrong: a fading layer has blended colours, a sliding one is offset.
+ *  Endless animations (a skeleton's shimmer) are ignored. */
+export async function settled(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+}

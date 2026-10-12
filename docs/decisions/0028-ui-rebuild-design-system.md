@@ -53,8 +53,31 @@ the main screens in both themes at 1440 px and 390 px.
 | `ai` | `#a78bfa` | 7.2 / 6.8 / 6.3 | `#6d3fe0` | 6.1 / 5.8 / 5.4 |
 | `primary-contrast` on `primary` | `#0a0b0d` | 6.2 | `#ffffff` | 5.9 |
 
-Chart series colours (Okabe–Ito hues, UI-003) are at least 7.1:1 on the dark canvas and 3.6:1 on
-the light one, above the 3:1 needed for graphical objects.
+**Categorical chart colours** (re-stepped in UI plan Step 5). The first set, Okabe–Ito hues
+lightened for the dark canvas, failed the palette validator in dark: too light for the band, and
+its worst neighbouring pair was 5.9 ΔE apart under deuteranopia. The shipped set is sky blue,
+amber, bluish green, vermillion, indigo, reddish purple, in that order, darker in dark and with
+indigo replacing the second blue so no two slots read as the same hue.
+
+| Slot | Dark | On `bg` | Light | On `bg` |
+|------|------|---------|-------|---------|
+| 1 sky blue | `#3d9bd1` | 6.4 | `#0072b2` | 5.2 |
+| 2 amber | `#c98500` | 6.4 | `#b87400` | 3.8 |
+| 3 bluish green | `#009e73` | 5.8 | `#008563` | 4.6 |
+| 4 vermillion | `#d55e00` | 5.1 | `#c85200` | 4.5 |
+| 5 indigo | `#7a6ff0` | 5.0 | `#5b4fc7` | 6.2 |
+| 6 reddish purple | `#c06a9b` | 5.4 | `#b85c92` | 4.2 |
+
+Validator results, neighbouring slots: lightness band, chroma floor and 3:1 contrast pass in both
+themes; worst pair under colour-vision deficiency 8.8 ΔE in dark and 8.2 in light (target 8);
+worst pair in normal vision 17.2 and 19.3 (floor 15). The set does **not** pass for every pair
+(amber and vermillion are 4.6 apart under deuteranopia), so a chart must keep neighbouring slots
+adjacent and never place distant ones side by side; the one user, the portfolio's sector bar,
+orders its segments by slot. A single series is drawn in neutral ink and uses none of these.
+
+Tints measured in Step 5: inserted text in a diff on its 10% tint, 8.7 dark and 4.7 light (the
+tint was 15% until axe measured light at 4.4); text on the strongest heat-table cell, 6.5 and 7.6;
+on the strongest correlation cell, 6.4 and 8.0 or better.
 
 ## Consequences
 
@@ -68,3 +91,20 @@ about 18 kB gzip; the entry bundle grew 0.4 kB gzip. The font package emits seve
 browsers fetch only the Latin one for our content. Revisit if a second accent colour is wanted, if
 an accessibility audit (Step 5) rejects the border contrast, or if Radix's unified package stops
 tree-shaking cleanly.
+
+## Addendum: UI plan Step 5 (2026-10-11)
+
+- **Motion** is one set in the theme: 120 ms for hover and press (the default for every
+  transition), 200 ms ease-out for things that arrive, 1.2 s for the skeleton shimmer, nothing
+  further than 8 px, all off under `prefers-reduced-motion`. Entrances on Radix layers are tied
+  to the open state, because Radix keeps a closing layer mounted while an animation runs on it.
+- **Touch targets** are at least 40 px on coarse pointers without changing how controls look:
+  an invisible centred pseudo-element extends each one. Controls packed side by side, or clipped
+  by a scroll area, are made 40 px themselves on touch instead.
+- **Font** is now only Inter's Latin and Latin-extended subsets, declared in `index.css`; the
+  Latin file is preloaded by the build. Other scripts fall back to the system font.
+- **`--scrim`** joins the tokens (the backdrop of the search palette), which removes the last
+  literal colour from the components.
+- **Removed** as unused by any screen: the `Dialog`, `Drawer`, `Checkbox` and `Surface`
+  primitives and `EvidenceBadge`. The side panel replaced the drawer.
+- No dependency was added.

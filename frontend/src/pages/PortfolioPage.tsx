@@ -1,313 +1,445 @@
-import { useMemo, useState } from "react";
+import { Plus, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
+import { formatValue } from "../charts/series";
+import { CitationChip } from "../components/citations/CitationChip";
+import { useCommandPalette } from "../components/CommandPaletteContext";
+import { PanelProvider } from "../components/panel/PanelProvider";
+import { Button, IconButton } from "../components/ui/Button";
 import { Container } from "../components/ui/Container";
+import { Input } from "../components/ui/Input";
 import { Section } from "../components/ui/Section";
-import { ErrorState, LoadingState } from "../components/ui/States";
-import { formatPercent } from "../lib/format";
-import { recomputeFrom } from "../lib/portfolioRecompute";
+import { Skeleton } from "../components/ui/Skeleton";
+import { Stat } from "../components/ui/Stat";
+import { EmptyState, ErrorState } from "../components/ui/States";
+import { formatDate, formatPercent, toNumber } from "../lib/format";
+import { metricDisplay, metricLabel } from "../lib/metricCatalog";
+import { recomputeFrom, toPercentages } from "../lib/portfolioRecompute";
+import type { Recomputed } from "../lib/portfolioRecompute";
 import { usePortfolioAnalysis } from "../lib/queries";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
 import type { PortfolioAnalysis } from "../types";
-import { X } from "lucide-react";
 
-interface HoldingInput {
+interface Holding {
   ticker: string;
-  weight: number;
+  weight: string; // as typed, in percent; parsed when used so the field can be cleared
 }
 
-const DEFAULT: HoldingInput[] = [
-  { ticker: "NVDA", weight: 40 },
-  { ticker: "AAPL", weight: 30 },
-  { ticker: "JPM", weight: 30 },
+const DEFAULT: Holding[] = [
+  { ticker: "NVDA", weight: "40" },
+  { ticker: "AAPL", weight: "30" },
+  { ticker: "JPM", weight: "30" },
 ];
+// The weighted figures shown as headline stats, in reading order.
+const HEADLINE = ["yoy_growth", "gross_margin", "net_margin", "fcf_margin"];
+// Categorical hues, used only where colour is the one way to tell parts of a whole apart.
+const HUES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
 
-export default function PortfolioPage() {
-  const [holdings, setHoldings] = useState<HoldingInput[]>(DEFAULT);
-  const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
-  // Live weights drive the client-side what-if recompute after an analysis (§37.2 item 10).
-  const [liveWeights, setLiveWeights] = useState<Record<string, number>>({});
-  const analyze = usePortfolioAnalysis();
+const weightOf = (holding: Holding) => Math.max(toNumber(holding.weight) ?? 0, 0);
+const list = (items: string[]) =>
+  items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 
-  const runAnalysis = () => {
-    analyze.mutate(holdings, {
-      onSuccess: (data) => {
-        setAnalysis(data);
-        const w: Record<string, number> = {};
-        for (const h of data.holdings) w[h.ticker] = Number(h.weight);
-        setLiveWeights(w);
-      },
-    });
-  };
-
-  const recomputed = useMemo(
-    () => (analysis ? recomputeFrom(analysis, liveWeights) : null),
-    [analysis, liveWeights],
-  );
-
-  const setHolding = (i: number, patch: Partial<HoldingInput>) =>
-    setHoldings(holdings.map((h, j) => (j === i ? { ...h, ...patch } : h)));
+function HoldingsEditor({ holdings, onChange }: { holdings: Holding[]; onChange: (next: Holding[]) => void }) {
+  const palette = useCommandPalette();
+  const total = Math.round(holdings.reduce((sum, h) => sum + weightOf(h), 0) * 10) / 10;
+  const off = holdings.length > 0 && total !== 100;
 
   return (
-    <Container className="py-8">
-      <h1 className="mb-1 text-xl font-semibold">Portfolio analysis</h1>
-      <p className="mb-4 text-sm text-muted">
-        Enter hypothetical holdings as ticker + weight. All figures are deterministic analysis of a
-        hypothetical portfolio — not a recommendation to buy, sell, hold, or rebalance.
-      </p>
-
-      <Section title="Holdings">
-        <div className="flex flex-col gap-2 p-4">
-          {holdings.map((h, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input
-                value={h.ticker}
-                onChange={(e) => setHolding(i, { ticker: e.target.value.toUpperCase() })}
-                aria-label={`Holding ${i + 1} ticker`}
-                className="w-28 rounded-control border border-border bg-surface px-2 py-1 text-sm"
-              />
-              <input
-                type="number"
-                min={0}
-                value={h.weight}
-                onChange={(e) => setHolding(i, { weight: Number(e.target.value) })}
-                aria-label={`Holding ${i + 1} weight`}
-                className="w-24 rounded-control border border-border bg-surface px-2 py-1 text-sm"
-              />
-              <span className="text-xs text-muted">%</span>
-              <button
-                type="button"
-                aria-label={`Remove holding ${i + 1}`}
-                onClick={() => setHoldings(holdings.filter((_, j) => j !== i))}
-                className="text-muted hover:text-text"
-              >
-                <X aria-hidden className="size-3.5" />
-              </button>
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setHoldings([...holdings, { ticker: "", weight: 10 }])}
-              className="rounded-control border border-border px-2 py-1 text-sm hover:bg-surface-2"
-            >
-              Add holding
-            </button>
-            <button
-              type="button"
-              onClick={runAnalysis}
-              disabled={analyze.isPending || holdings.filter((h) => h.ticker).length < 1}
-              className="rounded-control bg-primary px-3 py-1 text-sm font-medium text-primary-contrast hover:opacity-90 disabled:opacity-50"
-            >
-              {analyze.isPending ? "Analyzing…" : "Analyze"}
-            </button>
-          </div>
-        </div>
-      </Section>
-
-      {analyze.isPending && <LoadingState />}
-      {analyze.isError && <ErrorState message={analyze.error.message} onRetry={runAnalysis} />}
-
-      {analysis && recomputed && (
-        <div className="mt-4 flex flex-col gap-4">
-          <WhatIf
-            analysis={analysis}
-            liveWeights={liveWeights}
-            onChange={(ticker, w) => setLiveWeights({ ...liveWeights, [ticker]: w })}
-          />
-          <Aggregates recomputed={recomputed} />
-          <SectorExposure recomputed={recomputed} />
-          <RiskStatsPanel analysis={analysis} />
-          <RiskThemes analysis={analysis} />
-          {analysis.notes.length > 0 && (
-            <ul className="list-disc pl-5 text-xs text-muted">
-              {analysis.notes.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          )}
-          <p className="text-xs text-muted">{analysis.disclaimer}</p>
-        </div>
-      )}
-    </Container>
-  );
-}
-
-type Recomputed = NonNullable<ReturnType<typeof recomputeFrom>>;
-
-function WhatIf({
-  analysis,
-  liveWeights,
-  onChange,
-}: {
-  analysis: PortfolioAnalysis;
-  liveWeights: Record<string, number>;
-  onChange: (ticker: string, weight: number) => void;
-}) {
-  return (
-    <Section title="What-if weights">
-      <div className="flex flex-col gap-3 p-4">
-        <p className="text-xs text-muted">
-          Drag to re-weight; metrics below recompute instantly (no re-fetch).
-        </p>
-        {analysis.holdings.map((h) => (
-          <label key={h.ticker} className="flex items-center gap-3 text-sm">
-            <span className="w-16 font-medium">{h.ticker}</span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={liveWeights[h.ticker] ?? 0}
-              onChange={(e) => onChange(h.ticker, Number(e.target.value))}
-              className="flex-1"
-              aria-label={`${h.ticker} weight`}
-            />
-            <span className="w-12 text-right tnum">{(liveWeights[h.ticker] ?? 0).toFixed(0)}</span>
-          </label>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function Aggregates({ recomputed }: { recomputed: Recomputed }) {
-  return (
-    <Section title="Weighted metrics & concentration">
-      <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Stat
-          label="Concentration (HHI)"
-          value={recomputed.hhi.toFixed(3)}
-          sub={`${recomputed.effectiveHoldings.toFixed(1)} effective holdings`}
-        />
-        {recomputed.weightedMetrics.map((m) => (
-          <Stat
-            key={m.metricName}
-            label={m.metricName}
-            value={m.value === null ? "—" : formatPercent(m.value)}
-            sub={m.coverage < 1 ? `${formatPercent(m.coverage, 0)} coverage` : undefined}
-          />
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function SectorExposure({ recomputed }: { recomputed: Recomputed }) {
-  const max = Math.max(...recomputed.sectorExposure.map((s) => s.weight), 0.0001);
-  return (
-    <Section title="Sector exposure">
-      <div className="flex flex-col gap-2 p-4">
-        {recomputed.sectorExposure.map((s) => (
-          <div key={s.sector} className="text-sm">
-            <div className="flex justify-between">
-              <span>{s.sector}</span>
-              <span className="tnum text-muted">{formatPercent(s.weight, 0)}</span>
-            </div>
-            <div className="mt-1 h-2 w-full rounded-full bg-surface-2">
-              <div
-                className="h-2 rounded-full bg-[var(--chart-1)]"
-                style={{ width: `${(s.weight / max) * 100}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function RiskStatsPanel({ analysis }: { analysis: PortfolioAnalysis }) {
-  const risk = analysis.risk_stats;
-  if (!risk) return null;
-  return (
-    <Section title="Risk (price-based)">
-      <div className="p-4">
-        <div className="mb-3 flex flex-wrap gap-6 text-sm">
-          <Stat
-            label="Portfolio volatility (annualized)"
-            value={risk.portfolio_volatility ? formatPercent(risk.portfolio_volatility) : "—"}
-          />
-        </div>
-        {risk.correlation.length > 0 && (
-          <div className="overflow-auto">
-            <table className="text-sm">
-              <thead className="text-xs text-muted">
-                <tr>
-                  <th className="px-2 py-1" />
-                  {risk.correlation.map((r) => (
-                    <th key={r.ticker} className="px-2 py-1 text-right">
-                      {r.ticker}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {risk.correlation.map((r) => (
-                  <tr key={r.ticker} className="border-t border-border">
-                    <th scope="row" className="px-2 py-1 text-left font-normal">
-                      {r.ticker}
-                    </th>
-                    {risk.correlation.map((c) => (
-                      <td key={c.ticker} className="px-2 py-1 text-right tnum">
-                        {r.correlations[c.ticker] ? Number(r.correlations[c.ticker]).toFixed(2) : "—"}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {risk.notes.map((n) => (
-          <p key={n} className="mt-2 text-xs text-muted">
-            {n}
-          </p>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function RiskThemes({ analysis }: { analysis: PortfolioAnalysis }) {
-  return (
-    <Section title="Aggregated risk themes">
-      <div className="p-4">
-        {analysis.risk_themes.length === 0 ? (
-          <p className="text-sm text-muted">
-            No cited risk themes yet — they aggregate each holding&apos;s research-report risk
-            factors (generate a report per holding to populate them).
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-3 text-sm">
-            {analysis.risk_themes.map((t) => (
-              <li key={t.category}>
-                <div className="font-medium">
-                  {t.category.replace(/_/g, " ")}{" "}
-                  <span className="text-xs text-muted">
-                    ({t.holding_count} holding{t.holding_count === 1 ? "" : "s"},{" "}
-                    {formatPercent(t.portfolio_weight, 0)} of portfolio)
+    <section aria-label="Holdings">
+      <h2 className="border-b border-border pb-2 text-label text-muted">Holdings</h2>
+      <table className="w-full text-sm">
+        <caption className="sr-only">Hypothetical holdings and their weights</caption>
+        <tbody>
+          {holdings.map((holding, i) => (
+            <tr key={holding.ticker} className="animate-fade-in border-b border-border/60">
+              <th scope="row" className="py-2 text-left font-medium">
+                <Link to={`/company/${holding.ticker}`} className="hover:underline">
+                  {holding.ticker}
+                </Link>
+              </th>
+              <td className="py-2">
+                <span className="flex items-center justify-end gap-1.5">
+                  <span className="w-20">
+                    <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step="any"
+                    value={holding.weight}
+                    onChange={(event) =>
+                      onChange(holdings.map((h, j) => (j === i ? { ...h, weight: event.target.value } : h)))
+                    }
+                    aria-label={`${holding.ticker} weight, percent`}
+                    className="tnum text-right"
+                  />
                   </span>
-                </div>
-                <ul className="mt-1 list-disc pl-5 text-xs text-muted">
-                  {t.contributions.map((c, i) => (
-                    <li key={i}>
-                      <span className="font-medium">{c.ticker}:</span> {c.description}
-                    </li>
-                  ))}
-                </ul>
-              </li>
+                  <span aria-hidden className="text-subtle">
+                    %
+                  </span>
+                </span>
+              </td>
+              <td className="w-9 py-2 text-right">
+                <IconButton
+                  size="sm"
+                  label={`Remove ${holding.ticker}`}
+                  onClick={() => onChange(holdings.filter((_, j) => j !== i))}
+                >
+                  <X aria-hidden className="size-3.5" />
+                </IconButton>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        {holdings.length > 0 && (
+          <tfoot>
+            <tr>
+              <th scope="row" className="py-2.5 text-left font-normal text-muted">
+                Total
+              </th>
+              <td className={`tnum py-2.5 pr-5 text-right font-medium ${off ? "text-warning" : ""}`}>{total}%</td>
+              <td />
+            </tr>
+          </tfoot>
+        )}
+      </table>
+      {off && (
+        <p role="status" className="mt-1 text-caption text-warning">
+          Weights do not add up to 100%. The results use them in proportion.
+        </p>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          onClick={() =>
+            palette.pick({
+              title: "Add a holding",
+              exclude: holdings.map((h) => h.ticker),
+              onPick: (company) => onChange([...holdings, { ticker: company.ticker, weight: "10" }]),
+            })
+          }
+        >
+          <Plus aria-hidden className="size-3.5" />
+          Add holding
+        </Button>
+        {off && total > 0 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              const scaled = toPercentages(holdings.map(weightOf));
+              onChange(holdings.map((h, i) => ({ ...h, weight: String(scaled[i] ?? 0) })));
+            }}
+          >
+            Normalize to 100%
+          </Button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Parts of a whole as one bar. Sectors sit in name order and take the palette's hues in that
+ *  order, so a sector keeps its place and colour while the weights move, and only neighbouring
+ *  palette slots ever touch (which is what the palette is validated for). Past six sectors the
+ *  smallest are folded into "Other". */
+function SectorBar({ sectors }: { sectors: Recomputed["sectorExposure"] }) {
+  const held = sectors.filter((s) => s.weight > 0); // largest first
+  const shown = held.length > HUES.length ? held.slice(0, HUES.length - 1) : held;
+  const other = held.slice(shown.length).reduce((sum, s) => sum + s.weight, 0);
+  const parts = [
+    ...[...shown]
+      .sort((x, y) => x.sector.localeCompare(y.sector))
+      .map((s, i) => ({ ...s, color: HUES[i] ?? "var(--text-subtle)" })),
+    ...(other > 0 ? [{ sector: "Other", weight: other, color: "var(--text-subtle)" }] : []),
+  ];
+  return (
+    <div>
+      <div
+        role="img"
+        aria-label={`Sector exposure: ${parts.map((p) => `${p.sector} ${formatPercent(p.weight, 0)}`).join(", ")}`}
+        className="flex h-3 w-full gap-0.5"
+      >
+        {parts.map((part) => (
+          <span
+            key={part.sector}
+            className="h-full min-w-1 rounded-[3px] transition-[flex-grow] duration-(--duration-slow)"
+            style={{ flexGrow: part.weight, flexBasis: 0, backgroundColor: part.color }}
+          />
+        ))}
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-sm">
+        {parts.map((part) => (
+          <li key={part.sector} className="flex items-center gap-2">
+            <span aria-hidden className="size-2.5 rounded-[2px]" style={{ backgroundColor: part.color }} />
+            {part.sector}
+            <span className="tnum text-muted">{formatPercent(part.weight, 0)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** How the holdings' daily returns move together. Blue for together, orange for opposite, shade
+ *  for strength; the figure is always printed, so colour is never the only cue. */
+function Correlations({ analysis }: { analysis: PortfolioAnalysis }) {
+  const risk = analysis.risk_stats;
+  const rows = (risk?.correlation ?? []).filter((row) => Object.keys(row.correlations).length > 1);
+  if (!risk || rows.length < 2) return null;
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <table className="border-separate border-spacing-0.5 text-sm">
+          <caption className="sr-only">Correlation of daily returns between holdings</caption>
+          <thead>
+            <tr>
+              <td />
+              {rows.map((row) => (
+                <th key={row.ticker} scope="col" className="px-2 pb-1 text-center text-label font-normal text-muted">
+                  {row.ticker}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.ticker}>
+                <th scope="row" className="pr-3 text-left text-label font-normal text-muted">
+                  {row.ticker}
+                </th>
+                {rows.map((column) => {
+                  const rho = toNumber(row.correlations[column.ticker] ?? null);
+                  const self = row.ticker === column.ticker;
+                  const shade = rho === null || self ? 0 : Math.round(Math.min(Math.abs(rho), 1) * 55);
+                  const hue = (rho ?? 0) >= 0 ? "var(--chart-1)" : "var(--chart-2)";
+                  return (
+                    <td
+                      key={column.ticker}
+                      style={{ backgroundColor: `color-mix(in srgb, ${hue} ${shade}%, var(--surface))` }}
+                      className={`tnum h-9 min-w-16 text-center ${self ? "text-subtle" : ""}`}
+                    >
+                      {rho === null ? "N/A" : self ? "1" : rho.toFixed(2).replace("-", "−")}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-caption text-subtle">
+        Correlation of daily returns, {formatDate(risk.window_start)} to {formatDate(risk.window_end)}. 1 moves
+        together, 0 is unrelated, −1 moves opposite.
+      </p>
+    </div>
+  );
+}
+
+/** What is missing, one sentence each, naming the holdings concerned (never a silent gap). */
+function gaps(analysis: PortfolioAnalysis, recomputed: Recomputed): string[] {
+  const data = analysis.holdings_data ?? [];
+  const sentences: string[] = [];
+  for (const name of HEADLINE) {
+    const metric = recomputed.weightedMetrics.find((m) => m.metricName === name);
+    if (!metric || metric.coverage >= 0.9995) continue;
+    const without = data.filter((h) => h.metrics?.[name]?.value == null).map((h) => h.ticker);
+    if (without.length === 0) continue;
+    sentences.push(
+      metric.value === null
+        ? `${metricLabel(name)} is not reported by any holding.`
+        : `${metricLabel(name)} is not reported by ${list(without)}; the figure covers the other ${formatPercent(metric.coverage, 0)} of the portfolio.`,
+    );
+  }
+  const noPrices = (analysis.risk_stats?.holding_volatility ?? [])
+    .filter((h) => h.annualized_volatility == null)
+    .map((h) => h.ticker);
+  if (noPrices.length > 0) {
+    sentences.push(`There is no price history for ${list(noPrices)}, so volatility and correlation leave ${noPrices.length === 1 ? "it" : "them"} out.`);
+  }
+  return sentences;
+}
+
+function Results({ analysis, weights }: { analysis: PortfolioAnalysis; weights: Record<string, number> }) {
+  const recomputed = useMemo(() => recomputeFrom(analysis, weights), [analysis, weights]);
+  if (Object.keys(recomputed.weights).length === 0) {
+    return <EmptyState message="Give at least one holding a weight above zero to see results." />;
+  }
+  const unit = (name: string) => analysis.weighted_metrics.find((m) => m.metric_name === name)?.unit ?? "ratio";
+  const stats = HEADLINE.flatMap((name) => {
+    const metric = recomputed.weightedMetrics.find((m) => m.metricName === name);
+    return metric && metric.value !== null ? [{ name, value: metric.value }] : [];
+  });
+  const missing = gaps(analysis, recomputed);
+
+  // Citation numbers for the risk themes, in reading order.
+  const numbers = new Map<string, number>();
+  for (const theme of analysis.risk_themes) {
+    for (const c of theme.contributions) for (const id of c.source_ids) if (!numbers.has(id)) numbers.set(id, numbers.size + 1);
+  }
+
+  return (
+    <div className="space-y-12">
+      <div>
+        <div className="flex flex-wrap gap-x-10 gap-y-6">
+          {stats.map(({ name, value }) => (
+            <Stat
+              key={name}
+              label={metricLabel(name)}
+              value={formatValue(value, metricDisplay(name, unit(name)))}
+              meta={{ formula: "Average of the holdings, by weight" }}
+            />
+          ))}
+          <Stat
+            label="Effective holdings"
+            value={recomputed.effectiveHoldings.toFixed(1)}
+            meta={{ formula: `1 ÷ the sum of squared weights (HHI ${recomputed.hhi.toFixed(2)})` }}
+          />
+          {recomputed.portfolioVolatility !== null && (
+            <Stat
+              label="Volatility, annualized"
+              value={formatPercent(recomputed.portfolioVolatility)}
+              meta={{ formula: "From daily returns and the correlations below" }}
+            />
+          )}
+        </div>
+        {missing.length > 0 && (
+          <ul className="mt-4 max-w-2xl space-y-1 text-caption text-subtle">
+            {missing.map((sentence) => (
+              <li key={sentence}>{sentence}</li>
             ))}
           </ul>
         )}
       </div>
-    </Section>
+
+      <Section title="Sector exposure">
+        <div className="pt-5">
+          <SectorBar sectors={recomputed.sectorExposure} />
+        </div>
+      </Section>
+
+      {analysis.risk_stats && (
+        <Section title="How the holdings move together">
+          <div className="pt-5">
+            <Correlations analysis={analysis} />
+            {(analysis.risk_stats.correlation ?? []).filter((r) => Object.keys(r.correlations).length > 1).length < 2 && (
+              <p className="text-sm text-muted">At least two holdings with a price history are needed.</p>
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* The themes come from each holding's AI research report, so the section carries the AI mark. */}
+      <Section title="Risk themes" kind="ai">
+        <div className="max-w-[720px] pt-5">
+          {analysis.risk_themes.length === 0 ? (
+            <p className="text-sm text-muted">
+              No risk themes yet. They are gathered from each holding’s research report, and none of these
+              holdings has one.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {analysis.risk_themes.map((theme) => {
+                const held = [...new Set(theme.contributions.map((c) => c.ticker))];
+                const weight = held.reduce((sum, ticker) => sum + (recomputed.weights[ticker] ?? 0), 0);
+                return (
+                  <li key={theme.category} className="space-y-1.5 py-4 first:pt-0">
+                    <p className="text-label text-muted">
+                      {theme.category.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())} · {list(held)} ·{" "}
+                      {formatPercent(weight, 0)} of the portfolio
+                    </p>
+                    {theme.contributions
+                      .filter((c) => c.source_ids.length > 0)
+                      .map((c, i) => (
+                        <p key={`${c.ticker}-${i}`} className="text-body leading-relaxed">
+                          <span className="font-medium">{c.ticker}:</span> {c.description}
+                          {c.source_ids.map((id) => (
+                            <CitationChip key={id} number={numbers.get(id) ?? 0} sourceId={id} />
+                          ))}
+                        </p>
+                      ))}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {analysis.notes.map((note) => (
+            <p key={note} className="mt-3 text-caption text-subtle">
+              {note}
+            </p>
+          ))}
+        </div>
+      </Section>
+    </div>
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string | undefined }) {
+function ResultsSkeleton() {
   return (
-    <div>
-      <div className="text-xs text-muted">{label}</div>
-      <div className="text-lg font-semibold tnum">{value}</div>
-      {sub && <div className="text-xs text-muted">{sub}</div>}
+    <div role="status" aria-label="Analyzing the portfolio" className="space-y-10">
+      <div className="flex gap-10">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+      <Skeleton shape="block" className="h-24" />
+      <Skeleton shape="block" className="h-40" />
     </div>
+  );
+}
+
+/** Portfolio (§37.2): hypothetical holdings on the left, what they add up to on the right. A new
+ *  set of companies is analysed by the server once; after that every change of weight is
+ *  recomputed here from what the server returned, with no further request. */
+export default function PortfolioPage() {
+  const [holdings, setHoldings] = useState<Holding[]>(DEFAULT);
+  const { mutate, data, isError, error } = usePortfolioAnalysis();
+  useDocumentTitle("Portfolio");
+
+  const tickers = holdings.map((h) => h.ticker);
+  const tickerKey = tickers.join(",");
+  useEffect(() => {
+    // Equal weights: the server needs a positive weight for each, and the weights that matter
+    // are applied here, live.
+    if (tickerKey) mutate(tickerKey.split(",").map((ticker) => ({ ticker, weight: 1 })));
+  }, [tickerKey, mutate]);
+
+  // Results belong to the companies they were computed for; a stale analysis is not shown.
+  const analysis = data && data.holdings.map((h) => h.ticker).sort().join() === [...tickers].sort().join() ? data : null;
+  const weights = useMemo(
+    () => Object.fromEntries(holdings.map((h) => [h.ticker, weightOf(h)])),
+    [holdings],
+  );
+
+  return (
+    <PanelProvider>
+      <Container className="space-y-10 py-10">
+        <header>
+          <h1 className="text-heading font-semibold">Portfolio</h1>
+          <p className="mt-1 text-muted">Hypothetical portfolio. Not investment advice.</p>
+        </header>
+
+        <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <HoldingsEditor holdings={holdings} onChange={setHoldings} />
+          </div>
+          <div className="min-w-0" aria-live="off">
+            {holdings.length === 0 ? (
+              <EmptyState message="Add a holding to see what the portfolio adds up to." />
+            ) : analysis ? (
+              <Results analysis={analysis} weights={weights} />
+            ) : isError ? (
+              <ErrorState
+                message={error.message}
+                onRetry={() => mutate(tickers.map((ticker) => ({ ticker, weight: 1 })))}
+              />
+            ) : (
+              <ResultsSkeleton />
+            )}
+          </div>
+        </div>
+      </Container>
+    </PanelProvider>
   );
 }

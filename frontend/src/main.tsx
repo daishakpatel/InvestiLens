@@ -8,7 +8,6 @@ import { ApiError } from "./lib/apiClient";
 import { ApiStatusProvider } from "./lib/apiStatus";
 import { AuthProvider } from "./lib/auth";
 import { ThemeProvider } from "./lib/theme";
-import "@fontsource-variable/inter";
 import "./index.css";
 
 const queryClient = new QueryClient({

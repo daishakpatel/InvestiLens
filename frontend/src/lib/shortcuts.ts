@@ -20,6 +20,6 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
-export const IS_MAC =
+const IS_MAC =
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 export const PALETTE_HINT = IS_MAC ? "⌘K" : "Ctrl K";

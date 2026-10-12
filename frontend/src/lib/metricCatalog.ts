@@ -10,9 +10,12 @@ interface MetricInfo {
   label: string;
   kind: MetricKind; // amounts are bars (magnitude); ratios are lines (trend)
   multiple?: true; // a "ratio" that reads as 4.45× rather than as a percentage
+  /** Which end of a ranking is the stronger one. Default: higher. "neither" for figures where
+   *  more is not better or worse in itself (a valuation multiple, a share count). */
+  better?: "lower" | "neither";
 }
 
-export const METRICS: Record<string, MetricInfo> = {
+const METRICS: Record<string, MetricInfo> = {
   revenue: { label: "Revenue", kind: "bar" },
   cost_of_revenue: { label: "Cost of revenue", kind: "bar" },
   gross_profit: { label: "Gross profit", kind: "bar" },
@@ -20,7 +23,7 @@ export const METRICS: Record<string, MetricInfo> = {
   ebitda: { label: "EBITDA", kind: "bar" },
   net_income: { label: "Net income", kind: "bar" },
   eps_diluted: { label: "EPS (diluted)", kind: "bar" },
-  shares_diluted_weighted: { label: "Diluted shares", kind: "bar" },
+  shares_diluted_weighted: { label: "Diluted shares", kind: "bar", better: "neither" },
   yoy_growth: { label: "Revenue growth", kind: "line" },
 
   gross_margin: { label: "Gross margin", kind: "line" },
@@ -31,7 +34,7 @@ export const METRICS: Record<string, MetricInfo> = {
   roa: { label: "Return on assets", kind: "line" },
 
   operating_cash_flow: { label: "Operating cash flow", kind: "bar" },
-  capex: { label: "Capital expenditure", kind: "bar" },
+  capex: { label: "Capital expenditure", kind: "bar", better: "neither" },
   free_cash_flow: { label: "Free cash flow", kind: "bar" },
   depreciation_amortization: { label: "Depreciation & amortization", kind: "bar" },
   stock_based_compensation: { label: "Stock-based compensation", kind: "bar" },
@@ -46,25 +49,31 @@ export const METRICS: Record<string, MetricInfo> = {
   total_assets: { label: "Total assets", kind: "bar" },
   payables: { label: "Payables", kind: "bar" },
   current_liabilities: { label: "Current liabilities", kind: "bar" },
-  short_term_debt: { label: "Short-term debt", kind: "bar" },
-  long_term_debt: { label: "Long-term debt", kind: "bar" },
-  total_debt: { label: "Total debt", kind: "bar" },
-  total_liabilities: { label: "Total liabilities", kind: "bar" },
+  short_term_debt: { label: "Short-term debt", kind: "bar", better: "lower" },
+  long_term_debt: { label: "Long-term debt", kind: "bar", better: "lower" },
+  total_debt: { label: "Total debt", kind: "bar", better: "lower" },
+  total_liabilities: { label: "Total liabilities", kind: "bar", better: "lower" },
   shareholders_equity: { label: "Shareholders’ equity", kind: "bar" },
   current_ratio: { label: "Current ratio", kind: "line", multiple: true },
-  debt_to_equity: { label: "Debt / equity", kind: "line", multiple: true },
+  debt_to_equity: { label: "Debt / equity", kind: "line", multiple: true, better: "lower" },
 
   market_cap: { label: "Market cap", kind: "bar" },
   enterprise_value: { label: "Enterprise value", kind: "bar" },
-  pe_ratio: { label: "P/E", kind: "line", multiple: true },
-  ps_ratio: { label: "P/S", kind: "line", multiple: true },
-  ev_revenue: { label: "EV / revenue", kind: "line", multiple: true },
-  ev_ebitda: { label: "EV / EBITDA", kind: "line", multiple: true },
+  pe_ratio: { label: "P/E", kind: "line", multiple: true, better: "neither" },
+  ps_ratio: { label: "P/S", kind: "line", multiple: true, better: "neither" },
+  ev_revenue: { label: "EV / revenue", kind: "line", multiple: true, better: "neither" },
+  ev_ebitda: { label: "EV / EBITDA", kind: "line", multiple: true, better: "neither" },
   fcf_yield: { label: "Free cash flow yield", kind: "line" },
 };
 
 export function metricLabel(name: string): string {
   return METRICS[name]?.label ?? name.replace(/_/g, " ");
+}
+
+/** "higher" or "lower" when one end of a ranking is the stronger; null when neither is. */
+export function metricBetter(name: string): "higher" | "lower" | null {
+  const better = METRICS[name]?.better;
+  return better === "neither" ? null : (better ?? "higher");
 }
 
 export function metricKind(name: string): MetricKind {
@@ -161,6 +170,7 @@ const REASONS: Record<string, string> = {
   NOT_APPLICABLE_SECTOR: "Not applicable to this company’s sector",
   MISSING_INPUT: "An input is not reported in the filings",
   NEGATIVE_BASE: "Not meaningful: the base is zero or negative",
+  NO_DATA_FOR_PERIOD: "No figure for this period",
 };
 
 export function reasonText(code: string | undefined): string {

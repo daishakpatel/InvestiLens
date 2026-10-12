@@ -37,10 +37,3 @@ export function Section({
     </section>
   );
 }
-
-/** The one bordered, raised container, for content that genuinely needs separating. */
-export function Surface({ className = "", children }: { className?: string; children: ReactNode }) {
-  return (
-    <div className={`rounded-surface border border-border bg-surface ${className}`}>{children}</div>
-  );
-}

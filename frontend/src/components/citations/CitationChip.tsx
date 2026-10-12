@@ -12,6 +12,7 @@ export function CitationChip({ number, sourceId }: { number: number; sourceId: s
       aria-label={`Open source ${number}`}
       aria-pressed={active}
       title="View source"
+      data-inline=""
       // Padding enlarges the hit area; the negative margin keeps it from shifting the line.
       className={`relative -my-1 mx-px inline-flex min-w-4 items-center justify-center rounded-[4px] px-1 py-1 align-super text-[0.72em] font-medium leading-none text-primary transition-colors hover:bg-primary/15 ${
         active ? "bg-primary/20" : ""

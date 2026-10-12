@@ -139,7 +139,7 @@ function Latest({ ticker }: { ticker: string }) {
     .sort((a, b) => (b.filing_date ?? "").localeCompare(a.filing_date ?? ""))
     .slice(0, LATEST_COUNT);
   const headlines = (news.data?.items ?? []).slice(0, LATEST_COUNT);
-  const row = "-mx-2 block rounded-control px-2 py-2 transition-colors hover:bg-surface";
+  const row = "-mx-2 block rounded-control px-2 py-2 transition-colors hover:bg-surface pointer-coarse:py-2.5";
 
   return (
     <Section title="Latest">

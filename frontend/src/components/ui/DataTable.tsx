@@ -11,7 +11,8 @@ export interface Column<Row> {
 /** The standard table: sticky header, right-aligned numerals, row hover. Scrolls horizontally on
  *  narrow screens with the first column pinned. `startAtEnd` opens it scrolled to the last
  *  column, for tables that run oldest → newest and should show the newest first. `fill` makes
- *  it take its parent's height (a chart frame) instead of capping its own. When its content
+ *  it take its parent's height (a chart frame) instead of capping its own; `allRows` lifts the
+ *  cap so the page scrolls rather than the table. When its content
  *  overflows, the scroll area becomes a labelled, focusable region so it can be scrolled from
  *  the keyboard (WCAG 2.1.1). */
 export function DataTable<Row>({
@@ -22,6 +23,7 @@ export function DataTable<Row>({
   density = "comfortable",
   startAtEnd = false,
   fill = false,
+  allRows = false,
   label = "Data table",
 }: {
   columns: Column<Row>[];
@@ -31,6 +33,7 @@ export function DataTable<Row>({
   density?: "comfortable" | "compact";
   startAtEnd?: boolean;
   fill?: boolean;
+  allRows?: boolean;
   label?: string; // names the scroll region for assistive tech
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -59,7 +62,7 @@ export function DataTable<Row>({
     <div
       ref={scroller}
       {...(scrolls ? { tabIndex: 0, role: "region", "aria-label": label } : {})}
-      className={`overflow-auto ${fill ? "h-full" : "max-h-[32rem]"}`}
+      className={`overflow-auto ${fill ? "h-full" : allRows ? "" : "max-h-[32rem]"}`}
     >
       <table className="w-full border-separate border-spacing-0 text-sm">
         {caption && <caption className="pb-2 text-left text-label text-muted">{caption}</caption>}

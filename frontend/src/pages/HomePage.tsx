@@ -2,17 +2,13 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { WatchlistSlot } from "../components/home/WatchlistSlot";
+import { TickerRow } from "../components/home/TickerRow";
+import { Watchlist } from "../components/home/Watchlist";
 import { SearchTrigger } from "../components/SearchTrigger";
 import { Container } from "../components/ui/Container";
-import { Delta } from "../components/ui/Delta";
-import { Skeleton } from "../components/ui/Skeleton";
 import { useAuth } from "../lib/auth";
 import { POPULAR_COMPANIES } from "../lib/config";
-import { formatUsd } from "../lib/format";
-import { useRecentPrices } from "../lib/queries";
-import { latestQuote } from "../lib/quote";
-import { addRecentSearch, getRecentSearches } from "../lib/recentSearches";
+import { getRecentSearches } from "../lib/recentSearches";
 
 const EXAMPLE = POPULAR_COMPANIES[0] ?? { ticker: "NVDA", name: "NVIDIA" };
 
@@ -36,32 +32,6 @@ const FEATURES: { title: string; body: string; cta: string; to: string }[] = [
     to: `/company/${EXAMPLE.ticker}/filings`,
   },
 ];
-
-/** One company: ticker, name, last close, day change. The whole row is the link. */
-function TickerRow({ ticker, name }: { ticker: string; name: string }) {
-  const prices = useRecentPrices(ticker);
-  const quote = latestQuote(prices.data?.points);
-  return (
-    <li>
-      <Link
-        to={`/company/${ticker}`}
-        onClick={() => addRecentSearch({ ticker, name })}
-        className="-mx-3 flex h-12 items-center gap-3 rounded-control px-3 transition-colors hover:bg-surface"
-      >
-        <span className="w-14 shrink-0 font-medium">{ticker}</span>
-        <span className="min-w-0 flex-1 truncate text-muted">{name}</span>
-        {/* The price cells keep their width while loading and stay empty (not dashed) when a
-            company has no price data. */}
-        <span className="tnum w-20 shrink-0 text-right">
-          {prices.isPending ? <Skeleton className="ml-auto w-14" /> : quote && formatUsd(quote.close)}
-        </span>
-        <span className="w-20 shrink-0 text-right text-sm">
-          {quote && <Delta value={quote.changePct} />}
-        </span>
-      </Link>
-    </li>
-  );
-}
 
 function TickerList({ title, items }: { title: string; items: { ticker: string; name: string }[] }) {
   return (
@@ -103,6 +73,13 @@ export default function HomePage() {
       </section>
 
       <div className="space-y-20">
+        {/* A signed-in reader's own companies come before the general lists. */}
+        {user && (
+          <div className={`mx-auto ${column}`}>
+            <Watchlist userId={user.id} />
+          </div>
+        )}
+
         <div
           className={`mx-auto grid grid-cols-1 gap-x-16 gap-y-10 ${column} ${
             lists.length > 1 ? "md:grid-cols-2" : ""
@@ -112,12 +89,6 @@ export default function HomePage() {
             <TickerList key={list.title} {...list} />
           ))}
         </div>
-
-        {user && (
-          <div className={`mx-auto ${column}`}>
-            <WatchlistSlot />
-          </div>
-        )}
 
         <section aria-label="What you get" className="grid gap-x-12 gap-y-10 md:grid-cols-3">
           {FEATURES.map((feature) => (

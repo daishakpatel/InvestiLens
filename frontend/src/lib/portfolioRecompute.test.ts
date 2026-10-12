@@ -2,7 +2,7 @@
 // matching the backend formulas (ADR-0026), with no backend round-trip.
 import { describe, expect, it } from "vitest";
 
-import { normalizeWeights, recompute } from "./portfolioRecompute";
+import { normalizeWeights, recompute, toPercentages } from "./portfolioRecompute";
 import type { HoldingData, RiskStats } from "../types";
 
 const holdings: HoldingData[] = [
@@ -78,5 +78,18 @@ describe("recompute", () => {
     const gmEven = even.weightedMetrics.find((m) => m.metricName === "net_margin")?.value ?? NaN;
     const gmTilted = tilted.weightedMetrics.find((m) => m.metricName === "net_margin")?.value ?? NaN;
     expect(gmTilted).toBeGreaterThan(gmEven); // tilts toward A's higher margin
+  });
+});
+
+// §37.2: the "Normalize" action. Entered weights are rescaled, never silently changed.
+describe("toPercentages", () => {
+  it("rescales to exactly 100 and gives the rounding remainder to the largest holding", () => {
+    expect(toPercentages([1, 1, 1])).toEqual([33.4, 33.3, 33.3]);
+    expect(toPercentages([40, 30, 15]).reduce((a, b) => a + b, 0)).toBeCloseTo(100, 6);
+  });
+
+  it("leaves an all-zero list alone and treats a negative entry as zero", () => {
+    expect(toPercentages([0, 0])).toEqual([0, 0]);
+    expect(toPercentages([-5, 50])).toEqual([0, 100]);
   });
 });

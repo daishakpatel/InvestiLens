@@ -1,16 +1,17 @@
-import { Sparkles, Star } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router-dom";
 
 import type { CompanyOutletContext } from "../components/company/outletContext";
-import { CompanyPanels, useAssistant } from "../components/panel/CompanyPanels";
+import { PanelProvider, useAssistant } from "../components/panel/PanelProvider";
 import { Container } from "../components/ui/Container";
 import { Delta } from "../components/ui/Delta";
 import { Skeleton } from "../components/ui/Skeleton";
 import { ErrorState, LoadingState } from "../components/ui/States";
 import { RouteTabs } from "../components/ui/Tabs";
 import type { TabDef } from "../components/ui/Tabs";
-import { Tooltip } from "../components/ui/Tooltip";
+import { AlertsButton } from "../components/watch/AlertsButton";
+import { WatchButton } from "../components/watch/WatchButton";
 import { ApiError } from "../lib/apiClient";
 import { useApiStatus } from "../lib/apiStatus";
 import { formatUsd } from "../lib/format";
@@ -81,13 +82,8 @@ function CompanyHeader({ data }: { data: CompanyResponse }) {
           <Sparkles aria-hidden className="size-4 text-ai" />
           Ask
         </button>
-        <Tooltip asChild label="Watchlists arrive in a later update.">
-          {/* aria-disabled, not disabled: it must stay focusable for the tooltip to be reachable. */}
-          <button type="button" aria-disabled="true" className={`${ACTION} cursor-not-allowed opacity-60`}>
-            <Star aria-hidden className="size-4" />
-            Watch
-          </button>
-        </Tooltip>
+        <WatchButton ticker={c.ticker} />
+        <AlertsButton ticker={c.ticker} />
       </div>
     </div>
   );
@@ -137,9 +133,11 @@ export default function CompanyDashboard() {
   }
 
   return (
-    <CompanyPanels key={ticker.toUpperCase()} ticker={ticker.toUpperCase()}>
+    <PanelProvider key={ticker.toUpperCase()} assistantFor={ticker.toUpperCase()}>
       <Container className="pb-5 pt-8">
-        <div ref={setHeader}>
+        {/* Reserves the header's height while the company loads: on a phone the actions wrap
+            beneath the name, so it is twice as tall as on a desktop. */}
+        <div ref={setHeader} className="min-h-27 sm:min-h-13">
           {company.data ? (
             <CompanyHeader data={company.data} />
           ) : company.isError && online && reachable ? (
@@ -187,6 +185,6 @@ export default function CompanyDashboard() {
           </Suspense>
         </div>
       </Container>
-    </CompanyPanels>
+    </PanelProvider>
   );
 }

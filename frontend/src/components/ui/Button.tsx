@@ -19,7 +19,8 @@ const VARIANT: Record<Variant, string> = {
 };
 
 const SIZE: Record<Size, string> = { sm: "h-7 px-2.5 text-label", md: "h-9 px-3.5 text-sm" };
-const ICON_SIZE: Record<Size, string> = { sm: "size-7", md: "size-9" };
+// On touch, icon buttons are a full 40 px: they often sit side by side, with no room to borrow.
+const ICON_SIZE: Record<Size, string> = { sm: "size-7 pointer-coarse:size-10", md: "size-9 pointer-coarse:size-10" };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;

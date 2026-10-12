@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import report from "../fixtures/research-nvda.json" with { type: "json" };
+import { settled } from "./helpers";
 
 // UI plan Step 4: the reading surfaces (Research, Filings, News) and the two things that open
 // beside them, the evidence behind a citation and the assistant. Needs the dev stack running
@@ -422,6 +423,7 @@ test.describe("desktop", () => {
       }, theme);
       const scan = async (label: string) => {
         await page.waitForLoadState("networkidle");
+        await settled(page);
         const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
         const serious = results.violations.filter((v) => ["serious", "critical"].includes(v.impact ?? ""));
         expect(serious, `${label}: ${JSON.stringify(serious, null, 2)}`).toEqual([]);
@@ -469,6 +471,8 @@ test.describe("phone", () => {
 
     // A citation on a phone is a full-screen sheet; closing it returns to the filing.
     await page.getByRole("button", { name: "Open source 1", exact: true }).click();
+    await expect(panel(page)).toBeVisible();
+    await settled(page);
     const sheet = await panel(page).boundingBox();
     expect(sheet!.width).toBe(360);
     await panel(page).getByRole("button", { name: "Close panel" }).click();
@@ -489,6 +493,7 @@ test.describe("phone", () => {
     expect(await overflow(page), "news").toBeLessThanOrEqual(0);
 
     await page.getByRole("button", { name: "Ask" }).click();
+    await settled(page);
     const sheet = await panel(page).boundingBox();
     expect(sheet).toMatchObject({ x: 0, y: 0, width: 360, height: 780 });
     await panel(page).getByRole("button", { name: "Close panel" }).click();

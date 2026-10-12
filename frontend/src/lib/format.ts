@@ -12,7 +12,7 @@ const compactUsd = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-export function formatUsdCompact(value: string | number | null | undefined): string {
+function formatUsdCompact(value: string | number | null | undefined): string {
   const n = typeof value === "number" ? value : toNumber(value ?? null);
   if (n === null) return "—";
   return `$${compactUsd.format(n)}`;
@@ -30,7 +30,7 @@ export function formatPercent(ratio: string | number | null | undefined, digits 
   return `${(r * 100).toFixed(digits)}%`;
 }
 
-export function formatNumber(value: string | number | null | undefined, digits = 2): string {
+function formatNumber(value: string | number | null | undefined, digits = 2): string {
   const n = typeof value === "number" ? value : toNumber(value ?? null);
   if (n === null) return "—";
   return n.toLocaleString("en-US", { maximumFractionDigits: digits });

@@ -21,7 +21,7 @@ export function DropdownMenu({
           align={align}
           sideOffset={6}
           collisionPadding={8}
-          className="z-50 min-w-48 rounded-surface border border-border-strong bg-surface p-1 text-sm shadow-float"
+          className="z-50 min-w-48 data-[state=open]:animate-fade-in rounded-surface border border-border-strong bg-surface p-1 text-sm shadow-float"
         >
           {children}
         </RadixMenu.Content>

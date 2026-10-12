@@ -39,7 +39,7 @@ export function Tooltip({
           <RadixTooltip.Content
             sideOffset={6}
             collisionPadding={8}
-            className="z-50 max-w-xs rounded-control border border-border-strong bg-surface px-2.5 py-2 text-caption text-text shadow-float"
+            className="z-50 max-w-xs data-[state=delayed-open]:animate-fade-in rounded-control border border-border-strong bg-surface px-2.5 py-2 text-caption text-text shadow-float"
           >
             {label}
           </RadixTooltip.Content>

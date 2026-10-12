@@ -128,18 +128,150 @@ Onboarding tours, marketing pages, analytics events (UI-008 stays optional).
 
 ## Definition of Done
 
-- [ ] Compare and Portfolio use the new primitives and chart system; a comparison is shareable by
+- [x] Compare and Portfolio use the new primitives and chart system; a comparison is shareable by
       URL; weight changes update portfolio results with no network request
-- [ ] A signed-in user can watch a company, see it on Home with price and sparkline, turn on a
+- [x] A signed-in user can watch a company, see it on Home with price and sparkline, turn on a
       "New risk factor" alert, and see a notification arrive in the top-bar bell (simulate one
       via the existing alert-dispatch test path or a seeded notification)
-- [ ] Every screen has been reviewed in light and dark at 1440 px and 390 px; captures listed
-- [ ] axe reports zero serious or critical violations on all listed screens in both themes
-- [ ] The full happy path is completable by keyboard alone
-- [ ] Lighthouse scores for Home and `/company/NVDA` recorded in `docs/testing.md` (target 90+)
-- [ ] Visual regression baselines committed and the spec passes twice in a row locally
-- [ ] No old-UI component, unused dependency, or hard-coded colour remains
-- [ ] `docs/ui.md` written; ADR-0028 updated with final contrast numbers
-- [ ] `make check` green and `npm run build` succeeds
-- [ ] `## Hand-off` section appended to this file, including an honest list of anything that
+- [x] Every screen has been reviewed in light and dark at 1440 px and 390 px; captures listed
+      (all captured and scanned; the hand-off lists which were opened by eye)
+- [x] axe reports zero serious or critical violations on all listed screens in both themes
+- [x] The full happy path is completable by keyboard alone
+- [x] Lighthouse scores for Home and `/company/NVDA` recorded in `docs/testing.md` (target 90+;
+      the mobile company page misses it at 76 to 79, cause recorded)
+- [x] Visual regression baselines committed and the spec passes twice in a row locally
+- [x] No old-UI component, unused dependency, or hard-coded colour remains
+- [x] `docs/ui.md` written; ADR-0028 updated with final contrast numbers
+- [x] `make check` green and `npm run build` succeeds
+- [x] `## Hand-off` section appended to this file, including an honest list of anything that
       still falls short of the references and why
+
+## Hand-off
+
+Done 2026-10-11. `make check` green (456 backend, 77 frontend tests); `npm run build` succeeds;
+the behavioural e2e suite passes (67 tests, four workers); `visual.spec.ts` passes twice in a
+row (36 comparisons); axe reports no serious or critical violations on every listed screen in
+both themes. One Definition of Done item is ticked with a miss recorded: the mobile Lighthouse
+score for `/company/NVDA` is 76 to 79, below the 90 target (details below and in
+`docs/testing.md`).
+
+**What shipped**
+
+- **Compare (`pages/ComparePage.tsx`, `charts/ComparisonBars.tsx`, `lib/compare.ts`).** Chips
+  with "Add company" (the search palette in a new pick mode) and one-tap peers; the selection and
+  the charted metric live in the URL (`?tickers=&metric=`), parsed defensively. One `DataTable`:
+  the strongest figure per row in bold, where "strongest" follows the metric (lowest for debt,
+  none for a valuation multiple; `metricBetter` in `lib/metricCatalog.ts`), rank as a thin bar,
+  N/A with its reason, and a metric nobody has named in the note instead of shown as a blank
+  row. The chart is on the Step 3 system, in neutral ink. The AI explanation is an explicit,
+  sign-in-gated action under an AI mark.
+- **Portfolio (`pages/PortfolioPage.tsx`).** Holdings editor (weight fields, running total that
+  turns `warning`, "Normalize to 100%", add through the palette) beside results recomputed in
+  the browser from `lib/portfolioRecompute.ts`: headline stats, a stacked sector bar with a
+  legend, a correlation table, cited risk themes under an AI mark. A new set of companies costs
+  one request; changing weights costs none (asserted in `tools.spec.ts`). Missing data is one
+  sentence naming the holding.
+- **Watchlist, alerts, notifications (`components/watch/`, `components/home/`).** `WatchButton`
+  and `AlertsButton` in the company header, `NotificationsBell` in the top bar (inside the lazy
+  account chunk; polls every 60 s and on focus; opening marks as read), and the Watchlist on Home
+  with last close, day change and a 30-session `Sparkline`. Hooks and schemas for all three are
+  in `lib/queries.ts` and `lib/schemas.ts`.
+- **Shared pieces a later change will want:** `PanelProvider` (was `CompanyPanels`; without
+  `assistantFor` it gives any page the citation panel), `CitedText` (verified text with `[n]`
+  markers into chips), `useCommandPalette().pick()`, `SignInHint`, `DataTable allRows`,
+  `Popover onOpenChange`.
+- **Palette.** `--chart-1…6` re-stepped and validated in both themes (ADR-0028 has the table).
+  It passes for neighbouring slots, not for every pair, so the sector bar orders its segments by
+  slot. Compare's chart needs no categorical colour.
+- **Motion.** One set in `index.css`: `animate-fade-in`, `animate-slide-in`, `animate-value`;
+  120 ms default for every transition. On Radix layers use `data-[state=open]:animate-fade-in`.
+- **Accessibility.** 40 px touch targets on coarse pointers (an invisible centred hit area, in
+  the base layer; packed controls are sized instead), hit-tested on nine screens. The search
+  button's accessible name now matches its text. The happy path runs by keyboard alone.
+- **Performance.** Loading states shaped like their content, a reserved header height, and a
+  page that is always at least a screen tall took layout shift from 0.76 to 0.001 on the mobile
+  company page. Inter is Latin-only and preloaded. The assistant is its own chunk.
+- **Visual regression (`e2e/tests/visual.spec.ts`, `npm run visual`).** Nine screens, two
+  themes, two widths, against committed baselines. It replays API responses from
+  `e2e/fixtures/visual.har` with a fixed clock, so it needs only the frontend.
+- **Clean-up.** Removed the `Dialog`, `Drawer`, `Checkbox`, `Surface` and `EvidenceBadge`
+  primitives (no screen used them), `WatchlistSlot`, a dead query hook, unused exports and type
+  aliases, and the last literal colour (now `--scrim`). `/_ui` is not in the production build.
+- **Docs.** `docs/ui.md`, ADR-0028 (palette, contrast, Step 5 addendum), ADR-0031, README
+  (interface section with dark Home and Company), `docs/testing.md` (specs, Lighthouse).
+
+**What the API could not do, and what the UI does instead**
+
+- **No way to add a company to a watchlist.** Each watched company is stored as its own
+  watchlist named by its ticker (ADR-0031; the convention is confined to `lib/watchlist.ts`).
+  It works and persists, but it is a stand-in: the fix is `POST`/`DELETE
+  /watchlists/{id}/items`.
+- **An alert cannot carry a threshold or a news category.** The Price move switch has no
+  threshold field; the server's default applies.
+- **A notification names its company only by internal id**, so the bell cannot link to it.
+- **AI commentary arrives uncited in mock mode** (`sufficient: true`, text `MOCK_COMPLETION[…]`,
+  no citations). The UI treats text without citations as no answer and shows the plain "not
+  enough evidence" note. Real commentary has never been seen.
+- **The API does not compress responses.** The price history is 179 kB per company.
+
+**Lighthouse** (production build, mock-mode API; full table in `docs/testing.md`)
+
+| Page | Desktop | Mobile |
+|------|---------|--------|
+| Home | 100 / 100 | 94 / 100 |
+| `/company/NVDA` | 98 / 100 | 76 to 79 / 100 |
+
+The mobile company page is held back by its largest paint (5.2 s under slow-4G throttling): the
+hero waits for the chart library and the uncompressed price response. Preloading the route's
+chunks was tried and reverted (first paint 0.5 s slower, largest paint unchanged).
+
+**Bundle (gzip), before the rebuild → now**
+
+| Chunk | Before | Now |
+|-------|--------|-----|
+| entry `index` | 89.46 kB | 79.81 kB, plus `schemas` 34.54 kB loaded with it |
+| CSS | 5.36 kB | 9.76 kB |
+| `CompanyDashboard` | 1.82 kB | 3.13 kB |
+| `FinancialsTab` | 10.04 kB | 3.54 kB |
+| Recharts chunk | 98.24 kB | 99.67 kB |
+| `PanelProvider` (citation panel) | n/a | 4.98 kB |
+| `Assistant` (on first open) | n/a | 3.33 kB |
+| `CommandPalette` (on demand) | n/a | 6.51 kB |
+| `ComparePage` / `PortfolioPage` | n/a | 3.76 kB / 4.54 kB |
+
+"Before" is Step 1's measurement of the old UI. The entry's Zod schemas were inside the entry
+then; they now sit in a chunk fetched alongside it, so first-load JavaScript went from about 89
+to about 114 kB.
+
+**Captures**
+
+`e2e/screenshots/{dark,light}/{1440,390}/`, 36 per folder. New this step: `compare`,
+`compare-add`, `compare-bank`, `portfolio`, `portfolio-uneven`, and, signed in, `home-watchlist`,
+`company-alerts`, `notifications`, `company-assistant-chat`. Opened and looked at this step:
+Compare and Portfolio (dark 1440; light 1440 with a bank and with uneven weights; dark 390),
+Home with a watchlist (dark and light 1440), the alerts popover (dark 1440), notifications
+(light 390), the assistant mid-conversation (dark 1440), the research heat table (light 1440),
+Filings (light 1440), Overview (light 390), Financials (light 1440). **Not every one of the 144
+captures was opened**; the rest are covered by axe in both themes, by the visual baselines, and
+by the reviews recorded in Steps 2 to 4.
+
+**Where this still falls short, honestly**
+
+- The mobile performance target is missed on the company page (above).
+- Visual baselines are macOS. The on-demand workflow writes Linux ones on its first run and
+  uploads them; until someone commits those, CI compares nothing.
+- The behavioural specs are written against the dev database (live-ingested NVDA filings, AMD
+  without prices). The workflow's seeded database differs, so several would fail there. That
+  was already true of Steps 2 to 4.
+- The light theme was reviewed from captures and passes axe, but its only token changes are the
+  palette, the scrim, and the diff tint. It was not redesigned screen by screen.
+- Scrubbing the price does not cross-fade (the figure changes every frame; it would flicker).
+  Switching range does.
+- There is no toast, because nothing yet produces a result the reader cannot see.
+- The touch-target audit covers pages, not the insides of the side panel or popovers.
+- Carried from Step 4: the research layout has not been seen with a real LLM report, print was
+  only checked under emulated print media, and a mid-stream answer has not been observed.
+- Clyde and Albert, two of the four references, were never reviewed live in any step.
+- The dead-export check leaves four entries on purpose: the font package (used from CSS),
+  `openapi-typescript` (used by `make openapi`), and one export each in `authStore.ts` and
+  `chatStream.ts`, which this plan said not to touch.

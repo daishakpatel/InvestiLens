@@ -72,10 +72,14 @@ export function KeyStats({ ticker }: { ticker: string }) {
 
   if (financials.isPending) {
     return (
-      <div role="status" aria-label="Loading key figures" className="flex flex-wrap gap-x-12 gap-y-4">
-        {REPORTED.map((name) => (
-          <Skeleton key={name} className="h-11 w-28" />
-        ))}
+      <div role="status" aria-label="Loading key figures">
+        {/* The same grid as the figures, and the line beneath them. */}
+        <div className="grid grid-cols-2 gap-x-8 gap-y-5 sm:flex sm:flex-wrap sm:gap-x-12">
+          {REPORTED.map((name) => (
+            <Skeleton key={name} className="h-[46px] w-28" />
+          ))}
+        </div>
+        <Skeleton className="mt-4 h-8 w-full max-w-sm sm:h-4" />
       </div>
     );
   }

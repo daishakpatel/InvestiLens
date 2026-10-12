@@ -1,16 +1,20 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 import { DESKTOP_QUERY, useMediaQuery } from "../../lib/useMediaQuery";
-import { Assistant } from "../assistant/Assistant";
 import { useConversation } from "../assistant/useConversation";
 import { CitationContext } from "../citations/CitationContext";
 import type { CitationContextValue, Evidence } from "../citations/CitationContext";
 import { SourceView } from "../citations/SourceView";
 import { StatementsView } from "../citations/StatementsView";
+import { LoadingState } from "../ui/States";
 import { SidePanel } from "./SidePanel";
 import type { PanelMode } from "./SidePanel";
+
+// The assistant's interface arrives the first time it is opened (UI-004); most visits to a
+// company page never open it. The conversation state stays here, so it survives tab changes.
+const Assistant = lazy(() => import("../assistant/Assistant").then((module) => ({ default: module.Assistant })));
 
 /** From this width the assistant docks beside the page instead of floating over it. */
 const DOCK_QUERY = "(min-width: 1440px)";
@@ -25,20 +29,27 @@ const AssistantContext = createContext<AssistantContextValue | null>(null);
 
 export function useAssistant(): AssistantContextValue {
   const ctx = useContext(AssistantContext);
-  if (!ctx) throw new Error("useAssistant must be used within CompanyPanels");
+  if (!ctx) throw new Error("useAssistant must be used within PanelProvider");
   return ctx;
 }
 
 const focused = () => (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 
-/** Owns everything that can open beside a company page: the assistant, and the evidence behind a
- *  citation. Both live in one state and render through one `SidePanel`, so two side panels can
- *  never be open together: evidence wanted while the assistant is open is shown inside it, with
- *  a way back to the conversation.
+/** Owns everything that can open beside a page: the evidence behind a citation and, on a company
+ *  page (`assistantFor`), the assistant. Both live in one state and render through one
+ *  `SidePanel`, so two side panels can never be open together: evidence wanted while the
+ *  assistant is open is shown inside it, with a way back to the conversation.
  *
  *  Give this a `key` per company: the conversation and any open evidence belong to one company
  *  and must not follow the reader to another. */
-export function CompanyPanels({ ticker, children }: { ticker: string; children: ReactNode }) {
+export function PanelProvider({
+  assistantFor,
+  children,
+}: {
+  assistantFor?: string; // a ticker; without one the panel only ever shows evidence
+  children: ReactNode;
+}) {
+  const ticker = assistantFor ?? "";
   const [assistantOpen, setAssistantOpen] = useState(false);
   // What the panel is showing as evidence, innermost last (statements → one of their sources).
   const [stack, setStack] = useState<Evidence[]>([]);
@@ -136,7 +147,9 @@ export function CompanyPanels({ ticker, children }: { ticker: string; children: 
             and any half-written question. */}
         {assistantOpen && (
           <div className={top ? "hidden" : "flex min-h-0 flex-1 flex-col"}>
-            <Assistant ticker={ticker} conversation={conversation} composerRef={composerRef} />
+            <Suspense fallback={<LoadingState label="Opening the assistant" />}>
+              <Assistant ticker={ticker} conversation={conversation} composerRef={composerRef} />
+            </Suspense>
           </div>
         )}
         {top?.kind === "source" && <SourceView key={top.sourceId} sourceId={top.sourceId} />}

@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
 /** A counted sentence and the source it came from (management language tracking, §37.5). */
-export interface CountedStatement {
+interface CountedStatement {
   source_id: string;
   text: string;
   mentions: number;
@@ -25,6 +25,6 @@ export const CitationContext = createContext<CitationContextValue | null>(null);
 
 export function useCitations(): CitationContextValue {
   const ctx = useContext(CitationContext);
-  if (!ctx) throw new Error("useCitations must be used within a company page (CompanyPanels)");
+  if (!ctx) throw new Error("useCitations must be used within PanelProvider");
   return ctx;
 }

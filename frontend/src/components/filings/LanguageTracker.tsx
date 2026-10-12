@@ -52,7 +52,7 @@ function Row({
                 })
               }
               style={{ backgroundColor: `color-mix(in srgb, var(--primary) ${shade}%, var(--surface))` }}
-              className={`tnum relative block h-9 w-full min-w-14 text-sm transition-shadow ${
+              className={`tnum relative block h-9 w-full min-w-14 text-sm transition-shadow pointer-coarse:h-10 ${
                 point.count === 0
                   ? "cursor-default text-subtle"
                   : "text-text hover:shadow-[inset_0_0_0_1px_var(--primary)]"

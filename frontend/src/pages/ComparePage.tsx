@@ -1,282 +1,316 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Plus, X } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { ComparisonBars } from "../charts/ComparisonBars";
-import { Badge } from "../components/ui/Badge";
+import { formatValue } from "../charts/series";
+import { CitedText } from "../components/citations/CitedText";
+import { ReferenceList } from "../components/citations/ReferenceList";
+import { useCommandPalette } from "../components/CommandPaletteContext";
+import { PanelProvider } from "../components/panel/PanelProvider";
+import { SignInHint } from "../components/SignInHint";
+import { Button } from "../components/ui/Button";
 import { Container } from "../components/ui/Container";
+import { DataTable } from "../components/ui/DataTable";
+import type { Column } from "../components/ui/DataTable";
 import { Section } from "../components/ui/Section";
+import { Skeleton } from "../components/ui/Skeleton";
 import { AsyncContent, EmptyState } from "../components/ui/States";
+import { Tooltip } from "../components/ui/Tooltip";
 import { useAuth } from "../lib/auth";
-import { formatMetricValue, formatPercent } from "../lib/format";
+import { MAX_COMPANIES, MIN_COMPANIES, leader, parseTickers } from "../lib/compare";
+import { formatDate, toNumber } from "../lib/format";
+import { metricDisplay, metricLabel, reasonText } from "../lib/metricCatalog";
 import { useComparison, useComparisonCommentary, usePeers } from "../lib/queries";
-import type { ComparisonResponse } from "../types";
-import { X } from "lucide-react";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
+import type { ComparisonCell, ComparisonMetricRow, ComparisonResponse } from "../types";
 
 const DEFAULT_TICKERS = ["NVDA", "AMD", "INTC"];
-const CHART_METRICS = ["gross_margin", "net_margin", "yoy_growth"];
+const CHIP = "inline-flex h-8 items-center rounded-full text-sm transition-colors pointer-coarse:h-10";
 
-export default function ComparePage() {
-  const [tickers, setTickers] = useState<string[]>(DEFAULT_TICKERS);
-  const [draft, setDraft] = useState("");
-  const comparison = useComparison(tickers, []);
-
-  const add = () => {
-    const t = draft.trim().toUpperCase();
-    if (t && !tickers.includes(t) && tickers.length < 6) setTickers([...tickers, t]);
-    setDraft("");
-  };
-  const remove = (t: string) => setTickers(tickers.filter((x) => x !== t));
+function Picker({ tickers, onChange }: { tickers: string[]; onChange: (next: string[]) => void }) {
+  const palette = useCommandPalette();
+  const peers = usePeers(tickers[0] ?? "");
+  const full = tickers.length >= MAX_COMPANIES;
+  const suggestions = (peers.data?.peers ?? []).filter((peer) => !tickers.includes(peer.ticker));
 
   return (
-    <Container className="py-8">
-      <h1 className="mb-1 text-xl font-semibold">Compare companies</h1>
-      <p className="mb-4 text-sm text-muted">
-        Side-by-side metrics, aligned to a common calendar year and ranked within the selected peer
-        set. Analysis only — never a buy/sell recommendation.
-      </p>
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {tickers.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-3 py-1 text-sm"
-          >
-            <Link to={`/company/${t}`} className="font-medium hover:underline">
-              {t}
+    <div className="space-y-3">
+      <ul aria-label="Companies compared" className="flex flex-wrap items-center gap-2">
+        {tickers.map((ticker) => (
+          <li key={ticker} className={`${CHIP} animate-fade-in bg-surface-2 pr-1`}>
+            <Link to={`/company/${ticker}`} className="flex h-full items-center pl-3 pr-1.5 font-medium hover:underline">
+              {ticker}
             </Link>
             <button
               type="button"
-              aria-label={`Remove ${t}`}
-              onClick={() => remove(t)}
-              className="text-muted hover:text-text"
+              aria-label={`Remove ${ticker}`}
+              onClick={() => onChange(tickers.filter((t) => t !== ticker))}
+              data-inline=""
+              className="flex size-6 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-3 hover:text-text pointer-coarse:size-8"
             >
               <X aria-hidden className="size-3.5" />
             </button>
-          </span>
+          </li>
         ))}
-        {tickers.length < 6 && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              add();
-            }}
-            className="inline-flex items-center gap-1"
-          >
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Add ticker"
-              aria-label="Add ticker"
-              className="w-28 rounded-control border border-border bg-surface px-2 py-1 text-sm"
-            />
-            <button
-              type="submit"
-              className="rounded-control border border-border px-2 py-1 text-sm hover:bg-surface-2"
-            >
-              Add
-            </button>
-          </form>
-        )}
-      </div>
-
-      {tickers.length < 2 ? (
-        <EmptyState message="Add at least two companies to compare." />
-      ) : (
-        <AsyncContent query={comparison}>
-          {(data) => (
-            <div className="flex flex-col gap-4">
-              <CalendarizationNote data={data} />
-              <MetricTable data={data} />
-              <Section title="Side-by-side">
-                <div className="grid gap-6 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {CHART_METRICS.map((name) => {
-                    const row = data.metrics.find((m) => m.metric_name === name);
-                    if (!row) return null;
-                    return (
-                      <ComparisonBars
-                        key={name}
-                        metricName={row.metric_name}
-                        unit={row.unit}
-                        cells={row.cells}
-                      />
-                    );
-                  })}
-                </div>
-              </Section>
-              <CommentaryPanel tickers={tickers} />
-              <PeersPanel
-                ticker={tickers[0] ?? ""}
-                onAdd={(t) => !tickers.includes(t) && setTickers([...tickers, t])}
-              />
-              {data.notes.length > 0 && (
-                <ul className="list-disc pl-5 text-xs text-muted">
-                  {data.notes.map((n) => (
-                    <li key={n}>{n}</li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-xs text-muted">{data.disclaimer}</p>
-            </div>
-          )}
-        </AsyncContent>
-      )}
-    </Container>
-  );
-}
-
-function CalendarizationNote({ data }: { data: ComparisonResponse }) {
-  return (
-    <Section title={`Comparison period — calendar year ${data.calendar_year ?? "—"}`}>
-      <div className="flex flex-wrap gap-4 p-4 text-sm">
-        {data.companies.map((c) => (
-          <div key={c.ticker} className="min-w-32">
-            <div className="font-medium">{c.ticker}</div>
-            <div className="text-muted">
-              {c.fiscal_period ?? "—"} · FYE {c.fiscal_year_end ?? "—"}
-            </div>
-            <div className="text-xs text-muted">{c.sector ?? "—"}</div>
-          </div>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function MetricTable({ data }: { data: ComparisonResponse }) {
-  return (
-    <Section title="Metrics">
-      <div className="overflow-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-surface-2 text-xs text-muted">
-            <tr>
-              <th scope="col" className="px-3 py-2">
-                Metric
-              </th>
-              {data.companies.map((c) => (
-                <th key={c.ticker} scope="col" className="px-3 py-2 text-right">
-                  {c.ticker}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.metrics.map((row) => (
-              <tr key={row.metric_name} className="border-t border-border">
-                <th scope="row" className="px-3 py-2 font-normal">
-                  {row.metric_name}
-                </th>
-                {row.cells.map((cell) => (
-                  <td key={cell.ticker} className="px-3 py-2 text-right tnum">
-                    <div>{formatMetricValue(cell.result.value, row.unit)}</div>
-                    {cell.percentile != null && cell.result.value != null && (
-                      <div className="text-xs text-muted">
-                        {formatPercent(cell.percentile, 0)} pctile
-                      </div>
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Section>
-  );
-}
-
-function CommentaryPanel({ tickers }: { tickers: string[] }) {
-  const { user } = useAuth();
-  const commentary = useComparisonCommentary();
-
-  return (
-    <Section
-      title="AI commentary"
-      kind="ai"
-      actions={
-        user ? (
+        <li>
           <button
             type="button"
-            disabled={commentary.isPending}
-            onClick={() => commentary.mutate({ tickers })}
-            className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2 disabled:opacity-50"
+            disabled={full}
+            onClick={() =>
+              palette.pick({
+                title: "Add a company to compare",
+                exclude: tickers,
+                onPick: (company) => onChange([...tickers, company.ticker]),
+              })
+            }
+            className={`${CHIP} gap-1.5 border border-border-strong px-3 font-medium hover:bg-surface-2 disabled:opacity-50`}
           >
-            {commentary.isPending ? "Generating…" : "Generate"}
+            <Plus aria-hidden className="size-3.5" />
+            Add company
           </button>
+        </li>
+      </ul>
+      {/* This line keeps its height while the suggestions load, so the table does not jump. */}
+      <div className="min-h-7 pointer-coarse:min-h-10">
+        {full ? (
+          <p className="text-caption text-subtle">Six companies is the most that fit side by side.</p>
         ) : (
-          <Link to="/login" className="text-xs text-muted hover:underline">
-            Sign in to generate
-          </Link>
-        )
-      }
-    >
-      <div className="p-4 text-sm">
-        {commentary.isError && (
-          <p className="text-negative">Could not generate commentary. {commentary.error.message}</p>
+          suggestions.length > 0 && (
+            <ul aria-label={`Companies similar to ${tickers[0]}`} className="flex flex-wrap items-center gap-2">
+              <li className="text-caption text-subtle">Similar to {tickers[0]}</li>
+              {suggestions.map((peer) => (
+                <li key={peer.ticker}>
+                  <button
+                    type="button"
+                    title={`${peer.name} · ${peer.reason}`}
+                    aria-label={`Add ${peer.ticker}, ${peer.name}`}
+                    onClick={() => onChange([...tickers, peer.ticker])}
+                    className={`${CHIP} h-7 gap-1 px-2.5 text-label text-muted hover:bg-surface-2 hover:text-text`}
+                  >
+                    <Plus aria-hidden className="size-3" />
+                    {peer.ticker}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
         )}
-        {commentary.data ? (
-          commentary.data.sufficient && commentary.data.rendered_text ? (
+      </div>
+    </div>
+  );
+}
+
+/** One figure. The strongest in its row is in full ink and the rest are quieter; never green or
+ *  red, because leading a peer group is not a gain. The bar beneath is the figure's rank among
+ *  the companies on screen. */
+function Figure({ row, cell, leads }: { row: ComparisonMetricRow; cell: ComparisonCell; leads: boolean }) {
+  const value = toNumber(cell.result.value);
+  if (value === null) {
+    return (
+      <Tooltip label={reasonText(cell.result.warnings[0])}>
+        <span className="text-subtle">N/A</span>
+      </Tooltip>
+    );
+  }
+  const rank = toNumber(cell.percentile ?? null);
+  return (
+    <span className="inline-block min-w-16">
+      <span className={leads ? "font-semibold text-text" : "text-muted"}>
+        {formatValue(value, metricDisplay(row.metric_name, row.unit))}
+      </span>
+      {rank !== null && (
+        <span aria-hidden className="mt-1 block h-0.5 rounded-full bg-surface-3">
+          <span className="block h-full rounded-full bg-subtle" style={{ width: `${Math.round(rank * 100)}%` }} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+function Comparison({
+  data,
+  metric,
+  onMetric,
+}: {
+  data: ComparisonResponse;
+  metric: string | null;
+  onMetric: (name: string) => void;
+}) {
+  const hasFigure = (row: ComparisonMetricRow) => row.cells.some((cell) => cell.result.value !== null);
+  const rows = data.metrics.filter(hasFigure);
+  const missing = data.metrics.filter((row) => !hasFigure(row));
+  const selected = rows.find((row) => row.metric_name === metric) ?? rows[0];
+
+  const columns: Column<ComparisonMetricRow>[] = [
+    {
+      key: "metric",
+      header: "Metric",
+      render: (row) => (
+        <button
+          type="button"
+          aria-pressed={row === selected}
+          onClick={() => onMetric(row.metric_name)}
+          className={`-mx-2 rounded-control px-2 py-0.5 text-left transition-colors hover:text-text ${
+            row === selected ? "bg-surface-2 text-text" : "text-muted"
+          }`}
+        >
+          {metricLabel(row.metric_name)}
+        </button>
+      ),
+    },
+    ...data.companies.map((company): Column<ComparisonMetricRow> => ({
+      key: company.ticker,
+      header: (
+        <span>
+          <Link to={`/company/${company.ticker}`} className="font-medium text-text hover:underline">
+            {company.ticker}
+          </Link>
+          <span className="block font-normal text-subtle">{company.fiscal_period ?? "No period"}</span>
+        </span>
+      ),
+      numeric: true,
+      render: (row) => {
+        const cell = row.cells.find((c) => c.ticker === company.ticker);
+        return cell ? <Figure row={row} cell={cell} leads={leader(row) === company.ticker} /> : null;
+      },
+    })),
+  ];
+
+  return (
+    <div className="space-y-12">
+      <div>
+        <DataTable
+          label="Comparison of metrics by company"
+          allRows
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.metric_name}
+        />
+        <p className="mt-3 max-w-3xl text-caption text-subtle">
+          Each company’s fiscal year closest to calendar {data.calendar_year ?? "year"}
+          {data.companies.some((c) => c.period_end) &&
+            ` (${data.companies
+              .filter((c) => c.period_end)
+              .map((c) => `${c.ticker} to ${formatDate(c.period_end)}`)
+              .join(", ")})`}
+          . The strongest figure in a row is in bold; the bar beneath a figure is its rank among
+          these companies.
+          {missing.length > 0 &&
+            ` Not available for any of them: ${missing.map((row) => metricLabel(row.metric_name)).join(", ")}.`}
+          {data.notes.length > 0 && ` ${data.notes.join(" ")}`}
+        </p>
+      </div>
+
+      {selected && (
+        <div className="max-w-2xl">
+          <ComparisonBars row={selected} companies={data.companies} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A cited explanation of the differences, written on request (FR-010: marked as AI). The same
+ *  verification as research reports: every sentence is cited or it is withheld. */
+function Commentary({ tickers }: { tickers: string[] }) {
+  const { user } = useAuth();
+  const commentary = useComparisonCommentary();
+  const result = commentary.data;
+  // No AI text without a source (FR-020). The server withholds unsupported claims; this is the
+  // same rule applied once more before the reader, so text that arrives with no citations at
+  // all is treated as no answer rather than shown.
+  const cited = result?.sufficient && result.rendered_text && result.citations.length > 0;
+
+  return (
+    <Section title="The differences, explained" kind="ai">
+      <div className="max-w-[720px] space-y-4 pt-5">
+        {result ? (
+          cited ? (
             <>
-              <p className="whitespace-pre-wrap">{commentary.data.rendered_text}</p>
-              {commentary.data.citations.length > 0 && (
-                <p className="mt-2 text-xs text-muted">
-                  {commentary.data.citations.length} verified citation(s). Every statement is cited;
-                  unsupported claims and any recommendation are withheld.
-                </p>
-              )}
+              <p className="whitespace-pre-wrap text-body leading-relaxed">
+                <CitedText text={result.rendered_text} citations={result.citations} />
+              </p>
+              <ReferenceList
+                entries={result.citations.map((c) => ({ number: c.number, sourceId: c.source_id, tier: c.tier }))}
+              />
             </>
           ) : (
-            <p className="text-muted">
-              Insufficient cited evidence to describe the differences — the deterministic metrics
-              above remain available.
+            // Abstaining is the system working as designed: said plainly, not styled as a fault.
+            <p className="text-sm text-muted">
+              Not enough cited evidence to explain the differences. The figures above are unaffected.
             </p>
           )
         ) : (
-          <p className="text-muted">
-            Generate a cited, verified summary of the differences (same verification as research
-            reports; never a recommendation).
+          <p className="text-sm text-muted">
+            A short, cited account of why these companies’ figures differ, drawn from their filings.
+            It describes; it never recommends.
           </p>
+        )}
+        {commentary.isError && (
+          <p role="alert" className="text-sm text-negative">
+            The explanation could not be written. {commentary.error.message}
+          </p>
+        )}
+        {user ? (
+          <Button loading={commentary.isPending} onClick={() => commentary.mutate({ tickers })}>
+            {result ? "Explain again" : "Explain the differences"}
+          </Button>
+        ) : (
+          <SignInHint>Sign in to have the differences explained.</SignInHint>
         )}
       </div>
     </Section>
   );
 }
 
-function PeersPanel({ ticker, onAdd }: { ticker: string; onAdd: (t: string) => void }) {
-  const peers = usePeers(ticker);
-  const content = useMemo(() => peers.data?.peers ?? [], [peers.data]);
+/** Compare (§37.1): up to six companies, one table, the same calendar year. The selection and
+ *  the charted metric live in the URL, so a comparison can be shared as a link. */
+export default function ComparePage() {
+  const [params, setParams] = useSearchParams();
+  const tickers = params.has("tickers") ? parseTickers(params.get("tickers")) : DEFAULT_TICKERS;
+  const comparison = useComparison(tickers, []);
+  useDocumentTitle(tickers.length > 0 ? `Compare ${tickers.join(", ")}` : "Compare");
+
+  const update = (key: string, value: string) =>
+    setParams(
+      (prev) => {
+        prev.set(key, value);
+        return prev;
+      },
+      { replace: true, preventScrollReset: true },
+    );
+
   return (
-    <Section title={`Suggested peers for ${ticker}`}>
-      <div className="p-4">
-        {content.length === 0 ? (
-          <p className="text-sm text-muted">No peer suggestions.</p>
+    <PanelProvider>
+      <Container className="space-y-10 py-10">
+        <header>
+          <h1 className="text-heading font-semibold">Compare</h1>
+          <p className="mt-1 text-muted">Up to six companies, side by side, for the same calendar year.</p>
+        </header>
+
+        <Picker tickers={tickers} onChange={(next) => update("tickers", next.join(","))} />
+
+        {tickers.length < MIN_COMPANIES ? (
+          <EmptyState message="Add at least two companies to compare them." />
         ) : (
-          <ul className="flex flex-col gap-2 text-sm">
-            {content.map((p) => (
-              <li key={p.ticker} className="flex items-center justify-between gap-2">
-                <span>
-                  <span className="font-medium">{p.ticker}</span> — {p.name}{" "}
-                  <span className="text-xs text-muted">({p.reason})</span>
-                  {p.market_cap?.value != null && (
-                    <Badge tone="data">{formatMetricValue(p.market_cap.value, p.market_cap.unit)}</Badge>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onAdd(p.ticker)}
-                  className="rounded-control border border-border px-2 py-1 text-xs hover:bg-surface-2"
-                >
-                  Add
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            {comparison.isPending ? (
+              // The size of the table and chart to come, so the section below does not jump.
+              <div role="status" aria-label="Loading the comparison" className="space-y-12">
+                <Skeleton shape="block" className="h-[34rem]" />
+                <Skeleton shape="chart" className="h-64 max-w-2xl" />
+              </div>
+            ) : (
+              <AsyncContent query={comparison}>
+                {(data) => (
+                  <Comparison data={data} metric={params.get("metric")} onMetric={(name) => update("metric", name)} />
+                )}
+              </AsyncContent>
+            )}
+            <Commentary key={tickers.join(",")} tickers={tickers} />
+          </>
         )}
-        {(peers.data?.notes ?? []).map((n) => (
-          <p key={n} className="mt-2 text-xs text-muted">
-            {n}
-          </p>
-        ))}
-      </div>
-    </Section>
+      </Container>
+    </PanelProvider>
   );
 }

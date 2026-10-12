@@ -31,7 +31,12 @@ export function Stat({
       ].filter((r): r is [string, string] => Boolean(r[1]))
     : [];
 
-  const figure = <span className="text-title font-medium text-text">{value}</span>;
+  // Keyed by its text: a figure that changes is remounted, which replays the brief dip.
+  const figure = (
+    <span key={value} className="animate-value text-title font-medium text-text">
+      {value}
+    </span>
+  );
 
   return (
     <div className="min-w-24">

@@ -5,17 +5,15 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { AiMark } from "../components/ui/AiMark";
-import { Badge, EvidenceBadge, FreshnessBadge } from "../components/ui/Badge";
+import { Badge, FreshnessBadge } from "../components/ui/Badge";
 import { Button, IconButton } from "../components/ui/Button";
-import { Checkbox } from "../components/ui/Checkbox";
 import { DataTable } from "../components/ui/DataTable";
 import type { Column } from "../components/ui/DataTable";
 import { Delta } from "../components/ui/Delta";
-import { Dialog, Drawer } from "../components/ui/Dialog";
 import { DropdownMenu, MenuItem, MenuLabel, MenuSeparator } from "../components/ui/DropdownMenu";
 import { Input } from "../components/ui/Input";
 import { Popover } from "../components/ui/Popover";
-import { Section, Surface } from "../components/ui/Section";
+import { Section } from "../components/ui/Section";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { Select } from "../components/ui/Select";
 import { Skeleton, Spinner } from "../components/ui/Skeleton";
@@ -90,10 +88,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export default function UiGallery() {
   const [range, setRange] = useState<"1M" | "3M" | "1Y" | "5Y">("1Y");
   const [tab, setTab] = useState<"income" | "margins" | "cash">("income");
-  const [checked, setChecked] = useState(true);
   const [on, setOn] = useState(true);
-  const [dialog, setDialog] = useState(false);
-  const [drawer, setDrawer] = useState(false);
 
   return (
     <div className="space-y-12 py-8">
@@ -174,10 +169,7 @@ export default function UiGallery() {
               <option value="2024">vs 10-K · Feb 21, 2024</option>
             </Select>
           </Row>
-          <Row label="Checkbox, Switch">
-            <Checkbox checked={checked} onCheckedChange={setChecked}>
-              Risk factors only
-            </Checkbox>
+          <Row label="Switch">
             <Switch checked={on} onCheckedChange={setOn}>
               Show growth
             </Switch>
@@ -239,7 +231,6 @@ export default function UiGallery() {
             <Badge tone="warning">New</Badge>
             <Badge tone="negative">Removed</Badge>
             <Badge tone="positive">Fresh</Badge>
-            <EvidenceBadge label="limited_evidence" />
             <FreshnessBadge
               freshness={{ as_of: "2026-10-01T02:00:00Z", source: "price", freshness_status: "stale" }}
             />
@@ -277,11 +268,6 @@ export default function UiGallery() {
 
       <Section title="Containers and layers">
         <div className="divide-y divide-border/60">
-          <Row label="Surface">
-            <Surface className="max-w-sm p-4 text-sm text-muted">
-              The one bordered container, for content that needs separating from the canvas.
-            </Surface>
-          </Row>
           <Row label="Popover, Menu">
             <Popover trigger={<Button>Filter</Button>}>
               <p className="text-muted">Popover content: filters, alert switches.</p>
@@ -294,25 +280,6 @@ export default function UiGallery() {
                 Sign out
               </MenuItem>
             </DropdownMenu>
-          </Row>
-          <Row label="Dialog, Drawer">
-            <Button onClick={() => setDialog(true)}>Open dialog</Button>
-            <Button onClick={() => setDrawer(true)}>Open drawer</Button>
-            <Dialog open={dialog} onOpenChange={setDialog} title="Remove holding" description="This cannot be undone.">
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setDialog(false)}>
-                  Cancel
-                </Button>
-                <Button variant="danger" onClick={() => setDialog(false)}>
-                  Remove
-                </Button>
-              </div>
-            </Dialog>
-            <Drawer open={drawer} onOpenChange={setDrawer} title="Source" description="10-K · Item 1A · filed Feb 25, 2026">
-              <p className="text-sm text-muted">
-                Evidence opens beside the page, so the reader keeps their place.
-              </p>
-            </Drawer>
           </Row>
         </div>
       </Section>

@@ -29,11 +29,22 @@ generated files, fixtures, documentation, and vendored content.
 
 - **Backend:** Python 3.12, FastAPI, Celery, PostgreSQL 16, pgvector, Redis, and deterministic
 	financial metrics.
-- **Frontend:** React, TypeScript, Vite, and a typed API client for the research dashboard.
+- **Frontend:** React, TypeScript, Vite, and a typed API client: a dark-first research interface
+	with a price hero, cited AI research, filing change detection, comparison and portfolio tools,
+	a watchlist with alerts, and an assistant that opens beside any company page.
 - **AI and data:** SEC EDGAR, Tiingo, Finnhub, Anthropic Claude, Voyage AI embeddings, hybrid
 	retrieval, and source-validated citations.
 - **Engineering focus:** contract-first APIs, offline mock providers, reproducible evaluation,
 	observability, security hardening, and an explicit educational-use disclaimer.
+
+## The interface
+
+| Home | Company |
+|------|---------|
+| ![Home, dark theme: a search field under the line "Research you can verify"](docs/images/home-dark.png) | ![NVIDIA's company page, dark theme: the price, a one-year chart and key figures](docs/images/company-dark.png) |
+
+Dark by default, light by choice. Every figure can show the filing and formula behind it; every
+AI claim is a click away from the passage it cites. `docs/ui.md` describes the design system.
 
 ## Core principle
 
@@ -49,6 +60,7 @@ it is shown.
 | `docs/agent-guide.md` | Where contracts live and how to change them |
 | `docs/InvestiLens_Spec_v2.md` | Full product & technical specification (reference) |
 | `docs/conventions.md` | Global rules for every change (money, dates, AI, external calls) |
+| `docs/ui.md` | The design principles, tokens, primitives, and how to add a screen |
 | `docs/decisions/` | Architecture Decision Records (ADRs) |
 | `Instructions/` | Sequential, agent-sized task files. Start at `00_START_HERE.md` |
 | `backend/` | FastAPI app, Celery workers, data pipeline (Python 3.12, uv) |

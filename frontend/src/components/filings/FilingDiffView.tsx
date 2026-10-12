@@ -215,7 +215,7 @@ export function FilingDiffView({
               </p>
             )}
 
-            <div role="group" aria-label="Kinds of change to show" className="mt-5 flex flex-wrap gap-2">
+            <div role="group" aria-label="Kinds of change to show" className="mt-5 flex flex-wrap gap-2 pointer-coarse:gap-y-3">
               {CHANGE_ORDER.map((value) => (
                 <button
                   key={value}

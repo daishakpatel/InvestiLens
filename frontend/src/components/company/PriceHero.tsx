@@ -100,9 +100,13 @@ export function PriceHero({ ticker }: { ticker: string }) {
   if (prices.isPending || (prices.isError && !(online && reachable))) {
     return (
       <div role="status" aria-label="Loading price">
+        {/* Shaped like the loaded hero down to the range row and caption, so nothing beneath
+            it moves when the prices arrive. */}
         <Skeleton className="h-12 w-52" />
         <Skeleton className="mt-3 w-64" />
         <Skeleton shape="chart" className={`mt-6 ${PLOT}`} />
+        <Skeleton className="mt-3 h-7 w-52 pointer-coarse:h-10" />
+        <Skeleton className="mt-3 h-8 w-full max-w-md sm:h-4" />
       </div>
     );
   }
@@ -159,11 +163,15 @@ export function PriceHero({ ticker }: { ticker: string }) {
         <p className="tnum text-display-s font-semibold md:text-display-l" data-testid="hero-price">
           {formatUsd(scrubbing ? at.adj : last.close)}
         </p>
-        <ChangeLine
-          abs={change.abs}
-          pct={change.pct}
-          caption={scrubbing ? `${formatDate(open.date)} to ${formatDate(at.date)}` : phrase}
-        />
+        {/* Keyed by range: switching range replays a brief dip on the change beneath the price.
+            Scrubbing does not, since the figures then change on every frame. */}
+        <div key={range ?? "none"} className="animate-value">
+          <ChangeLine
+            abs={change.abs}
+            pct={change.pct}
+            caption={scrubbing ? `${formatDate(open.date)} to ${formatDate(at.date)}` : phrase}
+          />
+        </div>
       </div>
 
       {shown.length > 1 &&

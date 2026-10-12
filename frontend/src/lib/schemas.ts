@@ -5,6 +5,8 @@
 import { z } from "zod";
 
 import type {
+  Alert,
+  AppNotification,
   ChatResponse,
   CompanyResponse,
   CompanySearchResult,
@@ -29,6 +31,7 @@ import type {
   UserProfile,
   ValuationResponse,
   VerifiedOutput,
+  Watchlist,
 } from "../types";
 
 const freshness = z.object({
@@ -477,7 +480,36 @@ const managementLanguage = z.object({
   hedging: languageSeries,
 });
 
+const channel = z.enum(["email", "in_app"]);
+const watchlist = z.object({
+  id: z.string(),
+  name: z.string(),
+  items: z.array(z.object({ ticker: z.string() })).default([]),
+});
+const alert = z.object({
+  id: z.string(),
+  ticker: z.string(),
+  alert_type: z.enum(["new_10k", "new_10q", "new_8k", "price_move", "news_category", "new_risk_factor"]),
+  channel: channel.default("in_app"),
+  is_active: z.boolean().default(true),
+});
+const notification = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string().nullish(),
+  channel,
+  company_id: z.string().nullish(),
+  read: z.boolean().default(false),
+  created_at: z.string(),
+});
+
 export const parse = {
+  watchlist: (d: unknown): Watchlist => watchlist.parse(d) as Watchlist,
+  watchlists: (d: unknown): Watchlist[] => z.array(watchlist).parse(d) as Watchlist[],
+  alert: (d: unknown): Alert => alert.parse(d) as Alert,
+  alerts: (d: unknown): Alert[] => z.array(alert).parse(d) as Alert[],
+  notifications: (d: unknown): AppNotification[] =>
+    z.array(notification).parse(d) as AppNotification[],
   filingDiff: (d: unknown): FilingDiffResponse => filingDiff.parse(d) as FilingDiffResponse,
   earnings: (d: unknown): EarningsResponse => earnings.parse(d) as EarningsResponse,
   managementLanguage: (d: unknown): ManagementLanguageResponse =>

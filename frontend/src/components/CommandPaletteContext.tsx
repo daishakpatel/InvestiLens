@@ -8,8 +8,16 @@ import { isEditableTarget, isPaletteShortcut } from "../lib/shortcuts";
 const loadPalette = () => import("./CommandPalette");
 const CommandPalette = lazy(loadPalette);
 
+/** Use the palette to choose a company for the page, instead of navigating to it. */
+export interface PickRequest {
+  title: string; // the prompt, for example "Add a company to compare"
+  exclude: readonly string[]; // tickers already chosen
+  onPick: (company: { ticker: string; name: string }) => void;
+}
+
 interface CommandPaletteContextValue {
   open: () => void;
+  pick: (request: PickRequest) => void;
 }
 
 const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
@@ -18,8 +26,15 @@ const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(n
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
+  const [request, setRequest] = useState<PickRequest | null>(null);
 
   const open = useCallback(() => {
+    setRequest(null);
+    setEverOpened(true);
+    setIsOpen(true);
+  }, []);
+  const pick = useCallback((next: PickRequest) => {
+    setRequest(next);
     setEverOpened(true);
     setIsOpen(true);
   }, []);
@@ -28,6 +43,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isPaletteShortcut(event, isEditableTarget(event.target))) return;
       event.preventDefault();
+      setRequest(null); // the shortcut is always the global search
       setEverOpened(true);
       setIsOpen((current) => !current);
     };
@@ -40,13 +56,13 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(id);
   }, []);
 
-  const value = useMemo<CommandPaletteContextValue>(() => ({ open }), [open]);
+  const value = useMemo<CommandPaletteContextValue>(() => ({ open, pick }), [open, pick]);
   return (
     <CommandPaletteContext value={value}>
       {children}
       {everOpened && (
         <Suspense fallback={null}>
-          <CommandPalette open={isOpen} onOpenChange={setIsOpen} />
+          <CommandPalette open={isOpen} onOpenChange={setIsOpen} pick={request} />
         </Suspense>
       )}
     </CommandPaletteContext>

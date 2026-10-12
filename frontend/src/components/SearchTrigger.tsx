@@ -38,7 +38,6 @@ export function SearchTrigger({ variant }: { variant: "bar" | "hero" | "icon" | 
     <button
       type="button"
       onClick={open}
-      aria-label="Search companies"
       aria-keyshortcuts="Meta+K Control+K /"
       className={`flex w-full items-center gap-3 border border-border-strong bg-surface-2 text-left text-subtle transition-colors hover:border-subtle hover:text-muted ${
         hero ? "h-14 rounded-surface px-5 text-body" : "h-9 rounded-control px-3 text-sm"
@@ -46,7 +45,8 @@ export function SearchTrigger({ variant }: { variant: "bar" | "hero" | "icon" | 
     >
       <Search aria-hidden className={hero ? "size-5 shrink-0" : "size-4 shrink-0"} />
       <span className="min-w-0 flex-1 truncate">Search a company or ticker</span>
-      <span className="hidden sm:block">
+      {/* The shortcut is announced through aria-keyshortcuts; the button's name is its text. */}
+      <span aria-hidden className="hidden sm:block">
         <Kbd />
       </span>
     </button>

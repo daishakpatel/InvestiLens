@@ -5,8 +5,7 @@ import { Link } from "react-router-dom";
 
 import { apiRequest } from "../../lib/apiClient";
 import { useAuth } from "../../lib/auth";
-import type { ChatCitation } from "../../types";
-import { CitationChip } from "../citations/CitationChip";
+import { CitedText } from "../citations/CitedText";
 import { ReferenceList } from "../citations/ReferenceList";
 import { AiMark } from "../ui/AiMark";
 import { Badge } from "../ui/Badge";
@@ -22,25 +21,6 @@ function suggestedQuestions(ticker: string): string[] {
     "What are the biggest risks the company describes?",
     "What does management say about demand?",
   ];
-}
-
-/** Render answer text, turning inline [n] markers into citation chips once citations resolve. */
-function AnswerText({ text, citations }: { text: string; citations: ChatCitation[] }) {
-  const byNumber = new Map(citations.map((c) => [c.number, c.source_id]));
-  const parts = text.split(/(\[\d+\])/g);
-  return (
-    <>
-      {parts.map((part, i) => {
-        const match = /^\[(\d+)\]$/.exec(part);
-        if (match) {
-          const n = Number(match[1]);
-          const sourceId = byNumber.get(n);
-          if (sourceId) return <CitationChip key={i} number={n} sourceId={sourceId} />;
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </>
-  );
 }
 
 /** A decision not to answer, shown as what it is: deliberate, and not an error (§14, LGL-006). */
@@ -125,7 +105,7 @@ function Answer({
       ) : (
         message.text && (
           <p className="whitespace-pre-wrap text-body leading-relaxed">
-            <AnswerText text={message.text} citations={message.citations} />
+            <CitedText text={message.text} citations={message.citations} />
             {!message.done && <span aria-hidden className="ml-0.5 inline-block h-4 w-px animate-shimmer bg-text align-middle" />}
           </p>
         )
@@ -211,6 +191,12 @@ function Composer({
   inputRef: RefObject<HTMLTextAreaElement | null>;
 }) {
   const [draft, setDraft] = useState("");
+
+  // The panel sends focus here when it opens, but the first time it opens this component is
+  // still on its way and focus lands on the panel's title instead. Take it from there.
+  useEffect(() => {
+    if (document.activeElement?.closest('[role="dialog"]')?.contains(inputRef.current)) inputRef.current?.focus();
+  }, [inputRef]);
 
   // Grow with the text, up to a few lines, then scroll.
   useLayoutEffect(() => {

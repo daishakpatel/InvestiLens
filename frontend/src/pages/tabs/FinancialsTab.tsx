@@ -65,7 +65,7 @@ function SectionNav() {
                 document.getElementById(item.id)?.scrollIntoView();
                 void navigate({ hash: item.id }, { replace: true });
               }}
-              className={`flex h-7 items-center whitespace-nowrap rounded-full px-3 text-label font-medium transition-colors ${
+              className={`flex h-7 items-center whitespace-nowrap rounded-full px-3 text-label font-medium transition-colors pointer-coarse:h-10 ${
                 active === item.id ? "bg-surface-2 text-text" : "text-muted hover:text-text"
               }`}
             >

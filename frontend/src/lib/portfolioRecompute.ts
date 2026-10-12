@@ -5,7 +5,7 @@
 // display convenience, never stored.
 import type { HoldingData, PortfolioAnalysis, RiskStats } from "../types";
 
-export interface RecomputedWeightedMetric {
+interface RecomputedWeightedMetric {
   metricName: string;
   value: number | null;
   coverage: number;
@@ -88,7 +88,7 @@ export function recompute(
   };
 }
 
-export function portfolioVolatility(
+function portfolioVolatility(
   holdings: HoldingData[],
   weights: Record<string, number>,
   correlation: RiskStats["correlation"],
@@ -122,4 +122,16 @@ export function recomputeFrom(
   rawWeights: Record<string, number>,
 ): Recomputed {
   return recompute(analysis.holdings_data ?? [], rawWeights, analysis.risk_stats?.correlation ?? []);
+}
+
+/** Rescale entered weights so they add up to exactly 100, to one decimal place. Rounding leaves
+ *  a small remainder; it goes to the largest holding, where it matters least. */
+export function toPercentages(weights: readonly number[]): number[] {
+  const positive = weights.map((w) => (w > 0 ? w : 0));
+  const total = positive.reduce((a, b) => a + b, 0);
+  if (total <= 0) return positive;
+  const scaled = positive.map((w) => Math.round((w / total) * 1000) / 10);
+  const remainder = Math.round((100 - scaled.reduce((a, b) => a + b, 0)) * 10) / 10;
+  const largest = scaled.indexOf(Math.max(...scaled));
+  return scaled.map((w, i) => (i === largest ? Math.round((w + remainder) * 10) / 10 : w));
 }

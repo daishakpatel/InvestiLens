@@ -149,7 +149,7 @@ cd e2e && npm install && npm run install-browsers && npm test
 Or run `e2e.yml` via "Run workflow". A full run needs a completed report + chat, which require an
 LLM key (ADR-0006/ADR-0009) or the Fake-LLM seed.
 
-The suite has four specs, plus the capture script:
+The suite has five behavioural specs, a visual regression spec, and the capture script:
 
 | Spec | What it covers | Needs |
 |------|----------------|-------|
@@ -157,12 +157,38 @@ The suite has four specs, plus the capture script:
 | `tests/shell.spec.ts` | The app shell (UI plan Step 2): command palette shortcuts and §9.2 disambiguation, the five company tabs and old-URL redirects, the pinned sub-header, the outage banner and its recovery, no horizontal scroll at 360 px, theme switch, sign-in validation and return-to-page. | Seed companies only. Creates a few throwaway `e2e-…@example.com` users per run. |
 | `tests/company.spec.ts` | The company page (UI plan Step 3): the price hero (range changes without refetching; scrubbing by mouse, touch, and arrow keys with no layout shift), key figures, the no-price and not-applicable cases, chart table views and CSV downloads, theme-following charts, Financials controls, statement lineage tooltips, and 360 px fit. | Seed companies, plus one company with no price history (AMD in the dev database). |
 | `tests/reading.spec.ts` | The reading surfaces (UI plan Step 4): the citation panel (opens beside the text, swaps, returns focus, closes when the reader moves on), the research document (one AI mark, contents, every claim cited, risks filter, old Risks/Management links), the filing comparison (summary sentence, inline word diff, both filings' passages, the 404 and 422 cases), the news feed (day groups, clustered stories, filters), unsafe URLs in API data never becoming links, the assistant panel (docks at 1440 px, survives tab changes, cites, declines, one panel only, keyboard), phone layouts at 360 px, and an axe scan of all of it in both themes. | The dev database's NVDA filings (ids in the spec). The research report is mocked from `e2e/fixtures/research-nvda.json`, whose source ids are real and resolve against the API; dev databases only hold FakeLLM placeholder reports. Creates one throwaway user. |
-| `tests/screenshots.spec.ts` | Not assertions: writes full-page captures of every key screen, dark and light, at 1440 px and 390 px, to `e2e/screenshots/` for visual review. Run with `npm run screenshots`. | Seed companies and the dev server (`/_ui` exists only there). NVDA's research report is the same fixture. |
+| `tests/tools.spec.ts` | The tools and personal features (UI plan Step 5): Compare (the strongest figure per row, N/A with its reason, a shareable and defensively parsed URL, adding a company through the search palette, the chart with its table and CSV, the sign-in-gated AI explanation that is never shown uncited), Portfolio (weights recompute with no network request, the Normalize action, missing-data sentences, cited risk themes), the watchlist, alerts and notification bell, the happy path by keyboard alone, reduced motion, 40 px touch targets on every main screen, 360 px fit, and an axe scan of Home, Overview, Financials, Compare, Portfolio and their popovers in both themes. | Seed companies NVDA, AMD, INTC, AAPL and JPM. Creates throwaway users. The notification itself is stood in for with a mocked response, since alerts are dispatched by a batch job. |
+| `tests/visual.spec.ts` | Visual regression: nine key screens, dark and light, at 1440 px and 390 px, compared with committed baselines (`toHaveScreenshot`, 1% tolerance). Run with `npm run visual`; it is tagged `@visual` and left out of `npm test`. | Only the frontend. API responses are replayed from `fixtures/visual.har` and the clock is fixed, so it does not depend on the database or the date. Baselines are per operating system; the committed ones are macOS. Re-record responses with `npm run visual:record` (dev stack running); accept an intended change with `npm run visual -- --update-snapshots`. |
+| `tests/screenshots.spec.ts` | Not assertions: writes full-page captures of every key screen, dark and light, at 1440 px and 390 px, to `e2e/screenshots/` for visual review. Run with `npm run screenshots`. | Seed companies and the dev server (`/_ui` exists only there). NVDA's research report is the same fixture. The last few captures are taken signed in, with a throwaway account. |
 
 Run one spec with `npx playwright test tests/shell.spec.ts`.
 
 The suites run in parallel (Playwright's default workers). They used to need one worker because
 overlapping requests could stall the API; ADR-0029 fixed that, and a stall here is now a bug.
+
+### Lighthouse (UI-004)
+
+Measured 2026-10-11 with Lighthouse 12.8 on the production build (`npm run build && npm run
+preview`), API on localhost in mock mode. Target: 90 or above for Performance and Accessibility.
+
+| Page | Preset | Performance | Accessibility | LCP | CLS |
+|------|--------|-------------|---------------|-----|-----|
+| Home | desktop | 100 | 100 | 0.7 s | 0 |
+| Home | mobile (slow 4G, 4× CPU) | 94 | 100 | 2.8 s | 0 |
+| `/company/NVDA` | desktop | 98 | 100 | 1.1 s | 0.001 |
+| `/company/NVDA` | mobile (slow 4G, 4× CPU) | **76 to 79** | 100 | 5.2 s | 0.001 |
+
+The mobile company page misses the performance target. Its layout shift was fixed (0.76 before
+loading states were shaped like their content; 0.001 now), which took the score from 55. What is
+left is the largest paint, the price hero, which waits on three stages: the entry bundle, the
+company and Overview chunks with the chart library (100 kB gzip), and the price history. That
+last response is 179 kB because the API does not compress responses; behind a proxy or with
+compression enabled it would be about a tenth of that. Compressing API responses is the next
+step and is a backend change. Requesting the route's chunks early was tried and reverted: it
+delayed first paint by 0.5 s and left the largest paint unchanged.
+
+Reproduce: `CHROME_PATH=<a Chrome binary> npx lighthouse http://localhost:4173/company/NVDA
+--only-categories=performance,accessibility` (add `--preset=desktop` for the desktop rows).
 
 ## Tier 3 — Load (`load/locustfile.py`)
 
