@@ -172,6 +172,9 @@ class GeminiEmbeddingClient(EmbeddingClient):
             allowed_hosts=ALLOWED_HOSTS,
             rate_per_sec=settings.embedding_rate_limit_per_sec,
             timeout=_TIMEOUT_S,
+            # A refusal here is nearly always the quota, which a quick retry cannot clear; one
+            # retry keeps a question's fallback to keyword search fast.
+            max_retries=1,
             default_headers={
                 "x-goog-api-key": settings.gemini_api_key,
                 "Content-Type": "application/json",

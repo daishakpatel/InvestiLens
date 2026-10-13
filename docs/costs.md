@@ -48,7 +48,7 @@ workers)**. A sensible middle — always-on API + one combined worker + beat + p
 | SEC EDGAR | Filings + XBRL (keyless, public) | $0 |
 | Tiingo (prices) | **Not called in demo** (mock; ADR-0007) | $0 |
 | Finnhub (news) | **Not called in demo** (mock; ADR-0008) | $0 |
-| Embeddings: Gemini `gemini-embedding-2` (ADR-0033) or Voyage (ADR-0010) | One-time embed of the ingested filings, then one request per question | $0 on Gemini's free tier (100 texts a minute, so about 80 minutes for the dev DB's 7,722 chunks); paid Gemini is $0.20 per 1M tokens, Voyage < $1 one-off |
+| Embeddings: Gemini `gemini-embedding-2` (ADR-0033) or Voyage (ADR-0010) | One-time embed of the ingested filings, then one request per question | $0 on Gemini's free tier, capped at 100 texts a minute and 1,000 a day (eight days for the dev DB's 7,722 chunks); paid Gemini is $0.20 per 1M tokens, about $0.35 once for that corpus; Voyage < $1 one-off |
 | Gemini (LLM, ADR-0032) | Free tier when `LLM_PROVIDER=gemini`; otherwise pre-generated FakeLLM reports | $0 on the free tier. Free tier is capped at 20 requests/day on `gemini-3.8-flash` (about one report). Paid tier, measured 2026-10-12 on one NVDA run: about $0.05 per report (47k input / 5k output tokens over 12 calls), under $0.01 per chat answer |
 
 If the demo were switched to **live** data + real LLM (requires a Tiingo license permitting public

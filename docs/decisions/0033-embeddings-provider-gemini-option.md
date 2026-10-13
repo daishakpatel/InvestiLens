@@ -24,7 +24,10 @@ That script commits per batch so a quota error costs one batch.
 
 ## Consequences
 
-Semantic retrieval works at $0 and Recall@5 becomes measurable. `gemini-embedding-2` is a general
+Semantic retrieval works at $0, but the free tier is small: 100 texts a minute and 1,000 a day
+(measured 2026-10-12), with each question's query embedding counted against the same allowance.
+The dev database's 7,722 chunks would take eight days; on the paid tier they cost about $0.35
+once. Recall@5 becomes measurable once the corpus is embedded. `gemini-embedding-2` is a general
 model, not finance-tuned like `voyage-finance-2`; the golden-set eval (ADR-0020) decides whether
 the difference matters. Vectors from the two providers are not interchangeable: changing provider
 means re-embedding every chunk (the in-place path, since the dimension is unchanged; ADR-0013).

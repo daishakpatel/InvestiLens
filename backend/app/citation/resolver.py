@@ -14,6 +14,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.finance.display import describe_metric
 from app.models import Document, DocumentChunk, FinancialFact, FinancialMetric, News
 from app.schemas.citations import SourceDetail
 from app.schemas.sources import (
@@ -57,7 +58,7 @@ def _xbrl(row: FinancialFact) -> SourceDetail:
 
 def _metric(row: FinancialMetric) -> SourceDetail:
     """A canonical metric → derived_metric (with lineage, CIT-003) or xbrl_fact for a base value."""
-    text = f"{row.metric_name} {row.period} = {row.metric_value} {row.unit}".strip()
+    text = describe_metric(row.metric_name, row.period, row.metric_value, row.unit)
     sid = row.source_id or f"metric:{row.metric_name}:{row.period}"
     if row.is_derived:
         flags = row.quality_flags or {}

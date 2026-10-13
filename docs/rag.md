@@ -23,9 +23,11 @@ Vector search only matches chunks embedded by the active model, since distances 
 mean nothing. If the embedding provider fails or is over quota at query time, retrieval logs
 `rag.vector_search.failed` and continues on keyword search alone.
 
-Gemini's free tier embeds 100 texts a minute (measured 2026-10-12). `scripts/embed_chunks.py`
-commits each batch, so it can be stopped and restarted; run it there with
-`EMBEDDING_BATCH_SIZE=100 EMBEDDING_RATE_LIMIT_PER_SEC=0.016`.
+Gemini's free tier embeds 100 texts a minute and 1,000 a day (measured 2026-10-12); questions
+asked in the app draw on the same allowance. `scripts/embed_chunks.py`
+commits each batch, waits and retries when a batch is refused, and can be stopped and restarted;
+run it there with `EMBEDDING_BATCH_SIZE=80 EMBEDDING_RATE_LIMIT_PER_SEC=0.016`, which leaves room for
+questions asked in the app meanwhile.
 
 ## Generation pipeline (EMB-002)
 

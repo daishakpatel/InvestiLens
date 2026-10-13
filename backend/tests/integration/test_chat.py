@@ -145,7 +145,8 @@ def test_metric_question_structured(session: Session, seed: tuple[int, Company])
         llm=FakeLLM(),
     )
     assert not turn.abstained and not turn.refused
-    assert "130497000000" in turn.answer  # exact value from financial_metrics
+    # The stored 130,497,000,000 from financial_metrics, said the way a person would (FR-027).
+    assert "Revenue for FY2025 was $130.5 billion" in turn.answer
     assert turn.citations and turn.citations[0].source_id == "xbrl:TST:revenue:FY2025"
     assert any(t.tool == "get_financial_metric" for t in turn.tool_trace)
 
@@ -269,7 +270,7 @@ def test_followup_uses_context(session: Session, seed: tuple[int, Company]) -> N
         session_id=first.session_id,
         llm=FakeLLM(),
     )
-    assert "60922000000" in second.answer  # resolved "revenue" from the prior turn, FY2024
+    assert "$60.92 billion" in second.answer  # resolved "revenue" from the prior turn, FY2024
 
 
 # --- DoD: out-of-scope advice refused with a redirect ---
