@@ -129,5 +129,5 @@ provider interfaces in `providers/` (`FilingsProvider`, `PriceProvider`, `NewsPr
 | Prices | Tiingo | [ADR-0007](decisions/0007-price-provider-tiingo.md) |
 | News | Finnhub | [ADR-0008](decisions/0008-news-provider-finnhub.md) |
 | LLM | Google Gemini | [ADR-0032](decisions/0032-llm-provider-gemini.md) |
-| Embeddings | Voyage AI `voyage-finance-2` | [ADR-0010](decisions/0010-embeddings-voyage-finance.md) |
+| Embeddings | Voyage AI `voyage-finance-2`, or Gemini `gemini-embedding-2` | [ADR-0010](decisions/0010-embeddings-voyage-finance.md), [ADR-0033](decisions/0033-embeddings-provider-gemini-option.md) |
 | Transcripts | None in MVP | [ADR-0011](decisions/0011-transcripts-deferred.md) |

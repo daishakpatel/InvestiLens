@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     llm_provider: Literal["mock", "gemini"] | None = Field(default=None)
     llm_rate_limit_per_sec: float = Field(default=0.25)  # free-tier pacing; raise on a paid key
     llm_thinking_level: str = Field(default="low")  # Gemini thinkingLevel; "default" sends none
+    # Same idea for embeddings (ADR-0033): overrides PROVIDER_MODE for the embedder alone.
+    embedding_provider: Literal["mock", "voyage", "gemini"] | None = Field(default=None)
+    gemini_embedding_model: str = Field(default="gemini-embedding-2")
 
     # --- Citation & verification (Phase 3a, §13/§14, ADR-0015) ---
     # Rounding tolerance for the deterministic numeric-match layer (CIT-005 L2): a cited number

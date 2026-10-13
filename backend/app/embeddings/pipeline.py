@@ -59,14 +59,19 @@ def embed_pending(
     *,
     client: EmbeddingClient | None = None,
     batch_size: int | None = None,
+    max_batches: int | None = None,
 ) -> EmbedCounts:
-    """Embed every chunk missing a vector for the active model; log cost per batch (EMB-002)."""
+    """Embed every chunk missing a vector for the active model; log cost per batch (EMB-002).
+
+    `max_batches` stops early so a caller can commit between batches: a provider quota error
+    part-way through then costs one batch, not the whole run.
+    """
     client = client or get_embedding_client()
     batch_size = batch_size or get_settings().embedding_batch_size
     model, dim = client.model_name, client.dimension
     counts = EmbedCounts()
 
-    while True:
+    while max_batches is None or counts.batches < max_batches:
         batch = embed_repo.fetch_pending_batch(session, model=model, limit=batch_size)
         if not batch:
             break

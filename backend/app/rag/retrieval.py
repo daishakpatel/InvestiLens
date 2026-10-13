@@ -8,6 +8,7 @@ selection, expand parent-child context, and judge sufficiency. Structured-metric
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -22,6 +23,9 @@ from app.rag.rerank import get_reranker
 from app.rag.search import keyword_search, vector_search
 from app.rag.types import Evidence, RewrittenQuery
 from app.repositories import chunks as chunk_repo
+from app.utils.logging import get_logger, log_event
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -145,12 +149,12 @@ def retrieve_evidence(
     queries = [rewritten.expanded, *rewritten.sub_queries]
     ranked_lists: list[list[int]] = []
     for q in queries:
-        ranked_lists.append(
-            [
-                h.chunk_id
-                for h in vector_search(session, query=q, company_id=company_id, limit=top_n)
-            ]
-        )
+        try:
+            semantic = vector_search(session, query=q, company_id=company_id, limit=top_n)
+        except Exception as exc:  # embedding provider down or over quota: keyword search carries on
+            log_event(logger, logging.WARNING, "rag.vector_search.failed", error=str(exc))
+            semantic = []
+        ranked_lists.append([h.chunk_id for h in semantic])
         ranked_lists.append(
             [
                 h.chunk_id

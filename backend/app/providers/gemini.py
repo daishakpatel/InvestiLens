@@ -1,4 +1,4 @@
-"""Live Google Gemini LLM client (ADR-0032).
+"""Live Google Gemini clients: the LLM (ADR-0032) and embeddings (ADR-0033).
 
 One `generateContent` POST per call through the shared hardened client (timeout, retry with
 backoff, circuit breaker, host allowlist). The API key is sent in the `x-goog-api-key` header,
@@ -24,14 +24,19 @@ from collections.abc import Sequence
 from typing import Any
 
 from app.config import get_settings
-from app.providers.base import LLMClient, LLMMessage
+from app.providers.base import EmbeddingClient, LLMClient, LLMMessage
+from app.providers.voyage import _normalize
 from app.utils.http import HardenedHttpClient
 from app.utils.logging import get_logger, log_event
 
 logger = get_logger(__name__)
 
 ALLOWED_HOSTS = frozenset({"generativelanguage.googleapis.com"})
-_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+_ENDPOINT = _BASE + "/{model}:generateContent"
+_EMBED_ENDPOINT = _BASE + "/{model}:batchEmbedContents"
+_EMBED_MAX_TEXTS = 100  # batchEmbedContents takes at most 100 texts per request
+_TASK_TYPE = {"document": "RETRIEVAL_DOCUMENT", "query": "RETRIEVAL_QUERY"}
 _TIMEOUT_S = 60.0  # a 1,500-token report section plus thinking outlasts the shared 20 s default
 # shortcut: fixed thinking allowance on top of the caller's cap, raise it if calls end MAX_TOKENS
 THINKING_ALLOWANCE_TOKENS = 2048
@@ -148,3 +153,68 @@ class GeminiLLMClient(LLMClient):
                 usage_out=usage.get("candidatesTokenCount"),
                 usage_thinking=usage.get("thoughtsTokenCount"),
             )
+
+
+class GeminiEmbeddingClient(EmbeddingClient):
+    """`gemini-embedding-2` at the project's vector size (`outputDimensionality`), so vectors fit
+    the existing `vector(1024)` column. Document and query texts are embedded with different task
+    types, as retrieval needs. Token usage is the provider's own count, for the cost log."""
+
+    def __init__(self, client: HardenedHttpClient | None = None) -> None:
+        settings = get_settings()
+        if client is None and not settings.gemini_api_key:
+            raise RuntimeError("GEMINI_API_KEY is required for Gemini embeddings (ADR-0033)")
+        self._model = settings.gemini_embedding_model
+        self._dim = settings.embedding_dimension
+        self._last_total_tokens = 0
+        self._http = client or HardenedHttpClient(
+            user_agent=settings.sec_user_agent,
+            allowed_hosts=ALLOWED_HOSTS,
+            rate_per_sec=settings.embedding_rate_limit_per_sec,
+            timeout=_TIMEOUT_S,
+            default_headers={
+                "x-goog-api-key": settings.gemini_api_key,
+                "Content-Type": "application/json",
+            },
+        )
+
+    @property
+    def model_name(self) -> str:
+        return self._model
+
+    @property
+    def dimension(self) -> int:
+        return self._dim
+
+    @property
+    def last_total_tokens(self) -> int:
+        """Provider-reported token usage from the most recent `embed` call (EMB-002 cost log)."""
+        return self._last_total_tokens
+
+    async def embed(
+        self, texts: Sequence[str], *, input_type: str = "document"
+    ) -> Sequence[Sequence[float]]:
+        self._last_total_tokens = 0
+        task = _TASK_TYPE.get(input_type, "RETRIEVAL_DOCUMENT")
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), _EMBED_MAX_TEXTS):
+            part = texts[start : start + _EMBED_MAX_TEXTS]
+            payload = {
+                "requests": [
+                    {
+                        "model": f"models/{self._model}",
+                        "content": {"parts": [{"text": text}]},
+                        "taskType": task,
+                        "outputDimensionality": self._dim,
+                    }
+                    for text in part
+                ]
+            }
+            url = _EMBED_ENDPOINT.format(model=self._model)
+            data: dict[str, Any] = json.loads(self._http.post_bytes(url, json=payload))
+            rows = data.get("embeddings", [])
+            if len(rows) != len(part):
+                raise RuntimeError(f"Gemini returned {len(rows)} vectors for {len(part)} inputs")
+            self._last_total_tokens += int(data.get("usageMetadata", {}).get("promptTokenCount", 0))
+            vectors.extend(_normalize([float(x) for x in row["values"]]) for row in rows)
+        return vectors

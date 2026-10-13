@@ -54,8 +54,17 @@ def get_llm_client() -> LLMClient:
 
 
 def get_embedding_client() -> EmbeddingClient:
-    if get_settings().provider_mode == "mock":
+    settings = get_settings()
+    # EMBEDDING_PROVIDER picks the embedder on its own, like LLM_PROVIDER (ADR-0033).
+    provider = settings.embedding_provider or (
+        "mock" if settings.provider_mode == "mock" else "voyage"
+    )
+    if provider == "mock":
         return MockEmbeddingClient()
+    if provider == "gemini":
+        from app.providers.gemini import GeminiEmbeddingClient
+
+        return GeminiEmbeddingClient()
     from app.providers.voyage import VoyageEmbeddingClient
 
     return VoyageEmbeddingClient()

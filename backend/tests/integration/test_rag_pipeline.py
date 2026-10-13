@@ -185,6 +185,22 @@ def test_risk_query_returns_relevant_topk(session: Session, corpus: Company) -> 
     assert len(result.evidence) <= 10  # top-K bound
 
 
+def test_embedding_outage_falls_back_to_keyword_search(
+    session: Session, corpus: Company, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # RAG-010, NFR-006: the embedding provider being down or over quota must not take the answer
+    # down with it; keyword search alone still returns evidence.
+    def _down(*_a: object, **_k: object) -> list:  # type: ignore[type-arg]
+        raise RuntimeError("embedding provider unavailable")
+
+    monkeypatch.setattr(retrieval_mod, "vector_search", _down)
+    result = run_retrieval(
+        session, question="What supply chain risks does the company face?", ticker="TST"
+    )
+    assert result.evidence, "keyword search should still supply evidence"
+    assert "supply chain" in result.evidence[0].text.lower()
+
+
 # --- DoD 3: time-aware retrieval returns >=1 chunk per year over a 3-year range (RAG-014) ---
 
 

@@ -8,16 +8,24 @@ spec §16.4, §22.4 (EMB-001…004), ADR-0010 (model), ADR-0013 (migration + tun
 
 | Property | Value |
 |----------|-------|
-| Provider / model | Voyage AI `voyage-finance-2` |
+| Provider / model | Voyage AI `voyage-finance-2` (ADR-0010), or Gemini `gemini-embedding-2` with `EMBEDDING_PROVIDER=gemini` (ADR-0033) |
 | Dimension | 1024 (fixed) — `vector(1024)` column |
 | `input_type` | `document` at index time, `query` at search time |
 | Vectors | L2-normalized (cosine == the index metric) |
-| Batch size | 128 inputs/request (Voyage cap) |
+| Batch size | 128 inputs/request (Voyage cap); the Gemini client splits into requests of 100 |
 
 Each chunk stores `embedding`, `embedding_model`, and `embedding_dim` (EMB-001) so a corpus can
 hold mixed-model rows and re-embedding stays safe. `PROVIDER_MODE=mock` uses deterministic,
 offline hash vectors of the same dimension; `live` uses Voyage (`VOYAGE_API_KEY` required, raises
-if missing).
+if missing). `EMBEDDING_PROVIDER` overrides the mode for embeddings alone.
+
+Vector search only matches chunks embedded by the active model, since distances across models
+mean nothing. If the embedding provider fails or is over quota at query time, retrieval logs
+`rag.vector_search.failed` and continues on keyword search alone.
+
+Gemini's free tier embeds 100 texts a minute (measured 2026-10-12). `scripts/embed_chunks.py`
+commits each batch, so it can be stopped and restarted; run it there with
+`EMBEDDING_BATCH_SIZE=100 EMBEDDING_RATE_LIMIT_PER_SEC=0.016`.
 
 ## Generation pipeline (EMB-002)
 

@@ -35,8 +35,7 @@ class SearchHit:
     section: str | None
 
 
-def _query_vector(query: str, client: EmbeddingClient | None) -> list[float]:
-    client = client or get_embedding_client()
+def _query_vector(query: str, client: EmbeddingClient) -> list[float]:
     vectors = asyncio.run(client.embed([query], input_type="query"))  # RAG-010: query input type
     return [float(x) for x in vectors[0]]
 
@@ -51,9 +50,14 @@ def vector_search(
     ef_search: int | None = None,
 ) -> list[SearchHit]:
     """Semantic (cosine) search over the HNSW index, company-scoped (RAG-013)."""
-    vector = _query_vector(query, client)
+    client = client or get_embedding_client()
     return vector_search_by_vector(
-        session, vector=vector, company_id=company_id, limit=limit, ef_search=ef_search
+        session,
+        vector=_query_vector(query, client),
+        company_id=company_id,
+        limit=limit,
+        ef_search=ef_search,
+        model=client.model_name,
     )
 
 
@@ -64,8 +68,13 @@ def vector_search_by_vector(
     company_id: int,
     limit: int = 40,
     ef_search: int | None = None,
+    model: str | None = None,
 ) -> list[SearchHit]:
-    """Cosine search for a pre-computed query vector (lets tests pin exact vectors offline)."""
+    """Cosine search for a pre-computed query vector (lets tests pin exact vectors offline).
+
+    `model` limits the search to chunks embedded by that model: distances between two models'
+    vectors mean nothing, so a provider switch must find no neighbours until chunks are re-embedded.
+    """
     ef = int(ef_search or get_settings().hnsw_ef_search)  # int() guards the inlined literal
     # ef_search tunes HNSW recall at query time (EMB-004); LOCAL = scoped to this transaction.
     # SET takes no bind params, so the value is inlined — safe because it is a validated int.
@@ -75,7 +84,11 @@ def vector_search_by_vector(
         select(
             DocumentChunk.id, distance.label("distance"), DocumentChunk.text, DocumentChunk.section
         )
-        .where(DocumentChunk.company_id == company_id, DocumentChunk.embedding.is_not(None))
+        .where(
+            DocumentChunk.company_id == company_id,
+            DocumentChunk.embedding.is_not(None),
+            *([DocumentChunk.embedding_model == model] if model is not None else []),
+        )
         .order_by(distance)
         .limit(limit)
     ).all()

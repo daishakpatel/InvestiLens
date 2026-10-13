@@ -15,6 +15,11 @@ updates:
     groups:
       frontend-dependencies:
         patterns: ["*"]
+    # Major versions arrive one at a time by hand: a grouped PR merged TypeScript 7 before
+    # openapi-typescript and typescript-eslint supported it, which broke `npm ci`.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -22,7 +22,7 @@ from app.embeddings.pipeline import embed_pending
 from app.embeddings.reembed import migrate_model
 from app.models import Company, Document, DocumentChunk, LlmCall
 from app.providers.mocks.embeddings import MOCK_MODEL, MockEmbeddingClient
-from app.rag.search import keyword_search, vector_search_by_vector
+from app.rag.search import keyword_search, vector_search, vector_search_by_vector
 
 _CHUNK_TEXTS = [
     "Gross margin expanded in fiscal 2025 due to a richer mix of data-center products.",
@@ -128,6 +128,18 @@ def test_vector_search_orders_by_cosine(session: Session, seeded: Company) -> No
     assert scores == sorted(scores, reverse=True)  # descending similarity
 
 
+def test_vector_search_ignores_vectors_from_another_model(
+    session: Session, seeded: Company
+) -> None:
+    # EMB-003: after a provider switch the stored vectors and the query vector come from different
+    # models, and comparing them would rank chunks at random. They must not match at all.
+    embed_pending(session, client=MockEmbeddingClient())
+    other = MockEmbeddingClient(model="some-other-model")
+    assert vector_search(session, query="gross margin", company_id=seeded.id, client=other) == []
+    same = MockEmbeddingClient()
+    assert vector_search(session, query="gross margin", company_id=seeded.id, client=same)
+
+
 def test_keyword_search_matches_despite_different_phrasing(
     session: Session, seeded: Company
 ) -> None:
@@ -141,6 +153,17 @@ def test_keyword_search_matches_despite_different_phrasing(
     assert "Gross margin" in hits[0].text
     # ...and a term that appears in no chunk returns nothing (ANDed query), proving it is real FTS.
     assert keyword_search(session, query="cryptocurrency", company_id=seeded.id) == []
+
+
+def test_embedding_can_stop_after_a_batch_and_resume(session: Session, seeded: Company) -> None:
+    # EMB-002: a caller that commits between batches loses one batch, not the run, when a
+    # provider quota is hit part-way; the next call picks up the chunks still pending.
+    client = MockEmbeddingClient()
+    first = embed_pending(session, client=client, batch_size=2, max_batches=1)
+    assert (first.embedded, first.batches) == (2, 1)
+    rest = embed_pending(session, client=client, batch_size=2)
+    assert first.embedded + rest.embedded == len(_CHUNK_TEXTS)
+    assert embed_pending(session, client=client).embedded == 0  # nothing left
 
 
 def test_keyword_search_answers_a_full_sentence_question(session: Session, seeded: Company) -> None:

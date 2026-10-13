@@ -111,8 +111,8 @@ jobs:
       # drop the `|| true` to gate once a clean baseline is established.
       - name: Scan backend image (Trivy)
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.56.2/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin v0.56.2
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.75.0/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.75.0
           trivy image --severity HIGH,CRITICAL --exit-code 0 investilens-api:ci || true
 
   # The §18.4 eval smoke gate runs as the `test_eval_runner` integration test inside the `backend`
