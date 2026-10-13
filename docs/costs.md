@@ -49,7 +49,7 @@ workers)**. A sensible middle — always-on API + one combined worker + beat + p
 | Tiingo (prices) | **Not called in demo** (mock; ADR-0007) | $0 |
 | Finnhub (news) | **Not called in demo** (mock; ADR-0008) | $0 |
 | Voyage (embeddings) | One-time embed of 3 companies' filings, then idle | < $1 (one-off), ~$0 ongoing |
-| Anthropic (LLM) | Pre-gen reports via FakeLLM ($0); live only if a key is added + budget raised | ~$0 demo; ~$0.01–0.05 per generated report at `claude-sonnet` rates if enabled |
+| Gemini (LLM, ADR-0032) | Free tier when `LLM_PROVIDER=gemini`; otherwise pre-generated FakeLLM reports | $0 on the free tier. Free tier is capped at 20 requests/day on `gemini-3.8-flash` (about one report). Paid tier, measured 2026-10-12 on one NVDA run: about $0.05 per report (47k input / 5k output tokens over 12 calls), under $0.01 per chat answer |
 
 If the demo were switched to **live** data + real LLM (requires a Tiingo license permitting public
 display, and lifting the AI budget cap): budget on the order of **$5–20/mo** for light real

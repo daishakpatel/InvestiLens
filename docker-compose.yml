@@ -20,7 +20,8 @@ x-backend-env: &backend-env
   OBJECT_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-investilens-dev-secret}
   # Dev default matches app/config.py; a real deploy MUST override via env (SEC-001).
   JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-change-me-32-bytes-minimum-secret}
-  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  LLM_PROVIDER: ${LLM_PROVIDER:-}
   VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
   TIINGO_API_KEY: ${TIINGO_API_KEY:-}
   FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}

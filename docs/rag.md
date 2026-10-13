@@ -72,6 +72,10 @@ for exact-term recall that pure semantic search can miss.
 each over **one** index, company-scoped (RAG-013). Combining them (RRF fusion, reranking) is the
 Phase 2c pipeline below.
 
+Keyword search first requires every word of the query (`websearch_to_tsquery`). A full-sentence
+question rarely passes that, so when the strict match is empty it widens to any of the words,
+ranked by coverage. Without this, retrieval returns nothing whenever chunks have no embeddings.
+
 ---
 
 # Retrieval pipeline (Phase 2c)

@@ -143,6 +143,18 @@ def test_keyword_search_matches_despite_different_phrasing(
     assert keyword_search(session, query="cryptocurrency", company_id=seeded.id) == []
 
 
+def test_keyword_search_answers_a_full_sentence_question(session: Session, seeded: Company) -> None:
+    # RAG-010: a question as a person types it carries words no single chunk contains ("what",
+    # "main", "describes"). Requiring every word would return nothing, so when the strict match
+    # is empty the search falls back to "any of the words", best coverage first.
+    question = "What are the main supply chain risks the company describes?"
+    hits = keyword_search(session, query=question, company_id=seeded.id, limit=5)
+    assert hits, "a full-sentence question should still reach the supply-chain chunk"
+    assert "supply chain" in hits[0].text
+    # The fallback is still real full-text search: no shared word, no hit.
+    assert keyword_search(session, query="which cryptocurrency", company_id=seeded.id) == []
+
+
 def test_reembed_swap_migrates_without_data_loss(session: Session, seeded: Company) -> None:
     # EMB-003: old-model embeddings serve reads while the new model backfills, then atomic swap.
     embed_pending(session, client=MockEmbeddingClient())  # mock-embed-v1

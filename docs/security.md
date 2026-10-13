@@ -11,7 +11,7 @@ not assumed from the spec.
 |---|---|---|
 | User credentials | `users.password_hash` (Argon2id) | Account takeover |
 | Session material | `refresh_tokens.token_hash`, access JWTs (bearer, in-memory on the frontend) | Account takeover, replay |
-| Provider API keys (SEC, Tiingo, Finnhub, Voyage, Anthropic) | env only (`app/config.py`), never in code/logs/URLs | Cost abuse, provider ToS violation, key leakage to an attacker who could then pivot to the provider's own account scope |
+| Provider API keys (SEC, Tiingo, Finnhub, Voyage, Gemini) | env only (`app/config.py`), never in code/logs/URLs | Cost abuse, provider ToS violation, key leakage to an attacker who could then pivot to the provider's own account scope |
 | User-generated content | `chat_messages`, `watchlists`, `alerts`, `research_reports.user_id` association | Privacy; SEC-007 object-level access |
 | Financial data correctness | `financial_facts`, `financial_metrics`, `research_reports` | The product's entire value proposition — a wrong number or a fabricated AI claim is the worst possible failure, not just a bug |
 | Infra credentials | `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` | Full data-plane compromise if leaked |
@@ -24,7 +24,7 @@ not assumed from the spec.
 | Registered user | Anonymous capability + chat, research generation, watchlists, alerts, own account deletion | Authenticated, but still capped (per-user AI budget, ADR-0022; rate limits, §25.4) — **not** trusted with another user's data or with unbounded spend |
 | Admin (`users.role == "admin"`) | Ingestion-run/eval-run visibility, triggers a company refresh job | Elevated, DB-row-revocable (not a JWT claim — `require_admin` re-reads the row every request, so revoking admin takes effect immediately, not at next token refresh) |
 | External data publisher (SEC filer, news outlet) | Controls the *content* of filings/news InvestiLens ingests and feeds to an LLM | **Explicitly untrusted** — see §4 |
-| External provider (SEC EDGAR, Tiingo, Finnhub, Voyage, Anthropic) | Receives outbound requests; EDGAR/Tiingo/Finnhub/Voyage responses are parsed and stored | Semi-trusted infrastructure, but still schema-validated on the way in (DR-003) and allowlisted on the way out (SEC-015) |
+| External provider (SEC EDGAR, Tiingo, Finnhub, Voyage, Gemini) | Receives outbound requests; EDGAR/Tiingo/Finnhub/Voyage responses are parsed and stored | Semi-trusted infrastructure, but still schema-validated on the way in (DR-003) and allowlisted on the way out (SEC-015) |
 
 ## 3. Trust boundaries
 
@@ -33,7 +33,7 @@ Browser  ──HTTPS──▶  FastAPI (app/main.py)  ──SQL──▶  Postgr
    ▲                      │        │
    │                 CORS/JWT   outbound (HardenedHttpClient, SEC-015)
    │                      │        ▼
-   └──────SSE/JSON────────┘   SEC EDGAR / Tiingo / Finnhub / Voyage / Anthropic
+   └──────SSE/JSON────────┘   SEC EDGAR / Tiingo / Finnhub / Voyage / Gemini
                                       │
                          untrusted filing/news TEXT
                                       ▼
@@ -79,7 +79,7 @@ cite, never instructions to follow** (spec §16.9, RAG-040). Concretely:
 | SEC-011 | Managed Postgres connections use `sslmode=require` in any shared/production `DATABASE_URL` (not enforced locally — local Postgres has no TLS listener). Object storage is filesystem for the MVP (ADR-0012); S3 encryption-at-rest is a Phase 5d deployment configuration, not a code change, once the backend swaps. | deployment config (not yet deployed, §31.3) |
 | SEC-012 | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy`, `Referrer-Policy` on every response; HSTS gated behind `hsts_enabled` (only meaningful once TLS actually terminates — sending it over plain HTTP is a no-op/footgun). CSP is exempted on `/docs`/`/redoc` only — a strict `default-src 'none'` silently breaks FastAPI's CDN-loaded interactive docs in a real browser; every actual API response keeps it. Added this phase. | `app/api/security_headers.py`, `tests/unit/test_security_headers.py` |
 | SEC-013 | This document. | — |
-| SEC-014 | Account deletion (`DELETE /auth/me`) soft-deletes immediately and revokes all refresh-token families; `hard_delete_user` (verified this phase to cascade to `chat_sessions`/`watchlists`/`alerts`/`refresh_tokens`/`auth_tokens`, and to null `research_reports.user_id`/`jobs.created_by` rather than deleting public reports) is the retention-job path (Celery wiring is Phase 5d). `chat_message_retention_days` config + `scripts/purge_chat_history.py` (added this phase) give question-log retention a real limit. LLM provider data-usage settings (e.g. Anthropic's "don't train on my data") are an account-level dashboard setting, not code — flagged as a manual pre-launch checklist item since no live key exists yet (ADR-0009). | `app/auth/service.py`, `scripts/purge_chat_history.py`, `tests/integration/test_auth.py` |
+| SEC-014 | Account deletion (`DELETE /auth/me`) soft-deletes immediately and revokes all refresh-token families; `hard_delete_user` (verified this phase to cascade to `chat_sessions`/`watchlists`/`alerts`/`refresh_tokens`/`auth_tokens`, and to null `research_reports.user_id`/`jobs.created_by` rather than deleting public reports) is the retention-job path (Celery wiring is Phase 5d). `chat_message_retention_days` config + `scripts/purge_chat_history.py` (added this phase) give question-log retention a real limit. LLM provider data usage follows the Gemini tier (ADR-0032): on the free tier Google may use the content sent (filing excerpts, user questions) to improve its products; on the paid tier it does not. Moving to the paid tier, or disclosing this to users, is a manual pre-launch checklist item. | `app/auth/service.py`, `scripts/purge_chat_history.py`, `tests/integration/test_auth.py` |
 | SEC-015 | Every outbound call goes through `HardenedHttpClient`, which checks the target host against a per-provider allowlist (`www.sec.gov`/`data.sec.gov`/`sec.gov`, `api.tiingo.com`, `finnhub.io`, `api.voyageai.com`) and sets `follow_redirects=False` — a redirect to an attacker-controlled host is never followed. Audited this phase: grepped for any `httpx`/`requests` usage outside this client — none found. | `app/utils/http.py`, `app/providers/*/live.py` |
 
 ## 5. What's explicitly not done (and why)

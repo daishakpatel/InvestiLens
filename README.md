@@ -32,7 +32,7 @@ generated files, fixtures, documentation, and vendored content.
 - **Frontend:** React, TypeScript, Vite, and a typed API client: a dark-first research interface
 	with a price hero, cited AI research, filing change detection, comparison and portfolio tools,
 	a watchlist with alerts, and an assistant that opens beside any company page.
-- **AI and data:** SEC EDGAR, Tiingo, Finnhub, Anthropic Claude, Voyage AI embeddings, hybrid
+- **AI and data:** SEC EDGAR, Tiingo, Finnhub, Google Gemini, Voyage AI embeddings, hybrid
 	retrieval, and source-validated citations.
 - **Engineering focus:** contract-first APIs, offline mock providers, reproducible evaluation,
 	observability, security hardening, and an explicit educational-use disclaimer.
@@ -77,7 +77,7 @@ it is shown.
 ## Stack
 
 Python 3.12 · FastAPI · PostgreSQL 16 + pgvector · Redis · Celery · React + TypeScript ·
-Anthropic Claude · Voyage AI embeddings · SEC EDGAR · Tiingo · Finnhub. Rationale for each is in
+Google Gemini · Voyage AI embeddings · SEC EDGAR · Tiingo · Finnhub. Rationale for each is in
 `docs/decisions/`.
 
 ## Local setup

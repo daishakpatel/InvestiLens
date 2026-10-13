@@ -44,9 +44,13 @@ def get_news_provider() -> NewsProvider:
 
 
 def get_llm_client() -> LLMClient:
-    if get_settings().provider_mode == "mock":
+    settings = get_settings()
+    # LLM_PROVIDER picks the model on its own, so a real LLM can run over fixture data (ADR-0032).
+    if (settings.llm_provider or settings.provider_mode) == "mock":
         return MockLLMClient()
-    raise _live_unavailable("LLMClient")
+    from app.providers.gemini import GeminiLLMClient
+
+    return GeminiLLMClient()
 
 
 def get_embedding_client() -> EmbeddingClient:

@@ -1,6 +1,6 @@
 # ADR-0009: LLM provider — Anthropic Claude (two tiers)
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0032
 - **Date:** 2026-09-28
 - **Spec refs:** §7, §16, §17, NFR-004, NFR-008, NFR-010, Appendix D
 

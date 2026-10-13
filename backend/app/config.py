@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -9,11 +10,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ProviderMode = Literal["mock", "live"]
 
+# The repo-root `.env` (the one `.env.example` documents) is read wherever the process starts;
+# a `.env` in the working directory still overrides it.
+_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
+
 
 class Settings(BaseSettings):
     """Typed runtime configuration. Values come from environment variables / `.env`."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(_ROOT_ENV, ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        env_ignore_empty=True,  # a blank `KEY=` line keeps the default instead of blanking it
+    )
 
     # postgresql+psycopg://user:pass@host:port/db  (ADR-0002)
     database_url: str = Field(
@@ -72,8 +82,15 @@ class Settings(BaseSettings):
     rag_max_tool_calls: int = Field(default=6)  # tool-call budget per question (RAG-031)
     rag_tool_timeout_s: float = Field(default=10.0)  # per-tool wall-clock timeout (RAG-031)
     # Model routing (RAG-050): cheap for classify/rewrite, strong reserved for Phase 3 synthesis.
-    llm_model_cheap: str = Field(default="claude-haiku-4-5-20251001")
-    llm_model_strong: str = Field(default="claude-sonnet-5-5")
+    llm_model_cheap: str = Field(default="gemini-3.5-flash-lite")
+    llm_model_strong: str = Field(default="gemini-3.8-flash")
+
+    # --- LLM: Google Gemini (ADR-0032) ---
+    gemini_api_key: str = Field(default="")  # required only when the Gemini client is selected
+    # Overrides PROVIDER_MODE for the LLM alone, so a real model can run over fixture data.
+    llm_provider: Literal["mock", "gemini"] | None = Field(default=None)
+    llm_rate_limit_per_sec: float = Field(default=0.25)  # free-tier pacing; raise on a paid key
+    llm_thinking_level: str = Field(default="low")  # Gemini thinkingLevel; "default" sends none
 
     # --- Citation & verification (Phase 3a, §13/§14, ADR-0015) ---
     # Rounding tolerance for the deterministic numeric-match layer (CIT-005 L2): a cited number
@@ -157,12 +174,13 @@ class Settings(BaseSettings):
 
     # --- LLM cost estimation (Phase 5c, OBS-002/005) ---
     # Blended $/1M tokens, same spirit as embedding_cost_per_1m_tokens above: an estimate for the
-    # `llm_calls.cost_usd` column only, never financial output. Confirm against the provider's
-    # price list once a real ANTHROPIC_API_KEY is used (ADR-0009 live path is still deferred).
-    llm_cost_per_1m_input_tokens_cheap: Decimal = Field(default=Decimal("1.00"))
-    llm_cost_per_1m_output_tokens_cheap: Decimal = Field(default=Decimal("5.00"))
-    llm_cost_per_1m_input_tokens_strong: Decimal = Field(default=Decimal("3.00"))
-    llm_cost_per_1m_output_tokens_strong: Decimal = Field(default=Decimal("15.00"))
+    # `llm_calls.cost_usd` column only, never financial output. Gemini paid-tier list prices
+    # (ADR-0032; the strong tier doubles on 2027-01-01). Free-tier calls cost nothing but are
+    # still counted at list price, so per-user budgets keep limiting usage.
+    llm_cost_per_1m_input_tokens_cheap: Decimal = Field(default=Decimal("0.30"))
+    llm_cost_per_1m_output_tokens_cheap: Decimal = Field(default=Decimal("2.50"))
+    llm_cost_per_1m_input_tokens_strong: Decimal = Field(default=Decimal("0.75"))
+    llm_cost_per_1m_output_tokens_strong: Decimal = Field(default=Decimal("3.75"))
 
     # --- Privacy & retention (Phase 5c, §29, SEC-014) ---
     chat_message_retention_days: int = Field(default=365)

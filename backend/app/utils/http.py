@@ -154,6 +154,7 @@ class HardenedHttpClient:
                         url=url,
                         method=method,
                         attempt=attempt + 1,
+                        status=getattr(getattr(exc, "response", None), "status_code", None),
                         backoff=round(backoff, 3),
                     )
                     sleep(backoff)

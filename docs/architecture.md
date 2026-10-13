@@ -86,7 +86,7 @@ Copied from spec §19.2. This separation is the central idea of the project and 
    context. Filing and news text is wrapped as untrusted data, never instructions.
 7. **LLM synthesis.** The strong-tier model returns schema-validated structured output. Each
    claim references source IDs from the evidence set only
-   ([ADR-0009](decisions/0009-llm-provider-anthropic.md)).
+   ([ADR-0032](decisions/0032-llm-provider-gemini.md)).
 8. **Citation validation.** The backend checks that every cited ID exists in the evidence set,
    that numbers in prose match computed metrics, and that the claim is supported by the source
    span. Failing claims are removed, not shown.
@@ -128,6 +128,6 @@ provider interfaces in `providers/` (`FilingsProvider`, `PriceProvider`, `NewsPr
 | Filings, XBRL, ticker↔CIK | SEC EDGAR (`data.sec.gov`, `sec.gov/Archives`) | Fixed (free, authoritative) |
 | Prices | Tiingo | [ADR-0007](decisions/0007-price-provider-tiingo.md) |
 | News | Finnhub | [ADR-0008](decisions/0008-news-provider-finnhub.md) |
-| LLM | Anthropic Claude | [ADR-0009](decisions/0009-llm-provider-anthropic.md) |
+| LLM | Google Gemini | [ADR-0032](decisions/0032-llm-provider-gemini.md) |
 | Embeddings | Voyage AI `voyage-finance-2` | [ADR-0010](decisions/0010-embeddings-voyage-finance.md) |
 | Transcripts | None in MVP | [ADR-0011](decisions/0011-transcripts-deferred.md) |

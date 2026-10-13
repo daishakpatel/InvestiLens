@@ -6,7 +6,8 @@ query rewriting, and orchestration are Phase 2c and deliberately not here.
 
 - Semantic search sets `hnsw.ef_search` per query (EMB-004): higher = better recall, slower.
 - Keyword search uses `websearch_to_tsquery('english', …)` so stemming/synonyms let exact
-  financial terms ("gross margin", "restricted cash") match differently-phrased queries.
+  financial terms ("gross margin", "restricted cash") match differently-phrased queries. When no
+  chunk holds every word, it widens to any of the words.
 """
 
 from __future__ import annotations
@@ -14,8 +15,10 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import Float, func, select, text
+from sqlalchemy import Float, Text, cast, func, select, text
+from sqlalchemy.dialects.postgresql import TSQUERY
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -82,13 +85,25 @@ def vector_search_by_vector(
 def keyword_search(
     session: Session, *, query: str, company_id: int, limit: int = 40
 ) -> list[SearchHit]:
-    """Full-text keyword search over the GIN-indexed `tsv` column, company-scoped (RAG-010)."""
-    tsquery = func.websearch_to_tsquery("english", query)
-    rank = func.ts_rank_cd(DocumentChunk.tsv, tsquery, type_=Float)
-    rows = session.execute(
-        select(DocumentChunk.id, rank.label("rank"), DocumentChunk.text, DocumentChunk.section)
-        .where(DocumentChunk.company_id == company_id, DocumentChunk.tsv.op("@@")(tsquery))
-        .order_by(rank.desc())
-        .limit(limit)
-    ).all()
+    """Full-text keyword search over the GIN-indexed `tsv` column, company-scoped (RAG-010).
+
+    Every word must match first. A full-sentence question rarely passes that, so when it finds
+    nothing the search widens to any of the words, best coverage first.
+    """
+    strict = func.websearch_to_tsquery("english", query)
+    # plainto_tsquery joins the stemmed words with `&`; swapping in `|` turns it into "any word".
+    any_word = cast(
+        func.replace(cast(func.plainto_tsquery("english", query), Text), "&", "|"), TSQUERY
+    )
+    rows: Sequence[Any] = []
+    for tsquery in (strict, any_word):
+        rank = func.ts_rank_cd(DocumentChunk.tsv, tsquery, type_=Float)
+        rows = session.execute(
+            select(DocumentChunk.id, rank.label("rank"), DocumentChunk.text, DocumentChunk.section)
+            .where(DocumentChunk.company_id == company_id, DocumentChunk.tsv.op("@@")(tsquery))
+            .order_by(rank.desc())
+            .limit(limit)
+        ).all()
+        if rows:
+            break
     return [SearchHit(cid, float(r), txt, section) for cid, r, txt, section in rows]
