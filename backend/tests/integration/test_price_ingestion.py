@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -14,8 +15,10 @@ from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
 
 from app.ingestion.prices import ingest_prices
+from app.ingestion.prices.pipeline import stale_price_tickers
 from app.ingestion.sec import ingest_company
 from app.models import Company, CorporateAction, DataFreshness, PriceHistory
+from app.providers.prices.base import PriceBar, PriceSource
 from app.providers.prices.mock import MockPriceSource
 from app.providers.sec.mock import MockSecSource
 from app.utils.storage import FilesystemObjectStorage
@@ -91,6 +94,61 @@ def test_nvidia_2024_split_recorded(session: Session, nvda: Company) -> None:
     assert pre.close > post.close * 5  # raw dropped sharply
     assert pre.adj_close is not None and post.adj_close is not None
     assert abs(pre.adj_close - post.adj_close) < pre.adj_close  # adjusted continuous
+
+
+class _RealSource(PriceSource):
+    """Stands in for a live provider: a couple of bars under a different provider name."""
+
+    provider = "tiingo"
+
+    def __init__(self, bars: list[PriceBar]) -> None:
+        self._bars = bars
+
+    def get_prices(
+        self, ticker: str, *, start: date | None = None, end: date | None = None
+    ) -> Sequence[PriceBar]:
+        return self._bars
+
+
+def _bar(day: date, close: str) -> PriceBar:
+    price = Decimal(close)
+    return PriceBar(day, price, price, price, price, price, 1000)
+
+
+def test_switching_provider_replaces_the_sample_data(session: Session, nvda: Company) -> None:
+    # DR-025, DR-004: sample prices and real prices must never sit in one company's history. The
+    # sample set has a bar on every weekday, market holidays included, so an upsert alone would
+    # leave made-up bars and dividends in between the real ones.
+    ingest_prices(session, nvda, source=MockPriceSource())
+    assert _count(session, CorporateAction, nvda.id) > 0
+
+    real = [_bar(date(2026, 10, 9), "188.10"), _bar(date(2026, 10, 12), "190.25")]
+    counts = ingest_prices(session, nvda, source=_RealSource(real))
+
+    rows = session.scalars(select(PriceHistory).where(PriceHistory.company_id == nvda.id)).all()
+    assert counts.bars == 2
+    assert {(r.date, r.provider) for r in rows} == {
+        (date(2026, 10, 9), "tiingo"),
+        (date(2026, 10, 12), "tiingo"),
+    }
+    assert _count(session, CorporateAction, nvda.id) == 0  # the sample split and dividends went too
+
+
+def test_an_empty_fetch_keeps_what_is_already_stored(session: Session, nvda: Company) -> None:
+    # ING-004: a provider that returns nothing (unknown ticker, outage) must not wipe good data.
+    before = ingest_prices(session, nvda, source=MockPriceSource()).bars
+    ingest_prices(session, nvda, source=_RealSource([]))
+    assert _count(session, PriceHistory, nvda.id) == before
+
+
+def test_start_up_catch_up_picks_only_companies_gone_stale(session: Session, nvda: Company) -> None:
+    # §28.3, NFR-006: on a machine that was off when the schedule ran, prices are caught up at
+    # start. A company refreshed in the last 12 hours is left alone, so a restart costs nothing.
+    now = datetime.now(UTC)
+    assert "NVDA" in stale_price_tickers(session, now=now)  # never ingested
+    ingest_prices(session, nvda, source=MockPriceSource())
+    assert "NVDA" not in stale_price_tickers(session, now=now + timedelta(hours=1))
+    assert "NVDA" in stale_price_tickers(session, now=now + timedelta(hours=13))
 
 
 def test_reingest_is_idempotent(session: Session, nvda: Company) -> None:

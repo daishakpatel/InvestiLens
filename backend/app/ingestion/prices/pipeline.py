@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -20,14 +20,16 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.models import Company
 from app.providers.prices import PriceBar, PriceSource, get_price_source
+from app.repositories import companies as company_repo
 from app.repositories import prices as price_repo
-from app.repositories.freshness import record_freshness
+from app.repositories.freshness import get_freshness, record_freshness
 from app.repositories.ingestion import dead_letter, finish_run, start_run
 from app.utils.dates import years_ago
 from app.utils.logging import get_logger, log_event
 
 logger = get_logger(__name__)
 PRICE_SOURCE = "price"
+STALE_AFTER = timedelta(hours=12)  # end-of-day data: older than this may have missed a close
 
 
 @dataclass
@@ -35,10 +37,6 @@ class PriceCounts:
     bars: int = 0
     splits: int = 0
     dividends: int = 0
-
-
-def _provider_label() -> str:
-    return "tiingo" if get_settings().provider_mode == "live" else "mock"
 
 
 def _corporate_actions(
@@ -81,7 +79,7 @@ def ingest_prices(
     settings = get_settings()
     source = source or get_price_source()
     today = today or datetime.now(UTC).date()
-    provider = _provider_label()
+    provider = source.provider
     counts = PriceCounts()
     run = start_run(session, source=PRICE_SOURCE, company_id=company.id)
     attempt_at = datetime.now(UTC)
@@ -105,6 +103,8 @@ def ingest_prices(
             )
             for b in bars
         ]
+        if rows:  # an empty fetch must not wipe what is stored (ING-004)
+            price_repo.drop_other_providers(session, company.id, keep=provider)
         counts.bars = price_repo.upsert_price_bars(session, company.id, rows)
         actions = _corporate_actions(company.id, bars, provider)
         price_repo.replace_corporate_actions(session, company.id, actions, provider=provider)
@@ -164,3 +164,21 @@ def ingest_prices_for_tickers(
             results[ticker] = ingest_prices(session, company, source=source)
             session.commit()
     return results
+
+
+def stale_price_tickers(session: Session, *, now: datetime) -> list[str]:
+    """Active companies whose prices were not refreshed successfully within `STALE_AFTER`."""
+    stale: list[str] = []
+    for company in company_repo.list_active(session):
+        row = get_freshness(session, company_id=company.id, source=PRICE_SOURCE)
+        refreshed = row.last_success_at if row else None
+        if refreshed is None or now - refreshed > STALE_AFTER:
+            stale.append(company.ticker)
+    return stale
+
+
+def refresh_stale_prices(session_factory: Callable[[], Session]) -> dict[str, PriceCounts]:
+    """Catch prices up for stale companies: the app-start stand-in for the schedule (ADR-0035)."""
+    with session_factory() as session:
+        tickers = stale_price_tickers(session, now=datetime.now(UTC))
+    return ingest_prices_for_tickers(session_factory, tickers)

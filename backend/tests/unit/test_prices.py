@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 import httpx
+import pytest
 
 import app.finance.metrics as m
 from app.finance.shares import total_shares_outstanding
@@ -115,3 +116,28 @@ def test_multi_class_shares_sum() -> None:
     assert total_shares_outstanding([_D("5"), _D("1"), _D("6")]) == _D("12")
     assert total_shares_outstanding([None, _D("3")]) == _D("3")
     assert total_shares_outstanding([None, None]) is None
+
+
+def test_price_provider_switch_is_independent_of_provider_mode(  # DR-004, SEC-001
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.config import get_settings
+    from app.providers.prices import get_price_source
+    from app.providers.prices.live import TiingoPriceSource
+    from app.providers.prices.mock import MockPriceSource
+
+    assert isinstance(get_price_source(), MockPriceSource)  # the suite's default stays offline
+    monkeypatch.setenv("PRICE_PROVIDER", "tiingo")
+    monkeypatch.setenv("TIINGO_API_KEY", "")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="TIINGO_API_KEY"):
+            get_price_source()
+        monkeypatch.setenv("TIINGO_API_KEY", "test-key")
+        get_settings.cache_clear()
+        source = get_price_source()  # PROVIDER_MODE is still mock
+        assert isinstance(source, TiingoPriceSource) and source.provider == "tiingo"
+        assert MockPriceSource().provider == "mock"  # the label stored on every bar
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()

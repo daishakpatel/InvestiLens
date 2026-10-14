@@ -128,6 +128,7 @@ def _persist_annual_metric(
     session: Session,
     *,
     company_id: int,
+    ticker: str,
     facts: list[FactView],
     cmap: ConceptMap,
     metric: str,
@@ -156,7 +157,9 @@ def _persist_annual_metric(
             metric_value=fact.value,
             unit=fact.unit,
             source_tag=selection.source_tag,
-            source_id=fact.accession_number,
+            # One ID per metric and period: the filing's accession number alone is shared by
+            # every metric that filing reports, so it cannot say which one is cited (ADR-0034).
+            source_id=f"xbrl:{ticker}:{metric}:FY{fiscal_year}",
             as_reported_accession=fact.accession_number,
             is_latest=is_latest,
         )
@@ -194,6 +197,7 @@ def _derive_quarter_four(
     session: Session,
     *,
     company_id: int,
+    ticker: str,
     facts: list[FactView],
     cmap: ConceptMap,
     fye: date,
@@ -213,6 +217,20 @@ def _derive_quarter_four(
             continue
         q1, q2, q3 = cast(tuple[Selection, Selection, Selection], tuple(q))
         result = derive_q4(fy, q1, q2, q3)
+        # Same shape as ratio lineage (CIT-003). The annual input has a metric of its own to cite;
+        # the three quarters are not stored as metrics, so they are named by their filing.
+        fy_accession, *quarter_accessions = result.input_accessions
+        lineage = [
+            {
+                "name": f"FY{fiscal_year}",
+                "source_id": f"xbrl:{ticker}:{metric}:FY{fiscal_year}",
+                "accession": fy_accession,
+            },
+            *(
+                {"name": f"Q{n}", "accession": accession}
+                for n, accession in enumerate(quarter_accessions, start=1)
+            ),
+        ]
         metrics_repo.upsert_metric(
             session,
             company_id=company_id,
@@ -227,10 +245,10 @@ def _derive_quarter_four(
             unit=fy.unit,
             is_derived=True,
             source_tag=fy.source_tag,
-            source_id=f"q4_derived:{metric}",
+            source_id=f"derived:{ticker}:{metric}:Q4-FY{fiscal_year}",
             as_reported_accession=None,
             is_latest=True,
-            quality_flags={"derived": "Q4=FY-(Q1+Q2+Q3)", "inputs": result.input_accessions},
+            quality_flags={"derived": "Q4=FY-(Q1+Q2+Q3)", "inputs": lineage},
         )
         derived += 1
     return derived
@@ -256,6 +274,7 @@ def build_company_metrics(session: Session, company: Company) -> BuildCounts:
             rows, issues = _persist_annual_metric(
                 session,
                 company_id=company.id,
+                ticker=company.ticker,
                 facts=facts,
                 cmap=cmap,
                 metric=metric,
@@ -267,6 +286,7 @@ def build_company_metrics(session: Session, company: Company) -> BuildCounts:
         counts.derived_q4 += _derive_quarter_four(
             session,
             company_id=company.id,
+            ticker=company.ticker,
             facts=facts,
             cmap=cmap,
             fye=fye,

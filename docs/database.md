@@ -63,9 +63,13 @@ exact facts it came from without mutating source data.
 A derived metric's `source_id` is **company-scoped** — `derived:<TICKER>:<formula_id>:FY<year>`
 (Phase 6a, ADR-0026). It was previously `derived:<formula_id>:FY<year>`, which collided across
 companies and made `GET /sources` ambiguous once comparison put two companies' metrics in one
-evidence set. No schema change; the resolver matches whatever `source_id` is stored. The analogous
-Q4-derived base IDs (`q4_derived:<metric>`) remain company-unscoped (unused by comparison;
-backlogged).
+evidence set. No schema change; the resolver matches whatever `source_id` is stored.
+
+Base metrics and derived fourth quarters follow the same rule (ADR-0034): a base annual metric is
+`xbrl:<TICKER>:<metric>:FY<year>` and a derived Q4 is `derived:<TICKER>:<metric>:Q4-FY<year>`. A base
+metric used to carry its filing's accession number, which every metric from that filing shared;
+the filing now lives only in `as_reported_accession`. Run `scripts/build_metrics.py` to apply the
+scheme to an existing database.
 
 ### Company profile enrichment (Phase 6a)
 

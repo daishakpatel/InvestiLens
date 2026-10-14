@@ -9,3 +9,4 @@ Settings.model_config["env_file"] = None
 os.environ["PROVIDER_MODE"] = "mock"
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["EMBEDDING_PROVIDER"] = "mock"
+os.environ["PRICE_PROVIDER"] = "mock"

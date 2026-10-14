@@ -7,8 +7,11 @@ arrives in later phases.
 
 from __future__ import annotations
 
+import logging
+import threading
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,11 +34,31 @@ from app.api.errors import register_error_handlers
 from app.api.middleware import RateLimitMiddleware
 from app.api.security_headers import security_headers_middleware
 from app.config import get_settings
+from app.db import _session_factory
+from app.ingestion.prices.pipeline import refresh_stale_prices
 from app.observability import metrics as metrics_module
-from app.utils.logging import bind_request_id
+from app.utils.logging import bind_request_id, get_logger, log_event
 
 API_V1_PREFIX = "/api/v1"
 REQUEST_ID_HEADER = "X-Request-ID"
+logger = get_logger(__name__)
+
+
+def _catch_up_prices() -> None:
+    try:
+        refreshed = refresh_stale_prices(_session_factory())
+        log_event(logger, logging.INFO, "price.catch_up", tickers=sorted(refreshed))
+    except Exception as exc:  # a failed catch-up must never take the API down with it
+        log_event(logger, logging.ERROR, "price.catch_up.failed", error=str(exc))
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+    if get_settings().refresh_prices_on_startup:
+        # A laptop is off when the price-eod schedule fires, so catch up once at start, in the
+        # background so the API is ready immediately (ADR-0035).
+        threading.Thread(target=_catch_up_prices, name="price-catch-up", daemon=True).start()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -44,6 +67,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         description="Contract-first API for InvestiLens (spec §24).",
         openapi_url=f"{API_V1_PREFIX}/openapi.json",
+        lifespan=_lifespan,
     )
 
     # Middleware order matters: the LAST `add_middleware`/`@app.middleware` call is outermost

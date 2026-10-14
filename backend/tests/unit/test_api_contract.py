@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from fastapi.routing import APIRoute, iter_route_contexts
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from app.config import get_settings
 from app.db import get_db
 from app.main import API_V1_PREFIX, REQUEST_ID_HEADER, app
 from app.schemas.chat import MAX_QUESTION_LENGTH, ChatRequest
@@ -135,3 +137,30 @@ def test_chat_question_length_is_bounded() -> None:
     for bad in ["", "   ", "x" * (MAX_QUESTION_LENGTH + 1)]:
         with pytest.raises(ValidationError):
             ChatRequest(company="NVDA", question=bad)
+
+
+def test_start_up_price_catch_up_runs_only_when_switched_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """§28.3: the catch-up is a local stand-in for the schedule, so it is off unless asked for
+    and never blocks start-up (it runs on its own thread)."""
+    import app.main as main_module
+
+    calls: list[str] = []
+    monkeypatch.setattr(main_module, "_catch_up_prices", lambda: calls.append("ran"))
+    with TestClient(app):
+        pass
+    assert calls == []  # default: off
+
+    monkeypatch.setenv("REFRESH_PRICES_ON_STARTUP", "true")
+    get_settings.cache_clear()
+    try:
+        with TestClient(app):
+            pass
+        for thread in threading.enumerate():
+            if thread.name == "price-catch-up":
+                thread.join(timeout=5)
+        assert calls == ["ran"]
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()

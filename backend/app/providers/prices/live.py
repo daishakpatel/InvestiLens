@@ -26,6 +26,8 @@ def _dec(value: object) -> Decimal | None:
 
 
 class TiingoPriceSource(PriceSource):
+    provider = "tiingo"
+
     def __init__(self, client: HardenedHttpClient | None = None) -> None:
         settings = get_settings()
         if client is None and not settings.tiingo_api_key:

@@ -58,8 +58,9 @@ deep link; derived metrics also return lineage inputs, CIT-003). Id scheme:
 | prefix / shape | type |
 |----------------|------|
 | `news:<id>` | news_item |
-| `xbrl:<fact_id>` | xbrl_fact |
-| `derived:…` (or a `financial_metrics.source_id` match) | derived_metric |
+| `xbrl:<TICKER>:<metric>:FY<year>` | xbrl_fact: a base metric from `financial_metrics`, one ID per metric and period (ADR-0034) |
+| `derived:<TICKER>:<name>:<period>` | derived_metric: a ratio or a derived Q4 value, with lineage |
+| `xbrl:<fact_id>` (integer) | xbrl_fact: a raw `financial_facts` row |
 | chunk `paragraph_id` | text_chunk / table_chunk, or earnings_release/transcript if the parent document is one |
 
 ## Deferred

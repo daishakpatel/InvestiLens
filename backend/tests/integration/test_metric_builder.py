@@ -18,11 +18,14 @@ from alembic.config import Config
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
 
+from app.citation.resolver import resolve_source
 from app.finance.builder import build_company_metrics
+from app.finance.ratio_builder import build_company_ratios
 from app.ingestion.sec import ingest_company
 from app.models import Company, DataQualityIssue, FinancialMetric, FiscalCalendar
 from app.providers.sec.mock import MockSecSource
 from app.repositories import quality as quality_repo
+from app.schemas.sources import DerivedMetricSource, XbrlFactSource
 from app.utils.storage import FilesystemObjectStorage
 
 _GOLDEN = {
@@ -71,6 +74,59 @@ def test_builder_persists_golden_revenue(session: Session, nvda: Company) -> Non
     assert latest is not None
     assert latest.metric_value == Decimal(_GOLDEN["NVDA"]["metrics"]["revenue"]["value"])
     assert latest.source_tag == "us-gaap:Revenues"
+
+
+def test_every_latest_metric_has_its_own_source_id(session: Session, nvda: Company) -> None:
+    # CIT-001, CIT-002: a source ID names exactly one metric. Base metrics used to share their
+    # filing's accession number, so a net income question, and the citation behind it, resolved to
+    # whichever metric of that filing came first (revenue).
+    build_company_metrics(session, nvda)
+    build_company_ratios(session, nvda)
+    latest = session.scalars(
+        select(FinancialMetric).where(
+            FinancialMetric.company_id == nvda.id, FinancialMetric.is_latest.is_(True)
+        )
+    ).all()
+    ids = [m.source_id for m in latest]
+    assert len(ids) == len(set(ids)), "two metrics share a source ID"
+    assert all(i and ":NVDA:" in i for i in ids), "IDs must be company-scoped"
+
+    for name in ("net_income", "operating_income", "revenue"):
+        row = max(
+            (m for m in latest if m.metric_name == name and m.period_type == "FY"),
+            key=lambda m: m.fiscal_year or 0,
+        )
+        detail = resolve_source(session, row.source_id or "")
+        assert detail is not None
+        source = detail.source
+        assert isinstance(source, XbrlFactSource)
+        assert (source.concept_tag, source.value) == (name, row.metric_value)
+        assert source.accession_number == row.as_reported_accession  # the filing is still cited
+
+
+def test_derived_quarter_cites_the_figures_it_came_from(session: Session, nvda: Company) -> None:
+    # CIT-003, DR-022: Q4 = FY - (Q1+Q2+Q3). Its source must resolve with that lineage: the annual
+    # figure by its own source ID, the three quarters by the filings they were reported in. The
+    # inputs used to be bare accession strings, which the resolver could not read (HTTP 500).
+    build_company_metrics(session, nvda)
+    q4 = session.scalars(
+        select(FinancialMetric)
+        .where(
+            FinancialMetric.company_id == nvda.id,
+            FinancialMetric.metric_name == "revenue",
+            FinancialMetric.fiscal_quarter == 4,
+        )
+        .order_by(FinancialMetric.fiscal_year.desc())
+    ).first()
+    assert q4 is not None and q4.source_id == f"derived:NVDA:revenue:Q4-FY{q4.fiscal_year}"
+
+    detail = resolve_source(session, q4.source_id)
+    assert detail is not None and isinstance(detail.source, DerivedMetricSource)
+    assert detail.source.input_source_ids == [f"xbrl:NVDA:revenue:FY{q4.fiscal_year}"]
+    assert [i["name"] for i in detail.lineage] == [f"FY{q4.fiscal_year}", "Q1", "Q2", "Q3"]
+    assert all(i["accession"] for i in detail.lineage)
+    annual = resolve_source(session, detail.source.input_source_ids[0])
+    assert annual is not None and annual.source.source_id == detail.source.input_source_ids[0]
 
 
 def test_builder_persists_derived_q4_and_fiscal_calendar(session: Session, nvda: Company) -> None:

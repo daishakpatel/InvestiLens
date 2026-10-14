@@ -45,7 +45,12 @@ class Settings(BaseSettings):
     backfill_8k_months: int = Field(default=24)
 
     # --- Prices: Tiingo (Phase 1d, ADR-0007) ---
-    tiingo_api_key: str = Field(default="")  # required only when PROVIDER_MODE=live
+    tiingo_api_key: str = Field(default="")  # required only when Tiingo is the price source
+    # Overrides PROVIDER_MODE for prices alone (ADR-0035), so real prices need only this one key.
+    price_provider: Literal["mock", "tiingo"] | None = Field(default=None)
+    # Local stand-in for the price-eod schedule: catch stale prices up when the API starts.
+    # Leave off wherever Celery Beat runs, or every API instance would refetch at boot.
+    refresh_prices_on_startup: bool = Field(default=False)
     price_rate_limit_per_sec: float = Field(default=2.0)  # hourly cap handled by low volume+cache
     backfill_price_years: int = Field(default=5)  # 5y daily history for valuation bands
 

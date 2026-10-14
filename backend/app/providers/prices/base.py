@@ -31,6 +31,8 @@ class PriceBar:
 
 
 class PriceSource(ABC):
+    provider: str = "mock"  # stored on every bar; one provider's data per company (ADR-0035)
+
     @abstractmethod
     def get_prices(
         self, ticker: str, *, start: date | None = None, end: date | None = None

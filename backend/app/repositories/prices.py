@@ -51,6 +51,16 @@ def upsert_price_bars(session: Session, company_id: int, bars: list[dict[str, An
     return len(bars)
 
 
+def drop_other_providers(session: Session, company_id: int, *, keep: str) -> None:
+    """Remove a company's bars and corporate actions that came from any provider but `keep`.
+
+    Sample and real prices must not share a history: the sample set has a bar on every weekday,
+    so an upsert alone would leave made-up bars on market holidays between the real ones.
+    """
+    for model in (PriceHistory, CorporateAction):
+        session.execute(delete(model).where(model.company_id == company_id, model.provider != keep))
+
+
 def replace_corporate_actions(
     session: Session, company_id: int, actions: list[dict[str, Any]], *, provider: str
 ) -> int:
