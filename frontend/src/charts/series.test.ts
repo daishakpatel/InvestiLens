@@ -87,6 +87,7 @@ describe("scales and formatting", () => {
   it("knows a margin from a multiple, which the API unit alone does not say", () => {
     expect(displayOf("ratio")).toBe("percent");
     expect(displayOf("ratio", true)).toBe("multiple");
+    expect(displayOf("x")).toBe("multiple"); // P/E, EV/EBITDA from the valuation endpoint
     expect(displayOf("USD")).toBe("money");
     expect(displayOf("USD/shares")).toBe("perShare");
     expect(displayOf("shares")).toBe("count");

@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app.db import session_scope
 from app.finance.builder import build_company_metrics
 from app.finance.ratio_builder import build_company_ratios
+from app.finance.valuation_builder import build_company_valuation
 from app.models import Company
 
 
@@ -24,7 +25,8 @@ def main() -> None:
         for company in companies:
             counts = build_company_metrics(session, company)
             ratios = build_company_ratios(session, company)
-            print(f"{company.ticker}: {counts}, derived_ratios={ratios}")
+            valuation = build_company_valuation(session, company)
+            print(f"{company.ticker}: {counts}, derived_ratios={ratios}, valuation={valuation}")
 
 
 if __name__ == "__main__":
