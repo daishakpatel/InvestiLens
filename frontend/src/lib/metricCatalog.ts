@@ -61,6 +61,7 @@ const METRICS: Record<string, MetricInfo> = {
   enterprise_value: { label: "Enterprise value", kind: "bar" },
   pe_ratio: { label: "P/E", kind: "line", multiple: true, better: "neither" },
   ps_ratio: { label: "P/S", kind: "line", multiple: true, better: "neither" },
+  p_fcf: { label: "P/FCF", kind: "line", multiple: true, better: "neither" },
   ev_revenue: { label: "EV / revenue", kind: "line", multiple: true, better: "neither" },
   ev_ebitda: { label: "EV / EBITDA", kind: "line", multiple: true, better: "neither" },
   fcf_yield: { label: "Free cash flow yield", kind: "line" },

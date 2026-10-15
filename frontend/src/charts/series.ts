@@ -17,6 +17,7 @@ export type Display = "money" | "percent" | "multiple" | "perShare" | "count";
 
 export function displayOf(unit: string, multiple = false): Display {
   const u = unit.toLowerCase();
+  if (u === "x") return "multiple"; // valuation multiples arrive with their own unit (ADR-0036)
   if (u === "ratio") return multiple ? "multiple" : "percent";
   if (u === "usd") return "money";
   if (u === "usd/shares") return "perShare";
