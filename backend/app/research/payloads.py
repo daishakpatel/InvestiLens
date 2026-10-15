@@ -1,9 +1,11 @@
 """Deterministic financial payloads for the section generators (§10.3, DR: no LLM math).
 
 Each payload is JSON the LLM only *explains* — every number is computed here in Decimal from
-`financial_metrics` (Phase 1c), with an explicit unit, and N/A-labeled when a metric is NULL (e.g.
-bank-inapplicable metrics for JPM, DR-041/042). Alongside the payload we return the `EvidenceItem`s
-whose source IDs the payload exposes, so a claim citing a number verifies against the exact value.
+`financial_metrics` (Phase 1c) and handed over already written for a reader ("$215.94 billion",
+"71.07%", "46.63x", via `finance.display`), so the model quotes figures instead of copying raw
+Decimals; a NULL metric reads "not available" (bank-inapplicable metrics for JPM, DR-041/042).
+Alongside the payload we return the `EvidenceItem`s whose source IDs the payload exposes, so a
+claim citing a number verifies against the exact value (within the verifier's 1% tolerance).
 """
 
 from __future__ import annotations
@@ -15,6 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.citation.evidence import EvidenceItem
 from app.finance import metrics as fin
+from app.finance.display import format_metric_value, metric_label
+from app.finance.valuation_builder import LATEST, VALUATION_METRICS
 from app.repositories import metrics as metric_repo
 from app.research.evidence import from_metric, metric_source_id
 
@@ -28,7 +32,8 @@ SECTION_METRICS: dict[str, list[str]] = {
     "valuation_analysis": ["market_cap", "pe_ratio", "ps_ratio"],
 }
 
-_NA = "N/A"
+
+_NOT_APPLICABLE = "not applicable for this sector"
 
 
 def _series_block(
@@ -42,11 +47,26 @@ def _series_block(
     source_ids: dict[str, str] = {}
     evidence: list[EvidenceItem] = []
     for row in rows:
-        series[row.period] = _NA if row.metric_value is None else str(row.metric_value)
+        warnings = (row.quality_flags or {}).get("warnings") or []
+        series[row.period] = (
+            _NOT_APPLICABLE  # DR-001: say why, never a zero or a blank
+            if row.metric_value is None and fin.NOT_APPLICABLE_SECTOR in warnings
+            else format_metric_value(row.metric_value, unit, metric=name)
+        )
         sid = metric_source_id(row)
         source_ids[row.period] = sid
         evidence.append(from_metric(row))
     block: dict[str, Any] = {"unit": unit, "series": series, "source_ids": source_ids}
+    if name in VALUATION_METRICS:  # the multiple at the latest close, next to its history
+        latest = metric_repo.get_latest_metrics(session, company_id=company_id, metric_names=[name])
+        if latest and latest[0].period_type == LATEST:
+            row = latest[0]
+            block["latest_close"] = {
+                "as_of": row.period,
+                "value": format_metric_value(row.metric_value, row.unit, metric=name),
+                "source_id": metric_source_id(row),
+            }
+            evidence.append(from_metric(row))
 
     # Deterministic growth (backend math, never the LLM): YoY of the last pair + full-span CAGR.
     valued = [
@@ -72,14 +92,16 @@ def _growth_block(
     out: dict[str, Any] = {}
     evidence: list[EvidenceItem] = []
     if yoy.value is not None:
-        out["yoy"] = {"value": str(yoy.value), "unit": "ratio", "source_ids": [last_sid, prior_sid]}
+        out["yoy"] = {
+            "value": format_metric_value(yoy.value, "ratio"),
+            "source_ids": [last_sid, prior_sid],
+        }
         evidence.append(_derived_ev(f"derived:revenue_yoy_FY{last_fy}", "yoy_growth", yoy.value))
     if years >= 2:
         cagr = fin.cagr(first, last, years)
         if cagr.value is not None:
             out["cagr"] = {
-                "value": str(cagr.value),
-                "unit": "ratio",
+                "value": format_metric_value(cagr.value, "ratio"),
                 "years": years,
                 "source_ids": [first_sid, last_sid],
             }
@@ -94,7 +116,7 @@ def _derived_ev(source_id: str, formula_id: str, value: Decimal) -> EvidenceItem
         source=DerivedMetricSource(
             source_id=source_id, tier=1, formula_id=formula_id, formula_version="v1", value=value
         ),
-        text=f"{formula_id} = {value}",
+        text=f"{metric_label(formula_id)} was {format_metric_value(value, 'ratio')}",
         retrieval_score=0.9,
     )
 

@@ -41,9 +41,9 @@ _TIMEOUT_S = 60.0  # a 1,500-token report section plus thinking outlasts the sha
 # shortcut: fixed thinking allowance on top of the caller's cap, raise it if calls end MAX_TOKENS
 THINKING_ALLOWANCE_TOKENS = 2048
 # Gemini's smaller models cite their own way, whatever marker the prompt asks for: `[cite: a, b]`,
-# `[SOURCE:a, SOURCE:b]`, or `[source_id=a]` copied from the evidence labels. Only the syntax is
-# rewritten to one `[SOURCE:id]` each; the IDs are still checked against the evidence set
-# downstream (CIT-001).
+# `[SOURCE:a, SOURCE:b]`, `[SOURCE:a; SOURCE: b]`, or `[source_id=a]` copied from the evidence
+# labels. Only the syntax is rewritten to one `[SOURCE:id]` each; the IDs are still checked
+# against the evidence set downstream (CIT-001).
 _LABEL = r"(?:cite|source_id|source)\s*[:=]\s*"
 _GROUPED = re.compile(rf"\[{_LABEL}([^\]]+)\]", re.IGNORECASE)
 _PREFIX = re.compile(rf"^{_LABEL}", re.IGNORECASE)
@@ -51,7 +51,7 @@ _PREFIX = re.compile(rf"^{_LABEL}", re.IGNORECASE)
 
 def _source_markers(text: str) -> str:
     def split(match: re.Match[str]) -> str:
-        ids = (_PREFIX.sub("", part.strip()) for part in match.group(1).split(","))
+        ids = (_PREFIX.sub("", part.strip()) for part in re.split(r"[,;]", match.group(1)))
         return "".join(f"[SOURCE:{i}]" for i in ids if i)
 
     return _GROUPED.sub(split, text)

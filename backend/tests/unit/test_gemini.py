@@ -84,13 +84,13 @@ def test_complete_rewrites_grouped_citations_to_one_marker_each() -> None:  # CI
     # The verifier reads one [SOURCE:id] per source; an answer cited any other way is discarded.
     raw = (
         "Few foundries [cite: 51_1A_4, 40_1A_4]. Costs [SOURCE:a_1, SOURCE:news:7]. "
-        "Growth [source_id=52_7_207]. Fine [SOURCE:x]."
+        "Growth [source_id=52_7_207]. Risks [SOURCE:136_7A_161; SOURCE: 99_1A_86]. Fine [SOURCE:x]."
     )
     client = _client(_answer({"text": raw}), [])
     answer = asyncio.run(client.complete(_MESSAGES, model="m", max_tokens=20))
     assert answer == (
         "Few foundries [SOURCE:51_1A_4][SOURCE:40_1A_4]. Costs [SOURCE:a_1][SOURCE:news:7]. "
-        "Growth [SOURCE:52_7_207]. Fine [SOURCE:x]."
+        "Growth [SOURCE:52_7_207]. Risks [SOURCE:136_7A_161][SOURCE:99_1A_86]. Fine [SOURCE:x]."
     )
 
 

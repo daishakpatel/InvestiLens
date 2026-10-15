@@ -39,7 +39,7 @@ _PLAIN = re.compile(r"(?<![\w.])(\d[\d,]*\.?\d*)(?![\w%])")
 # finance term; purely connective sentences ("This section covers…") do not.
 _FACT_TERMS = re.compile(
     r"\b(revenue|margin|income|earnings|eps|cash|debt|growth|grew|increased|decreased|declined|"
-    r"rose|fell|risk|guidance|ebitda|dividend|billion|million|percent)\b",
+    r"rose|fell|risk|guidance|ebitda|dividend|billion|million|percent)s?\b",  # "risks", "margins"
     re.IGNORECASE,
 )
 _CAUSAL = re.compile(

@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from app.citation.confidence import score_claim
 from app.citation.evidence import EvidenceItem, index_evidence
-from app.citation.extract import extract_numbers, split_claims, strip_markers
+from app.citation.extract import extract_numbers, has_factual_content, split_claims, strip_markers
 from app.citation.pipeline import verify_text
 from app.citation.tiers import tier_for_source_type, tier_score
 from app.schemas.sources import DerivedMetricSource, TextChunkSource
@@ -179,3 +179,11 @@ def test_confidence_strong_vs_limited() -> None:
     weak = [EvidenceItem(source=TextChunkSource(source_id="n", tier=5, document_id="d"), text="x")]
     _, weak_label = score_claim(weak, "partially")
     assert weak_label == "limited_evidence"
+
+
+def test_plural_finance_terms_make_a_sentence_factual() -> None:  # CIT-005 L5
+    # "risks" and "margins" are as factual as "risk" and "margin". Missing the plural let a cited
+    # sentence count as connective, so an answer whose only other sentence was uncited abstained.
+    assert has_factual_content("The excerpts discuss several distinct risks, including cyber.")
+    assert has_factual_content("Margins improved across the period.")
+    assert not has_factual_content("This section covers the following topics.")

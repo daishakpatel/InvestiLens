@@ -259,4 +259,16 @@ def test_jpm_inapplicable_metric_labeled_na(session: Session) -> None:
     company = _seed_company(session, "JPM", gross_margin=None)  # bank: gross_margin is N/A
     payload, _ev = build_payload(session, company.id, "profitability_analysis")
     series = payload["metrics"]["gross_margin"]["series"]
-    assert series["FY2025"] == "N/A"  # labeled N/A, never a nonsense number (DR-041/042)
+    # Labeled with the reason, never a zero or a blank (DR-001, DR-041/042).
+    assert series["FY2025"] == "not applicable for this sector"
+
+
+def test_payload_hands_the_model_readable_figures(session: Session) -> None:
+    # FR-027: the model quotes "$130.5 billion" instead of copying a raw Decimal, and the evidence
+    # it cites reads the same way, so the verifier still matches the stored value.
+    company = _seed_company(session, "NVDA", gross_margin="0.7500")
+    payload, evidence = build_payload(session, company.id, "revenue_analysis")
+    revenue = payload["metrics"]["revenue"]
+    assert revenue["series"]["FY2025"] == "$130.5 billion"
+    assert revenue["calculated"]["yoy"]["value"] == "114.2%"  # 1.14204…, trailing zero dropped
+    assert "Revenue for FY2025 was $130.5 billion" in [e.text for e in evidence]

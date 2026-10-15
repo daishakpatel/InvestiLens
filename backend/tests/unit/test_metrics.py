@@ -87,6 +87,8 @@ def test_bank_inapplicable_metrics_resolve_na_not_zero() -> None:
         is None
     )
     assert m.ev_to_ebitda(_D(10), _D(5), applicable=cmap.applies("ev_ebitda")).value is None
+    na = m.ev_to_revenue(_D(10), _D(5), applicable=cmap.applies("ev_ebitda"))
+    assert na.value is None and na.warnings == [m.NOT_APPLICABLE_SECTOR]  # DR-042
     assert m.altman_z_score(
         _D(1), _D(1), _D(1), _D(1), _D(1), _D(1), _D(1), applicable=cmap.applies("altman")
     ).warnings == [m.NOT_APPLICABLE_SECTOR]

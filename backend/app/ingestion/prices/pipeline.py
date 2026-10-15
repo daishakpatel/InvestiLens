@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.finance.valuation_builder import build_company_valuation
 from app.models import Company
 from app.providers.prices import PriceBar, PriceSource, get_price_source
 from app.repositories import companies as company_repo
@@ -68,6 +69,17 @@ def _corporate_actions(
     return actions
 
 
+def _revalue(session: Session, company: Company) -> None:
+    """New closes move market cap and every multiple; rebuild them with the prices (§10.7)."""
+    try:
+        with session.begin_nested():  # a failure here must not undo the price run (ING-005)
+            build_company_valuation(session, company)
+    except Exception as exc:
+        log_event(
+            logger, logging.ERROR, "valuation.rebuild.failed", ticker=company.ticker, error=str(exc)
+        )
+
+
 def ingest_prices(
     session: Session,
     company: Company,
@@ -106,6 +118,8 @@ def ingest_prices(
         if rows:  # an empty fetch must not wipe what is stored (ING-004)
             price_repo.drop_other_providers(session, company.id, keep=provider)
         counts.bars = price_repo.upsert_price_bars(session, company.id, rows)
+        if rows:
+            _revalue(session, company)
         actions = _corporate_actions(company.id, bars, provider)
         price_repo.replace_corporate_actions(session, company.id, actions, provider=provider)
         counts.splits = sum(1 for a in actions if a["action_type"] == "split")

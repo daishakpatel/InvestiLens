@@ -65,6 +65,10 @@ A derived metric's `source_id` is **company-scoped** — `derived:<TICKER>:<form
 companies and made `GET /sources` ambiguous once comparison put two companies' metrics in one
 evidence set. No schema change; the resolver matches whatever `source_id` is stored.
 
+Valuation multiples (ADR-0036) are stored twice: per fiscal year (`period_type` FY, priced at the
+year end) and at the latest close (`period_type` LATEST, `period` = the price date, source ID
+`derived:<TICKER>:<metric>:<date>`); the latest-close rows are rebuilt with every price run.
+
 Base metrics and derived fourth quarters follow the same rule (ADR-0034): a base annual metric is
 `xbrl:<TICKER>:<metric>:FY<year>` and a derived Q4 is `derived:<TICKER>:<metric>:Q4-FY<year>`. A base
 metric used to carry its filing's accession number, which every metric from that filing shared;

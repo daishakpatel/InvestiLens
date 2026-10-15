@@ -92,3 +92,13 @@ def test_rounded_text_still_matches_the_stored_value(value: str, unit: str, metr
     assert token.value is not None
     stated = token.value / 100 if token.kind == "percent" else token.value
     assert abs(stated - stored) <= abs(stored) * Decimal("0.01")
+
+
+def test_valuation_multiples_and_dated_periods() -> None:  # FR-024
+    assert format_metric_value(Decimal("46.6342"), "x", metric="pe_ratio") == "46.63x"
+    assert describe_metric("pe_ratio", "2026-10-13", Decimal("46.63"), "x") == (
+        "Price-to-earnings ratio as of 2026-10-13 was 46.63x"
+    )
+    assert describe_metric("market_cap", "FY2026", Decimal("5562000000000"), "USD") == (
+        "Market cap for FY2026 was $5.56 trillion"
+    )

@@ -75,7 +75,8 @@ def _metric(row: FinancialMetric) -> SourceDetail:
         return SourceDetail(
             source=derived,
             text=text,
-            lineage=[{k: str(v) for k, v in i.items()} for i in inputs],
+            # An input without a source (a price) is listed by name, not as a dead "None" link.
+            lineage=[{k: str(v) for k, v in i.items() if v is not None} for i in inputs],
         )
     fact = XbrlFactSource(
         source_id=sid,

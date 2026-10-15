@@ -404,11 +404,13 @@ def p_fcf(market_cap_value: Num, fcf_ttm: Num, *, sources: Sources = None) -> Me
 
 
 def ev_to_revenue(
-    enterprise_value_v: Num, revenue_ttm: Num, *, sources: Sources = None
+    enterprise_value_v: Num, revenue_ttm: Num, *, applicable: bool = True, sources: Sources = None
 ) -> MetricResult:
     inputs = _inputs(
         [("enterprise_value", enterprise_value_v), ("revenue_ttm", revenue_ttm)], sources
     )
+    if not applicable:  # EV itself is N/A for banks (§12), so is every multiple of it
+        return _fail(NOT_APPLICABLE_SECTOR, MULTIPLE, "ev_to_revenue", inputs)
     return _divide(
         enterprise_value_v, revenue_ttm, unit=MULTIPLE, formula_id="ev_to_revenue", inputs=inputs
     )

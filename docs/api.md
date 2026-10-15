@@ -71,7 +71,7 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 |--------|------|-------|
 | GET | `/companies/{ticker}/financials?metrics=&period_type=&from=&to=` | Metric series |
 | GET | `/companies/{ticker}/metrics/{metric_name}/lineage?period=` | Derivation lineage (CIT-003) |
-| GET | `/companies/{ticker}/valuation` | Valuation metrics |
+| GET | `/companies/{ticker}/valuation` | Valuation metrics: the multiples at the latest close where stored, else the latest fiscal year end (ADR-0036) |
 | GET | `/companies/{ticker}/prices?start=&end=&interval=` | OHLCV |
 | GET | `/companies/{ticker}/insiders` | Form 4 (P2) |
 | GET | `/companies/{ticker}/ownership` | 13F (P2) |

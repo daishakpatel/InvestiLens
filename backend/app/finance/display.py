@@ -37,6 +37,8 @@ _LABELS = {
     "ps_ratio": "Price-to-sales ratio",
     "ev_revenue": "Enterprise value to revenue",
     "ev_ebitda": "Enterprise value to EBITDA",
+    "p_fcf": "Price-to-free-cash-flow ratio",
+    "cagr": "Compound annual growth",
 }
 
 
@@ -62,6 +64,8 @@ def format_metric_value(value: Decimal | None, unit: str | None, *, metric: str 
         return f"{sign}${_scaled(abs(value))}"
     if unit == "USD/shares":
         return f"{sign}${abs(value).quantize(_CENT, rounding=ROUND_HALF_UP):,f} per share"
+    if unit == "x":  # valuation multiples (metrics.MULTIPLE)
+        return f"{_trim(value)}x"
     if unit == "ratio":
         return f"{_trim(value)}x" if metric in _MULTIPLES else f"{_trim(value * 100)}%"
     if unit == "shares":
@@ -76,4 +80,6 @@ def metric_label(name: str) -> str:
 def describe_metric(name: str, period: str, value: Decimal | None, unit: str | None) -> str:
     """One sentence for a metric: "Revenue for FY2026 was $215.94 billion"."""
     shown = format_metric_value(value, unit, metric=name)
+    if period[:1].isdigit():  # a valuation at a dated close, e.g. "2026-10-13"
+        return f"{metric_label(name)} as of {period} was {shown}"
     return f"{metric_label(name)} for {period.replace('-', ' ')} was {shown}"

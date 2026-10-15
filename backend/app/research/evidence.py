@@ -9,6 +9,7 @@ claims verify against the exact backend value (CIT-003).
 from __future__ import annotations
 
 from app.citation.evidence import EvidenceItem
+from app.finance.display import describe_metric
 from app.models import FinancialMetric
 from app.rag.types import Evidence as RagEvidence
 from app.schemas.sources import DerivedMetricSource, XbrlFactSource
@@ -31,7 +32,7 @@ def metric_source_id(metric: FinancialMetric) -> str:
 def from_metric(metric: FinancialMetric) -> EvidenceItem:
     """financial_metrics row → verifier evidence. Derived rows expose formula lineage (CIT-003)."""
     sid = metric_source_id(metric)
-    text = f"{metric.metric_name} {metric.period} = {metric.metric_value} {metric.unit}".strip()
+    text = describe_metric(metric.metric_name, metric.period, metric.metric_value, metric.unit)
     if metric.is_derived:
         flags = metric.quality_flags or {}
         inputs = [dict(i) for i in flags.get("inputs", [])]

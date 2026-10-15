@@ -81,7 +81,7 @@ class FinancialMetric(Base, TimestampMixin):
     fiscal_quarter: Mapped[int | None] = mapped_column(Integer)
     period_start: Mapped[date | None] = mapped_column(Date)
     period_end: Mapped[date | None] = mapped_column(Date)
-    period_type: Mapped[str] = mapped_column(String(8))  # FY|Q|TTM
+    period_type: Mapped[str] = mapped_column(String(8))  # FY|Q|TTM|LATEST (ADR-0036)
     metric_name: Mapped[str] = mapped_column(String(64))
     # Nullable: a sector-inapplicable or uncomputable metric stores NULL + a reason in
     # `quality_flags` (DR-041/042), never a misleading zero. See migration 0003.

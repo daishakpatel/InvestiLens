@@ -98,7 +98,12 @@ def get_latest_metrics(
                 FinancialMetric.metric_name.in_(metric_names),
                 FinancialMetric.is_latest.is_(True),
             )
-            .order_by(FinancialMetric.fiscal_year.desc(), FinancialMetric.fiscal_quarter.desc())
+            # A valuation at the latest close outranks the same multiple at a fiscal year end.
+            .order_by(
+                (FinancialMetric.period_type == "LATEST").desc(),
+                FinancialMetric.fiscal_year.desc(),
+                FinancialMetric.fiscal_quarter.desc(),
+            )
         )
     )
     seen: dict[str, FinancialMetric] = {}
