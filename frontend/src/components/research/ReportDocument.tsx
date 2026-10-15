@@ -22,6 +22,7 @@ import { LanguageTracker } from "../filings/LanguageTracker";
 import { AiMark } from "../ui/AiMark";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { Popover } from "../ui/Popover";
 import { SegmentedControl } from "../ui/SegmentedControl";
 import { Select } from "../ui/Select";
 
@@ -314,16 +315,55 @@ export function ReportDocument({ envelope }: { envelope: ResearchReportEnvelope 
             Written by an AI model from {ticker}’s filings, reported figures and news. Every claim
             links to its source; where the evidence was not there, the section was left out.
           </p>
-          <p className="mt-2 text-caption text-subtle">
-            {[
-              envelope.generated_at && `Generated ${formatDate(envelope.generated_at)}`,
-              envelope.model && `Model ${envelope.model}`,
-              envelope.prompt_version && `Prompt ${envelope.prompt_version}`,
-              envelope.data_version && `Data ${envelope.data_version}`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-1 text-caption text-subtle">
+            <span>
+              {[envelope.generated_at && `Generated ${formatDate(envelope.generated_at)}`, envelope.model]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            {(envelope.prompt_version || envelope.data_version) && (
+              <>
+                {/* Provenance (spec §10.16) matters to whoever checks the report, not to every
+                    reader: behind a popover on screen, written out in print. */}
+                <span className="print:hidden">
+                  <Popover
+                    trigger={
+                      <Button variant="ghost" size="sm" className="h-auto px-1.5 py-0.5 text-caption text-subtle">
+                        Details
+                      </Button>
+                    }
+                  >
+                    <dl className="space-y-3">
+                      {envelope.prompt_version && (
+                        <div>
+                          <dt className="text-muted">Prompt version</dt>
+                          <dd className="font-mono">{envelope.prompt_version}</dd>
+                        </div>
+                      )}
+                      {envelope.data_version && (
+                        <div>
+                          <dt className="text-muted">Data fingerprint</dt>
+                          <dd className="font-mono">{envelope.data_version}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <p className="mt-3 text-caption text-subtle">
+                      The instructions the model was given and the exact set of sources it used. Two
+                      reports with the same values were written from the same evidence.
+                    </p>
+                  </Popover>
+                </span>
+                <span className="hidden print:inline">
+                  {[
+                    envelope.prompt_version && `· Prompt ${envelope.prompt_version}`,
+                    envelope.data_version && `· Data ${envelope.data_version}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                </span>
+              </>
+            )}
+          </div>
         </header>
 
         <div className="space-y-14">
