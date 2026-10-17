@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 # Generic contact per SEC fair-access policy; not a personal address.
-USER_AGENT = "InvestiLens/0.1 fixtures (contact: dev@investilens.example)"
+USER_AGENT = "AssayDesk/0.1 fixtures (contact: dev@assay-desk.example)"
 RATE_LIMIT_SECONDS = 0.3  # ~3 req/s, under SEC's 5 req/s ceiling (LGL-002)
 FIXTURES = Path(__file__).resolve().parents[1] / "backend" / "tests" / "fixtures"
 

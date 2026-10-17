@@ -199,7 +199,7 @@ blocks a public deploy until swapped (ADR-0007), and Phase 5d provides the hoste
 ```
 uv run --with locust locust -f load/locustfile.py --host http://localhost:8000 \
     --users 50 --spawn-rate 5 --run-time 2m --headless
-# set INVESTILENS_TOKEN=<bearer> to include the chat path
+# set ASSAY_DESK_TOKEN=<bearer> to include the chat path
 ```
 
 ### NFR targets (§8) and results

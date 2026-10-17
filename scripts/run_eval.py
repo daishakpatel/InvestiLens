@@ -49,7 +49,7 @@ def _judge() -> Judge:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="InvestiLens evaluation runner")
+    parser = argparse.ArgumentParser(description="Assay Desk evaluation runner")
     parser.add_argument("--smoke", action="store_true", help="run the small smoke subset")
     parser.add_argument("--gate", action="store_true", help="fail if metrics regress vs baseline")
     parser.add_argument("--update-baseline", action="store_true", help="write the new baseline")

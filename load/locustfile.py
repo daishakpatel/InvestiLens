@@ -1,4 +1,4 @@
-"""Load test for InvestiLens read endpoints + chat concurrency (Phase 5a, scope #8).
+"""Load test for Assay Desk read endpoints + chat concurrency (Phase 5a, scope #8).
 
 Verifies the §8 NFR latency targets against a RUNNING, seeded stack — it is not part of the
 per-PR gate (ADR-0019). Run, record the result in docs/testing.md, and compare to the targets:
@@ -12,7 +12,7 @@ Usage (needs the Locust dependency, not installed by default):
     uv run --with locust locust -f load/locustfile.py --host http://localhost:8000 \
         --users 50 --spawn-rate 5 --run-time 2m --headless
 
-Set INVESTILENS_TOKEN to a Bearer access token to exercise the authenticated chat path
+Set ASSAY_DESK_TOKEN to a Bearer access token to exercise the authenticated chat path
 (ADR-0006: chat requires auth); without it, only the anonymous read endpoints are driven.
 """
 
@@ -59,7 +59,7 @@ class ChatUser(HttpUser):
     wait_time = between(2.0, 5.0)
 
     def on_start(self) -> None:
-        token = os.environ.get("INVESTILENS_TOKEN")
+        token = os.environ.get("ASSAY_DESK_TOKEN")
         if not token:
             self.environment.runner.quit()  # no auth → skip chat load
             return

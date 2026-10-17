@@ -1,4 +1,4 @@
-# InvestiLens frontend image (Phase 5d). Production build served by nginx — this is the
+# Assay Desk frontend image (Phase 5d). Production build served by nginx — this is the
 # self-host / Render-static path; the primary target is Vercel (static build of `npm run build`),
 # see docs/deployment notes + render.yaml. The docker-compose dev `frontend` service does NOT use
 # this image; it runs `npm run dev` for hot reload.

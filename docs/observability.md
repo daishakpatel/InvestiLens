@@ -58,7 +58,7 @@ from `app/observability/metrics.py`:
 | `job_queue_depth` | gauge | `COUNT(*) FROM jobs WHERE status='queued'` on each scrape |
 | `cache_hit_ratio` | gauge | **always `NaN`** — see §6 |
 
-`observability/grafana/dashboards/investilens.json` is a ready-to-provision dashboard over these
+`observability/grafana/dashboards/assay-desk.json` is a ready-to-provision dashboard over these
 exact metric names; `observability/prometheus.yml` + an optional `prometheus`/`grafana` pair in
 `docker-compose.yml` (`--profile observability`) wire it up for a real deployment. None of this
 needs to run for local dev — the metrics are correct and scrapeable from `/metrics` directly

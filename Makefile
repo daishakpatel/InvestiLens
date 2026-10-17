@@ -59,4 +59,4 @@ beat:
 # Back up the dev DB (pg_dump custom format). Restore: scripts/restore_db.sh <dump>.
 backup:
 	mkdir -p backups
-	docker compose exec -T postgres pg_dump -Fc --no-owner --no-privileges -U $${POSTGRES_USER:-investilens} $${POSTGRES_DB:-investilens} > backups/investilens-$$(date -u +%Y%m%dT%H%M%SZ).dump
+	docker compose exec -T postgres pg_dump -Fc --no-owner --no-privileges -U $${POSTGRES_USER:-investilens} $${POSTGRES_DB:-investilens} > backups/assay-desk-$$(date -u +%Y%m%dT%H%M%SZ).dump

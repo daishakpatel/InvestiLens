@@ -6,7 +6,7 @@
 # uploaded to versioned object storage alongside the raw filings (ADR-0012). Locally, pg_dump
 # lives in the postgres container, so run it through compose:
 #
-#   docker compose exec -T postgres pg_dump -Fc "$DATABASE_URL" > backups/investilens-$(date +%F).dump
+#   docker compose exec -T postgres pg_dump -Fc "$DATABASE_URL" > backups/assay-desk-$(date +%F).dump
 #
 # or, with pg client tools on PATH (CI / managed host):
 #
@@ -17,7 +17,7 @@ set -euo pipefail
 OUT_DIR="${BACKUP_DIR:-backups}"
 mkdir -p "$OUT_DIR"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-OUT="$OUT_DIR/investilens-$STAMP.dump"
+OUT="$OUT_DIR/assay-desk-$STAMP.dump"
 
 # Normalize a SQLAlchemy URL (postgresql+psycopg://) to a libpq URL pg_dump understands.
 PG_URL="${DATABASE_URL/+psycopg/}"

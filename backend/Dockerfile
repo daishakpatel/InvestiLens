@@ -1,4 +1,4 @@
-# InvestiLens backend image (Phase 5d). Serves the API and runs the Celery workers/beat — one
+# Assay Desk backend image (Phase 5d). Serves the API and runs the Celery workers/beat — one
 # image, different commands (compose/render set the command per service).
 FROM python:3.12-slim AS base
 

@@ -6,7 +6,7 @@
 # the same thresholds page someone, not just get logged. Keep both in sync by hand when a
 # threshold setting in `app/config.py` changes.
 groups:
-  - name: investilens
+  - name: assay-desk
     rules:
       - alert: IngestionLag
         expr: ingestion_lag_minutes > 60

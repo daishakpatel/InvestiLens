@@ -3,7 +3,7 @@
 # RESTORE_DATABASE_URL (defaults to DATABASE_URL). The restore procedure is documented and tested
 # — see docs/costs.md / the Phase 5d summary for a verified round-trip.
 #
-#   scripts/restore_db.sh backups/investilens-20261008T000000Z.dump
+#   scripts/restore_db.sh backups/assay-desk-20261008T000000Z.dump
 #
 # WARNING: --clean drops existing objects in the target first. Point RESTORE_DATABASE_URL at the
 # restore target (a fresh DB for a drill, or the real one for a genuine recovery) — never guess.
