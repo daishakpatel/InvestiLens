@@ -30,7 +30,7 @@ _HOSTS = frozenset({"data.sec.gov"})
 
 
 def _client(handler: Callable[[httpx.Request], httpx.Response]) -> HardenedHttpClient:
-    ua = "InvestiLens/test (contact: dev@investilens.example)"
+    ua = "AssayDesk/test (contact: dev@assay-desk.example)"
     inner = httpx.Client(transport=httpx.MockTransport(handler), headers={"User-Agent": ua})
     return HardenedHttpClient(user_agent=ua, allowed_hosts=_HOSTS, rate_per_sec=1000, client=inner)
 

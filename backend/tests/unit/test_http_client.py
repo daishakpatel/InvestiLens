@@ -17,7 +17,7 @@ _HOSTS = frozenset({"data.sec.gov"})
 
 def _client(
     handler: Callable[[httpx.Request], httpx.Response],
-    ua: str = "InvestiLens/test (contact: dev@investilens.example)",
+    ua: str = "AssayDesk/test (contact: dev@assay-desk.example)",
 ) -> HardenedHttpClient:
     transport = httpx.MockTransport(handler)
     inner = httpx.Client(transport=transport, headers={"User-Agent": ua})
@@ -44,7 +44,7 @@ def test_sends_user_agent(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client(handler)
     body = client.get_bytes("https://data.sec.gov/x.json", sleep=lambda _s: None)
     assert body == b"ok"
-    assert "InvestiLens" in seen["ua"] and "contact:" in seen["ua"]
+    assert "AssayDesk" in seen["ua"] and "contact:" in seen["ua"]
 
 
 def test_retries_then_succeeds() -> None:

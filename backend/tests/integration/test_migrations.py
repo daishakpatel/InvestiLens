@@ -26,7 +26,7 @@ _MODEL_TABLES = set(Base.metadata.tables)
 def _seed_module() -> ModuleType:
     """Import scripts/seed.py by path (it lives outside the package)."""
     seed_path = Path(__file__).resolve().parents[3] / "scripts" / "seed.py"
-    spec = importlib.util.spec_from_file_location("investilens_seed", seed_path)
+    spec = importlib.util.spec_from_file_location("assay_desk_seed", seed_path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

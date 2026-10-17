@@ -203,7 +203,7 @@ const SIGNED_IN_SHOTS: Shot[] = [
       });
       await box.fill("Should I buy NVDA stock right now?");
       await box.press("Enter");
-      await expect(page.getByRole("dialog").getByText("Outside what InvestiLens covers")).toBeVisible({
+      await expect(page.getByRole("dialog").getByText("Outside what Assay Desk covers")).toBeVisible({
         timeout: 30_000,
       });
     },

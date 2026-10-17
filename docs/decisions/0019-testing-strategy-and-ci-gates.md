@@ -18,7 +18,7 @@ adopting Testcontainers and keeping the existing throwaway-database fixture.
 ## Decision
 
 Keep the existing session-scoped throwaway-DB fixture (`tests/integration/conftest.py`): it
-creates/drops `investilens_test` on the configured server, runs real Alembic migrations against
+creates/drops `assay_desk_test` on the configured server, runs real Alembic migrations against
 real pgvector, and **skips** (not fails) when no server is reachable — so the unit suite stays
 fully offline (DR-004) while CI's `pgvector/pgvector:pg16` service runs the integration/migration
 tests. This already gives Testcontainers' isolation guarantee without a new dependency or a Docker

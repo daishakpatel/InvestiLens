@@ -75,6 +75,18 @@ test.describe("command palette (§9.1, FR-001, UI-003)", () => {
   });
 });
 
+test("home shows the Assay Desk brand and the evidence promise (§9.1, FR-001, ADR-0037)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveTitle(/Assay Desk/);
+  await expect(page.getByRole("banner").getByRole("link", { name: "Assay Desk" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Research you can verify." })).toBeVisible();
+  await expect(
+    page.getByText(
+      "Financials, filings, and AI analysis for US public companies, with every number traced and every claim cited.",
+    ),
+  ).toBeVisible();
+});
+
 test.describe("company frame", () => {
   test("has five tabs and every pre-rebuild URL still lands somewhere", async ({ page }) => {
     await page.goto(company);
@@ -178,7 +190,7 @@ test.describe("global states (§28.2)", () => {
   test("an outage shows one banner, no per-panel errors, and recovers by itself", async ({ page }) => {
     await page.route("**/api/v1/**", (route) => route.abort());
     await page.goto(company);
-    const banner = page.getByRole("status").filter({ hasText: /Can’t reach InvestiLens/ });
+    const banner = page.getByRole("status").filter({ hasText: /Can’t reach Assay Desk/ });
     await expect(banner).toBeVisible();
     await expect(banner).toHaveCount(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
@@ -198,7 +210,7 @@ test.describe("global states (§28.2)", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await page.waitForTimeout(4000);
     expect(calls).toBeLessThanOrEqual(3); // first try, one retry, and StrictMode's remount at most
-    await expect(page.getByText(/Can’t reach InvestiLens/)).toHaveCount(0);
+    await expect(page.getByText(/Can’t reach Assay Desk/)).toHaveCount(0);
   });
 });
 

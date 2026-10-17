@@ -22,7 +22,7 @@ from app.config import get_settings
 _MIGRATIONS_DIR = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "infrastructure", "migrations"
 )
-_TEST_DB_NAME = "investilens_test"
+_TEST_DB_NAME = "assay_desk_test"
 
 
 def _server_url(db_url: str, database: str) -> str:

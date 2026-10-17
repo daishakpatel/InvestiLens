@@ -375,7 +375,7 @@ test.describe("desktop", () => {
     await composer.fill("Should I buy NVDA stock right now?");
     await composer.press("Enter");
     await expect(
-      panel(page).getByText(/Outside what InvestiLens covers|Not enough evidence to answer/).last(),
+      panel(page).getByText(/Outside what Assay Desk covers|Not enough evidence to answer/).last(),
     ).toBeVisible({ timeout: 30_000 });
     await expect(panel(page).getByRole("alert")).toHaveCount(0);
 
