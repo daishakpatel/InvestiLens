@@ -28,7 +28,7 @@ function Declined({ kind, text }: { kind: "abstained" | "refused"; text: string 
   return (
     <div className="rounded-control border border-border px-3 py-2.5">
       <p className="text-label font-medium text-text">
-        {kind === "abstained" ? "Not enough evidence to answer" : "Outside what InvestiLens covers"}
+        {kind === "abstained" ? "Not enough evidence to answer" : "Outside what Assay Desk covers"}
       </p>
       <p className="mt-1 text-sm text-muted">{text}</p>
     </div>

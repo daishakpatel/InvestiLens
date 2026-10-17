@@ -20,7 +20,7 @@ const COPY: Record<Mode, { title: string; submit: string; prompt: string; switch
   login: {
     title: "Sign in",
     submit: "Sign in",
-    prompt: "New to InvestiLens?",
+    prompt: "New to Assay Desk?",
     switchTo: "Create an account",
   },
   register: {
@@ -83,7 +83,7 @@ export default function AuthPage() {
       // A rejected fetch is a network failure; anything else is the API's own message, verbatim.
       setFailure(
         error instanceof TypeError
-          ? "Can’t reach InvestiLens. Check your connection and try again."
+          ? "Can’t reach Assay Desk. Check your connection and try again."
           : error instanceof Error
             ? error.message
             : "Something went wrong.",

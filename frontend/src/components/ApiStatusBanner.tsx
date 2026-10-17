@@ -16,7 +16,7 @@ export function ApiStatusBanner() {
       <Icon aria-hidden className="size-4 shrink-0 text-warning" />
       <span>
         {online
-          ? "Can’t reach InvestiLens. Reconnecting…"
+          ? "Can’t reach Assay Desk. Reconnecting…"
           : "You’re offline. Data will load when you reconnect."}
       </span>
       {online && (

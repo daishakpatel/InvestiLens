@@ -64,8 +64,8 @@ export default function HomePage() {
       <section className="flex min-h-[calc(100svh-11rem)] flex-col items-center justify-center py-16 text-center">
         <h1 className="text-display-s font-semibold md:text-display-l">Research you can verify.</h1>
         <p className="mt-4 max-w-xl text-body text-muted md:text-title">
-          Financials, filings and AI analysis for US public companies. Every number is traced to
-          its source, and every claim is cited.
+          Financials, filings, and AI analysis for US public companies, with every number traced
+          and every claim cited.
         </p>
         <div className="mt-10 w-full max-w-xl">
           <SearchTrigger variant="hero" />

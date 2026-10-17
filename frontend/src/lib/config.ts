@@ -3,7 +3,7 @@
 export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 export const DISCLAIMER =
-  "InvestiLens provides data and AI-generated analysis for informational purposes only. " +
+  "Assay Desk provides data and AI-generated analysis for informational purposes only. " +
   "It is not investment advice.";
 
 // Companies offered before the user has searched for anything (home page and command palette).

@@ -18,7 +18,7 @@ const NAV = [
 export function Wordmark() {
   return (
     <Link to="/" className="text-title font-semibold tracking-tight text-text">
-      InvestiLens
+      Assay Desk
     </Link>
   );
 }
