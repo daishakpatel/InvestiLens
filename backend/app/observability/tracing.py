@@ -40,7 +40,7 @@ def configure_tracing(*, exporter: SpanExporter | None = None) -> TracerProvider
     global _PROVIDER
     chosen = exporter or _default_exporter()
     if _PROVIDER is None:
-        _PROVIDER = TracerProvider(resource=Resource.create({SERVICE_NAME: "investilens-api"}))
+        _PROVIDER = TracerProvider(resource=Resource.create({SERVICE_NAME: "assay-desk-api"}))
         trace.set_tracer_provider(_PROVIDER)
     _PROVIDER.add_span_processor(SimpleSpanProcessor(chosen))
     return _PROVIDER

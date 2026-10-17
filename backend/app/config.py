@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # --- SEC EDGAR ingestion (Phase 1a) ---
     # Descriptive UA with contact is mandatory (LGL-002). Not a personal address by default.
-    sec_user_agent: str = Field(default="InvestiLens/0.1 (contact: dev@investilens.example)")
+    sec_user_agent: str = Field(default="AssayDesk/0.1 (contact: dev@assay-desk.example)")
     sec_rate_limit_per_sec: float = Field(default=5.0)  # SEC fair-access ceiling (LGL-002)
     # Local object store root for raw filings (ING-008). S3/MinIO backend is Phase 5d (ADR-0012).
     storage_dir: str = Field(default=".storage")
@@ -228,7 +228,7 @@ class Settings(BaseSettings):
     smtp_port: int = Field(default=587)
     smtp_user: str = Field(default="")
     smtp_password: str = Field(default="")
-    smtp_from: str = Field(default="alerts@investilens.example")
+    smtp_from: str = Field(default="alerts@assay-desk.example")
     # Price-move alert threshold (fractional daily move that trips a `price_move` alert).
     alert_price_move_threshold: float = Field(default=0.05)
 

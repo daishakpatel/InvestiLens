@@ -63,9 +63,9 @@ async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="InvestiLens API",
+        title="Assay Desk API",
         version="1.0.0",
-        description="Contract-first API for InvestiLens (spec §24).",
+        description="Contract-first API for Assay Desk (spec §24).",
         openapi_url=f"{API_V1_PREFIX}/openapi.json",
         lifespan=_lifespan,
     )

@@ -6,7 +6,7 @@ notification and advance the watermark. Idempotent: re-running without a new eve
 because the watermark only moves forward when something actually fired (JOB-001).
 
 The triggering "event time" for filings/news is the *ingestion* time (`created_at`), so the
-30-minute SLA (DoD) is measured from when InvestiLens learns of the event — which is what the
+30-minute SLA (DoD) is measured from when Assay Desk learns of the event — which is what the
 EDGAR poller (≤10 min) + this dispatch (every few min) together bound.
 """
 
