@@ -22,13 +22,13 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16  # Postgres 16 + pgvector (ADR-0002)
         env:
-          POSTGRES_DB: investilens
-          POSTGRES_USER: investilens
-          POSTGRES_PASSWORD: investilens
+          POSTGRES_DB: assay_desk
+          POSTGRES_USER: assay_desk
+          POSTGRES_PASSWORD: assay_desk
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U investilens"
+          --health-cmd "pg_isready -U assay_desk"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -42,7 +42,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://investilens:investilens@localhost:5432/investilens
+      DATABASE_URL: postgresql+psycopg://assay_desk:assay_desk@localhost:5432/assay_desk
       REDIS_URL: redis://localhost:6379/0
       PROVIDER_MODE: mock  # no real network calls in the default test suite (DR-004)
     steps:
@@ -102,9 +102,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Build backend image
-        run: docker build -f backend/Dockerfile -t investilens-api:ci .
+        run: docker build -f backend/Dockerfile -t assay-desk-api:ci .
       - name: Build frontend image
-        run: docker build -f frontend/Dockerfile -t investilens-frontend:ci frontend
+        run: docker build -f frontend/Dockerfile -t assay-desk-frontend:ci frontend
       # Scan the built backend image for OS/library CVEs (SEC-009 container scanning). Trivy is
       # installed from its official script (pinned to a version) rather than a marketplace action
       # so the ref always resolves and the scan is reproducible. Report-only for now (|| true);
@@ -113,7 +113,7 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.75.0/contrib/install.sh \
             | sh -s -- -b /usr/local/bin v0.75.0
-          trivy image --severity HIGH,CRITICAL --exit-code 0 investilens-api:ci || true
+          trivy image --severity HIGH,CRITICAL --exit-code 0 assay-desk-api:ci || true
 
   # The §18.4 eval smoke gate runs as the `test_eval_runner` integration test inside the `backend`
   # job (it seeds a company, runs the smoke set, and fails on a deliberate citation regression —

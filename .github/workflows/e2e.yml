@@ -17,16 +17,16 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_DB: investilens
-          POSTGRES_USER: investilens
-          POSTGRES_PASSWORD: investilens
+          POSTGRES_DB: assay_desk
+          POSTGRES_USER: assay_desk
+          POSTGRES_PASSWORD: assay_desk
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U investilens"
+          --health-cmd "pg_isready -U assay_desk"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://investilens:investilens@localhost:5432/investilens
+      DATABASE_URL: postgresql+psycopg://assay_desk:assay_desk@localhost:5432/assay_desk
       PROVIDER_MODE: mock
     steps:
       - uses: actions/checkout@v5
