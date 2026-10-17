@@ -1,6 +1,6 @@
 # Observability
 
-How InvestiLens is instrumented, what's tracked, and how degradation is handled (spec §28,
+How Assay Desk is instrumented, what's tracked, and how degradation is handled (spec §28,
 OBS-001…005, ERR-001…004; decisions in [ADR-0021](decisions/0021-observability-stack.md) and
 [ADR-0022](decisions/0022-redis-rate-limiting-and-ai-budget.md)).
 

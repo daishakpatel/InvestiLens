@@ -1,4 +1,4 @@
-# InvestiLens — AI-Powered Investment Research & Financial Intelligence Platform
+# Assay Desk — AI-Powered Investment Research & Financial Intelligence Platform
 
 ## Product & Technical Specification (BRD + System Design) — v2.0
 
@@ -67,7 +67,7 @@
 # 1. Project Overview
 
 ## 1.1 Project name
-**InvestiLens** — AI-Powered Investment Research & Financial Intelligence Platform
+**Assay Desk** — AI-Powered Investment Research & Financial Intelligence Platform
 
 ## 1.2 One-line description
 > An AI-powered investment research platform that aggregates SEC filings, financial statements, market data, earnings information, and news, then uses retrieval-augmented generation (RAG) to produce citation-backed company research reports.
@@ -240,7 +240,7 @@ Eventually support thousands of companies (S&P 500 first, then Russell 3000).
 
 # 6. Legal, Licensing & Compliance
 
-- **LGL-001 [MVP] Not investment advice.** A persistent disclaimer MUST appear on the dashboard, on every AI report, in chat, and on any exported document: *"InvestiLens provides research information for educational purposes only and is not investment, legal, or tax advice."*
+- **LGL-001 [MVP] Not investment advice.** A persistent disclaimer MUST appear on the dashboard, on every AI report, in chat, and on any exported document: *"Assay Desk provides research information for educational purposes only and is not investment, legal, or tax advice."*
 - **LGL-002 SEC fair access.** All EDGAR requests MUST send a descriptive `User-Agent` including a contact email, and MUST stay under SEC's published request-rate limit (design target ≤ 5 req/s). Use bulk/`companyfacts` endpoints where possible.
 - **LGL-003 Market data licensing.** Do not scrape sites whose terms forbid it. Use an API whose terms permit your use case (personal/portfolio vs redistribution). Document the provider's terms in `docs/decisions/`.
 - **LGL-004 News licensing.** Store headline, URL, publisher, timestamp, and a short summary; store full text only if the provider's license allows. Never republish full articles.
@@ -301,7 +301,7 @@ The v1 spec said only "SEC API / Market API / News API." Providers MUST be chose
 
 ```text
 ┌─────────────────────────────────────────────┐
-│ InvestiLens                                 │
+│ Assay Desk                                  │
 │                                             │
 │ Search a company                            │
 │                                             │
@@ -2596,7 +2596,7 @@ Managed Redis
 # 32. Repository Structure
 
 ```text
-investilens/
+assay-desk/
 │
 ├── frontend/
 │   ├── src/
@@ -3112,7 +3112,7 @@ That combination is useful for the **SWE + AI/ML + fintech** direction.
 
 ## 38.2 Suggested resume description (use only once actually completed)
 
-> **InvestiLens — AI Investment Research Platform**
+> **Assay Desk — AI Investment Research Platform**
 > Built a full-stack AI investment research platform that ingests SEC filings, financial statements, market data, earnings information, and news to generate citation-backed company analysis using RAG and LLMs. Designed a FastAPI/PostgreSQL backend with pgvector-based semantic retrieval, asynchronous data pipelines, and structured financial analytics; implemented source-level citation validation to reduce unsupported AI-generated claims.
 
 Quantified bullets (fill from *measured* eval results):
@@ -3283,4 +3283,4 @@ Each prompt file contains: purpose, inputs, output schema, safety rules (untrust
 
 ---
 
-*End of document — InvestiLens Specification v2.0*
+*End of document — Assay Desk Specification v2.0*

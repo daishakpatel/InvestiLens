@@ -1,4 +1,6 @@
-# InvestiLens
+# Assay Desk
+
+*Every claim, traced to its source.*
 
 AI-powered investment research platform. Deterministic financial data from SEC filings and
 market sources, combined with retrieval-grounded LLM analysis in which every claim is cited
@@ -8,7 +10,7 @@ to a verifiable source.
 
 ## Project overview
 
-InvestiLens is a full-stack financial intelligence application for researching public
+Assay Desk is a full-stack financial intelligence application for researching public
 companies. It combines deterministic financial calculations with SEC filings, market data,
 news, retrieval-augmented generation, and citation validation so generated research can be
 traced back to its evidence.
@@ -58,7 +60,7 @@ it is shown.
 |------|---------|
 | `docs/architecture.md` | System design and the life of a research request |
 | `docs/agent-guide.md` | Where contracts live and how to change them |
-| `docs/InvestiLens_Spec_v2.md` | Full product & technical specification (reference) |
+| `docs/AssayDesk_Spec_v2.md` | Full product & technical specification (reference) |
 | `docs/conventions.md` | Global rules for every change (money, dates, AI, external calls) |
 | `docs/ui.md` | The design principles, tokens, primitives, and how to add a screen |
 | `docs/decisions/` | Architecture Decision Records (ADRs) |
@@ -129,5 +131,5 @@ with `make coverage` (gates) and `uv run python ../scripts/run_eval.py` (full se
 
 ## Disclaimer
 
-InvestiLens provides research information for educational purposes only and is not
+Assay Desk provides research information for educational purposes only and is not
 investment, legal, or tax advice.

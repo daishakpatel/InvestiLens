@@ -9,7 +9,7 @@ against.
 
 ## Objective
 
-The reading experiences are where InvestiLens earns trust. Today they are stacks of bordered
+The reading experiences are where Assay Desk earns trust. Today they are stacks of bordered
 cards with badges on every row and a modal that hides what you were reading. Rebuild them as a
 calm, editorial reading surface where evidence opens beside the text, and make the assistant
 available from anywhere on a company page.

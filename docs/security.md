@@ -1,6 +1,6 @@
 # Security
 
-Threat model and mitigations for InvestiLens (spec §29, SEC-001…015). This is a real description
+Threat model and mitigations for Assay Desk (spec §29, SEC-001…015). This is a real description
 of what the system actually does, not the checklist restated — each claim below was verified
 against the code during the Phase 5c audit (see `Instructions/22_phase5c_observability_and_security.md`),
 not assumed from the spec.
@@ -23,7 +23,7 @@ not assumed from the spec.
 | Anonymous visitor | Read-only browsing (companies, filings, financials, prices, news) — no AI, no account (ADR-0006) | Untrusted |
 | Registered user | Anonymous capability + chat, research generation, watchlists, alerts, own account deletion | Authenticated, but still capped (per-user AI budget, ADR-0022; rate limits, §25.4) — **not** trusted with another user's data or with unbounded spend |
 | Admin (`users.role == "admin"`) | Ingestion-run/eval-run visibility, triggers a company refresh job | Elevated, DB-row-revocable (not a JWT claim — `require_admin` re-reads the row every request, so revoking admin takes effect immediately, not at next token refresh) |
-| External data publisher (SEC filer, news outlet) | Controls the *content* of filings/news InvestiLens ingests and feeds to an LLM | **Explicitly untrusted** — see §4 |
+| External data publisher (SEC filer, news outlet) | Controls the *content* of filings/news Assay Desk ingests and feeds to an LLM | **Explicitly untrusted** — see §4 |
 | External provider (SEC EDGAR, Tiingo, Finnhub, Voyage, Gemini) | Receives outbound requests; EDGAR/Tiingo/Finnhub/Voyage responses are parsed and stored | Semi-trusted infrastructure, but still schema-validated on the way in (DR-003) and allowlisted on the way out (SEC-015) |
 
 ## 3. Trust boundaries
@@ -42,7 +42,7 @@ Browser  ──HTTPS──▶  FastAPI (app/main.py)  ──SQL──▶  Postgr
 
 The boundary that matters most for an AI product is **untrusted filing/news text flowing into an
 LLM prompt** (the bottom of the diagram). Filing and news text is written by a third party (a SEC
-filer, a news outlet) InvestiLens has no control over and must treat as hostile — it is **data to
+filer, a news outlet) Assay Desk has no control over and must treat as hostile — it is **data to
 cite, never instructions to follow** (spec §16.9, RAG-040). Concretely:
 
 - `app/ingestion/documents/clean.py` strips hidden markup (`display:none`, zero-size, etc.)

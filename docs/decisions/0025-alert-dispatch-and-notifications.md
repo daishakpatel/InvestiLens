@@ -16,7 +16,7 @@ email + in-app. No email provider is configured in this project.
 - **`notifications` table + `app/alerts/dispatch.py`.** The `send_alerts` Beat task (every 5 min)
   evaluates each active alert against a watermark (`last_triggered_at`): a new filing of the
   alert's type, a latest daily price move past a threshold, or new news in a category, all keyed
-  off *ingestion* time so the 30-min SLA is measured from when InvestiLens learns of the event
+  off *ingestion* time so the 30-min SLA is measured from when Assay Desk learns of the event
   (EDGAR poll ≤10 min + dispatch ≤5 min stays well inside 30). Firing an alert writes a
   `notifications` row and advances the watermark, so re-evaluation without a new event sends
   nothing (idempotent, JOB-001).

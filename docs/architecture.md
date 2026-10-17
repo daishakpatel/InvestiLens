@@ -1,6 +1,6 @@
 # Architecture
 
-InvestiLens is a **modular monolith**: one FastAPI deployable plus Celery workers, sharing one
+Assay Desk is a **modular monolith**: one FastAPI deployable plus Celery workers, sharing one
 PostgreSQL (with pgvector) and Redis ([ADR-0001](decisions/0001-modular-monolith.md)). Source:
 spec §19–§20.
 

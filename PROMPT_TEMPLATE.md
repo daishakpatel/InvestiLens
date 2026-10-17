@@ -10,13 +10,13 @@ Act as a Staff-level Software Engineer (Stripe / Meta caliber) with deep experti
 full-stack, AI/LLM systems (RAG, citations, evals), and fintech data correctness.
 
 CONTEXT:
-- Project: InvestiLens. Read `CLAUDE.md` and `docs/conventions.md` first; they are binding.
+- Project: Assay Desk. Read `CLAUDE.md` and `docs/conventions.md` first; they are binding.
 - Stack is decided in `docs/decisions/` (ADRs). Don't re-choose anything an ADR already settles.
 - Backend: Python 3.12 via `uv` (`cd backend && uv run ...`); FastAPI; SQLAlchemy 2 + Alembic;
   Postgres 16 + pgvector + Redis via `docker compose`. Frontend: React + TS (Vite), npm.
 - The gate is `make check` (ruff + ruff format --check + mypy --strict + pytest, backend and
   frontend). It MUST pass before the task is done.
-- Full spec: `docs/InvestiLens_Spec_v2.md`. Read ONLY the sections the task file cites.
+- Full spec: `docs/AssayDesk_Spec_v2.md`. Read ONLY the sections the task file cites.
 - Current state: <e.g. "Phase 1 complete; Phase 2a next">
 
 TASK:

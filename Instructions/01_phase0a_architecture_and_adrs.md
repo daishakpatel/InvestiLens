@@ -16,7 +16,7 @@ the repo skeleton.
 1. **Repo skeleton.** Create the structure below (empty folders/`__init__.py`/`.gitkeep` where
    needed — don't build features yet):
    ```text
-   investilens/
+   assay-desk/
    ├── frontend/src/{components,pages,hooks,services,types,charts}
    ├── backend/app/{api,models,schemas,services,repositories,finance,providers,rag,citation,ingestion,tasks,utils}
    ├── backend/tests/{unit,integration,fixtures,eval}

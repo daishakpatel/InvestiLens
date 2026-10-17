@@ -1,4 +1,4 @@
-# InvestiLens UI Rebuild — Plan Index & Design Direction
+# Assay Desk UI Rebuild — Plan Index & Design Direction
 
 The current UI works but reads as a generic admin dashboard: navy-slate dark theme, boxed panels
 inside boxed panels, ten equal-weight tabs, small type, no hero, no motion. This folder is a

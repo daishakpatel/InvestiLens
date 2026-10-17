@@ -1,6 +1,6 @@
-# InvestiLens — Remaining Work
+# Assay Desk — Remaining Work
 
-Audited 2026-10-12 against `docs/InvestiLens_Spec_v2.md`; last updated 2026-10-15. All 25 task
+Audited 2026-10-12 against `docs/AssayDesk_Spec_v2.md`; last updated 2026-10-15. All 25 task
 files and the 5 `UI_plan/` steps have been worked through; this is what is still open.
 
 Tags: `[code]` = checked in the code, database or CI on the date shown in the item or, if none,

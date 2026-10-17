@@ -1,6 +1,6 @@
 # Testing Strategy
 
-How InvestiLens is tested, what runs where, and how to run each suite. Source: spec §30 (testing
+How Assay Desk is tested, what runs where, and how to run each suite. Source: spec §30 (testing
 strategy) and §8 (NFR latency targets); decisions in [ADR-0019](decisions/0019-testing-strategy-and-ci-gates.md).
 
 ## Tiers

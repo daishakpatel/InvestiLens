@@ -1,6 +1,6 @@
 # Cost Estimate
 
-Rough monthly cost to run InvestiLens at **demo scale** (a portfolio link: low traffic, 3 seed
+Rough monthly cost to run Assay Desk at **demo scale** (a portfolio link: low traffic, 3 seed
 companies, anonymous read-only browsing, tightly-capped AI). Hosting is Render (ADR-0023);
 figures are list prices as of 2026-10 and **should be re-checked against current pricing** before
 relying on them — they are estimates, not quotes.

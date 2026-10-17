@@ -1,12 +1,12 @@
-# InvestiLens — Agent Task Index
+# Assay Desk — Agent Task Index
 
-This folder breaks the full spec (`InvestiLens_Spec_v2.md`) into small, sequential task
+This folder breaks the full spec (`AssayDesk_Spec_v2.md`) into small, sequential task
 files. Give an agent **one file at a time**, in the order below. Each file is scoped to be
 finishable in a single agent session and states exactly what it needs from prior files and
 what it must hand off to later ones.
 
-If a task file references "the full spec," that means `InvestiLens_Spec_v2.md` — keep it in
-the repo (`docs/InvestiLens_Spec_v2.md`) as the reference doc; these task files are the
+If a task file references "the full spec," that means `AssayDesk_Spec_v2.md` — keep it in
+the repo (`docs/AssayDesk_Spec_v2.md`) as the reference doc; these task files are the
 condensed, actionable version of it.
 
 ## How to use these files

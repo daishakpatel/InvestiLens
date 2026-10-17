@@ -1,4 +1,4 @@
-# InvestiLens — Agent Instructions
+# Assay Desk — Agent Instructions
 
 ## Workflow
 
@@ -6,7 +6,7 @@
   `Instructions/00_START_HERE.md`, and do **one task file per session**, in order.
 - Don't start a task whose Prerequisites aren't done. Don't mark a task done until every item
   in its Definition of Done is checked.
-- "The full spec" means `docs/InvestiLens_Spec_v2.md`. Read only the sections the task file
+- "The full spec" means `docs/AssayDesk_Spec_v2.md`. Read only the sections the task file
   cites, not the whole document.
 - Need a decision the task file doesn't make? Check `docs/decisions/` first. If it isn't
   decided yet, make the call, write a one-paragraph ADR using

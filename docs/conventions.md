@@ -1,7 +1,7 @@
 # Global Conventions
 
 These rules apply to every task, every agent, every PR. They are not restated in individual
-task files. Source: `docs/InvestiLens_Spec_v2.md` §0 and §2.2; task index
+task files. Source: `docs/AssayDesk_Spec_v2.md` §0 and §2.2; task index
 `Instructions/00_START_HERE.md`.
 
 ## Money, units, dates
