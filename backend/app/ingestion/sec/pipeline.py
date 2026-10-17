@@ -42,11 +42,13 @@ class IngestCounts:
     facts: int = 0
     facts_skipped: int = 0
     dead_letters: int = 0
+    documents_restored: int = 0  # filings already known whose stored HTML had gone missing
 
     def as_dict(self) -> dict[str, int]:
         return {
             "filings_ingested": self.filings_ingested,
             "filings_skipped": self.filings_skipped,
+            "documents_restored": self.documents_restored,
             "facts": self.facts,
             "facts_skipped": self.facts_skipped,
             "dead_letters": self.dead_letters,
@@ -95,6 +97,12 @@ def _ingest_one_filing(
     counts: IngestCounts,
 ) -> None:
     if filing_repo.filing_exists(session, ref.accession_number):
+        # Known filing: skip it, unless its stored HTML is gone, in which case it could never be
+        # parsed again. Fetch it back to the key the filing already points at (ING-001).
+        location = filing_repo.raw_document_location(session, ref.accession_number)
+        if location and not storage.exists(location):
+            storage.put(location, sec.fetch_document(ref))
+            counts.documents_restored += 1
         counts.filings_skipped += 1
         return
 

@@ -166,6 +166,12 @@ def filing_exists(session: Session, accession_number: str) -> bool:
     )
 
 
+def raw_document_location(session: Session, accession_number: str) -> str | None:
+    return session.scalar(
+        select(Filing.raw_document_location).where(Filing.accession_number == accession_number)
+    )
+
+
 def get_filing_id_for_period(
     session: Session, *, company_id: int, filing_type: str, period_end: date | None
 ) -> int | None:

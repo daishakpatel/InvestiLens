@@ -41,6 +41,20 @@ _METRIC_LEXICON: list[tuple[re.Pattern[str], str]] = [
 ]
 
 
+# "How has revenue grown over three years?" asks for stored figures; "why did it grow?" does not.
+_WHY = re.compile(r"\b(why|drove|drive[sn]?|driver|reason|attribut|because|explain)", re.I)
+
+
+def _is_metric_trend(question: str, rewritten: RewrittenQuery) -> bool:
+    """A stored metric over several fiscal years, asked as "how", not "why" (RAG-030)."""
+    return (
+        rewritten.is_over_time
+        and len(rewritten.fiscal_years) > 1
+        and _extract_metric(question) is not None
+        and not _WHY.search(question)
+    )
+
+
 def _extract_metric(question: str) -> str | None:
     for pattern, name in _METRIC_LEXICON:
         if pattern.search(question):
@@ -58,14 +72,18 @@ def _structured_answer(
     runner = ToolRunner(session)
     blocks: list[str] = []
     source_ids: list[str] = []
-    for period in (f"FY{y}" for y in years):
-        result = runner.call("get_financial_metric", ticker=ticker, metric=metric, period=period)
-        if result.get("value") is not None:
-            blocks.append(
-                f"[metric] {metric} {period} = {result['value']} {result.get('unit', '')} "
-                f"(source_id={result['source_ids'][0] if result['source_ids'] else 'n/a'})"
-            )
-            source_ids.extend(result["source_ids"])
+    # Over several years, revenue also brings its stored year-on-year growth (from the second year).
+    with_growth = metric == "revenue" and len(years) > 1
+    for index, period in enumerate(f"FY{y}" for y in years):
+        names = [metric, "yoy_growth"] if with_growth and index > 0 else [metric]
+        for name in names:
+            result = runner.call("get_financial_metric", ticker=ticker, metric=name, period=period)
+            if result.get("value") is not None:
+                blocks.append(
+                    f"[metric] {name} {period} = {result['value']} {result.get('unit', '')} "
+                    f"(source_id={result['source_ids'][0] if result['source_ids'] else 'n/a'})"
+                )
+                source_ids.extend(result["source_ids"])
     trace = [{"tool": c.name, "latency_ms": c.latency_ms} for c in runner.log]
     return blocks, source_ids, trace
 
@@ -159,8 +177,9 @@ def _run_retrieval(
     fiscal_years = fiscal_repo.get_fiscal_years(session, company_id=company.id)
     rewritten = rewrite_query(question, intent=intent, available_fiscal_years=fiscal_years)
 
-    # RAG-030: a pure metric lookup is answered from structured data, never via document search.
-    if intent == Intent.FINANCIAL_METRIC:
+    # RAG-030: a pure metric lookup, or a stored metric's trend over several years, is answered
+    # from structured data, never via document search.
+    if intent == Intent.FINANCIAL_METRIC or _is_metric_trend(question, rewritten):
         # Default a metric lookup with no explicit period to the latest fiscal year.
         years = rewritten.fiscal_years or ([max(fiscal_years)] if fiscal_years else [])
         blocks, source_ids, trace = _structured_answer(

@@ -215,3 +215,20 @@ def test_tool_budget_and_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(ToolBudgetExceeded):
         runner2.call("fake", x=99)
     assert len(runner2.log) == 6  # every executed call logged with latency
+
+
+def test_diversity_cap_gives_way_when_one_filing_is_all_there_is() -> None:  # RAG-017
+    # The per-filing cap spreads evidence across filings. With a single filing (JPM's one 10-K),
+    # a hard cap left 3 passages and the answer abstained; the cap now only reorders.
+    from dataclasses import replace
+
+    from app.rag.retrieval import _select_diverse
+
+    def in_filing(chunk_id: int, document_id: int) -> Evidence:
+        return replace(_ev(chunk_id, "text"), document_id=document_id)
+
+    one_filing = [in_filing(i, 1) for i in range(8)]
+    assert len(_select_diverse(one_filing, max_per_doc=3, top_k=6, stratify_years=[])) == 6
+    mixed = [in_filing(i, 1) for i in range(5)] + [in_filing(10 + i, 2) for i in range(5)]
+    picked = _select_diverse(mixed, max_per_doc=3, top_k=6, stratify_years=[])
+    assert [e.document_id for e in picked].count(1) == 3  # still spread when it can be

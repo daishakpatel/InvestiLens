@@ -258,9 +258,10 @@ def test_bull_bear_share_evidence(session: Session) -> None:
 def test_jpm_inapplicable_metric_labeled_na(session: Session) -> None:
     company = _seed_company(session, "JPM", gross_margin=None)  # bank: gross_margin is N/A
     payload, _ev = build_payload(session, company.id, "profitability_analysis")
-    series = payload["metrics"]["gross_margin"]["series"]
-    # Labeled with the reason, never a zero or a blank (DR-001, DR-041/042).
-    assert series["FY2025"] == "not applicable for this sector"
+    block = payload["metrics"]["gross_margin"]
+    # Labeled with the reason, never a zero or a blank (DR-001, DR-041/042) — said once, not as a
+    # year-by-year series for the model to narrate.
+    assert block == {"not_applicable": "not applicable for this sector"}
 
 
 def test_payload_hands_the_model_readable_figures(session: Session) -> None:
@@ -272,3 +273,45 @@ def test_payload_hands_the_model_readable_figures(session: Session) -> None:
     assert revenue["series"]["FY2025"] == "$130.5 billion"
     assert revenue["calculated"]["yoy"]["value"] == "114.2%"  # 1.14204…, trailing zero dropped
     assert "Revenue for FY2025 was $130.5 billion" in [e.text for e in evidence]
+
+
+def test_payload_covers_the_last_five_fiscal_years_and_skips_empty_metrics(
+    session: Session,
+) -> None:
+    # A report reads like NVDA's when the model gets recent history, not two decades of it, and is
+    # not asked to narrate a metric that has no value in any year.
+    company = _seed_company(session, "TST", gross_margin="0.7500")
+    for fy in range(2016, 2023):  # seven more years of revenue before the seeded 2023-2025
+        session.add(
+            FinancialMetric(
+                company_id=company.id,
+                period=f"FY{fy}",
+                fiscal_year=fy,
+                period_type="FY",
+                metric_name="revenue",
+                metric_value=Decimal(10**9 * fy),
+                unit="USD",
+                source_id=f"xbrl:TST:revenue:FY{fy}",
+                is_latest=True,
+            )
+        )
+    session.add(
+        FinancialMetric(
+            company_id=company.id,
+            period="FY2025",
+            fiscal_year=2025,
+            period_type="FY",
+            metric_name="operating_margin",
+            metric_value=None,
+            unit="ratio",
+            is_derived=True,
+            source_id="derived:TST:operating_margin:FY2025",
+            is_latest=True,
+            quality_flags={"warnings": ["MISSING_INPUT"]},
+        )
+    )
+    session.flush()
+    revenue, _ = build_payload(session, company.id, "revenue_analysis")
+    assert list(revenue["metrics"]["revenue"]["series"]) == [f"FY{y}" for y in range(2021, 2026)]
+    profitability, _ = build_payload(session, company.id, "profitability_analysis")
+    assert "operating_margin" not in profitability["metrics"]  # no value in any year

@@ -151,6 +151,37 @@ def test_metric_question_structured(session: Session, seed: tuple[int, Company])
     assert any(t.tool == "get_financial_metric" for t in turn.tool_trace)
 
 
+def test_trend_question_is_answered_from_stored_figures(
+    session: Session, seed: tuple[int, Company]
+) -> None:
+    # RAG-030, FR-027: "how has revenue grown over the last three years?" asks for numbers the
+    # database already holds, so it is answered from them (no model, nothing to misread), year by
+    # year, each cited. A "why" question still goes to the filings.
+    user_id, _ = seed
+
+    class _NoModel(FakeLLM):
+        async def complete(self, *args: object, **kwargs: object) -> str:
+            raise AssertionError("a trend in stored figures must not go to the model")
+
+    turn = answer_question(
+        session,
+        company="TST",
+        question="How has revenue grown over the last three years?",
+        user_id=user_id,
+        llm=_NoModel(),
+    )
+    assert not turn.abstained
+    for sentence in (
+        "Revenue for FY2023 was $26.97 billion",
+        "Revenue for FY2024 was $60.92 billion",
+        "Revenue for FY2025 was $130.5 billion",
+    ):
+        assert sentence in turn.answer
+    assert {c.source_id for c in turn.citations} >= {
+        f"xbrl:TST:revenue:FY{fy}" for fy in (2023, 2024, 2025)
+    }
+
+
 # --- DoD: qualitative question returns a cited, verified answer ---
 
 

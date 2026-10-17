@@ -109,6 +109,24 @@ def test_reingest_is_idempotent(session: Session, storage: FilesystemObjectStora
     assert first.facts == second.facts
 
 
+def test_reingest_restores_a_missing_document(
+    session: Session, storage: FilesystemObjectStorage
+) -> None:
+    # ING-001: "already ingested" must mean the document is stored too. A filing row whose HTML
+    # is gone (another storage root, a wiped directory) was skipped for good, so it could never
+    # be parsed; a re-run fetches it again without duplicating the filing.
+    ingest_company(session, "NVDA", sec=MockSecSource(), storage=storage)
+    tenk = session.scalars(select(Filing).where(Filing.filing_type == "10-K")).one()
+    assert tenk.raw_document_location is not None
+    storage._path(tenk.raw_document_location).unlink()
+    filings_before = _count(session, Filing)
+
+    again = ingest_company(session, "NVDA", sec=MockSecSource(), storage=storage)
+    assert storage.exists(tenk.raw_document_location)
+    assert again.documents_restored == 1 and again.filings_skipped == 3
+    assert _count(session, Filing) == filings_before
+
+
 class _FailOn8KSource(MockSecSource):
     """A mock whose 8-K document fetch fails, to exercise dead-lettering."""
 

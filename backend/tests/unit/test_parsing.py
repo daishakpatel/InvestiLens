@@ -124,3 +124,19 @@ def test_ixbrl_extraction_and_cross_check() -> None:
     # Planted mismatch is flagged; exact agreement is not.
     assert cross_check([first], {first.concept: first.value * Decimal("2")})
     assert cross_check([first], {first.concept: first.value}) == []
+
+
+def test_a_filing_without_item_headings_is_kept_as_one_section() -> None:  # DP-001, CH-001
+    # Intel's 10-K has no "Item 1A"/"Item 7" headings (it is laid out as an annual report with a
+    # cross-reference index at the back). Dropping it left Intel with no searchable text; it is
+    # now kept as one low-confidence section, flagged, so chat and reports can still cite it.
+    blocks = [Block("text", f"Paragraph {i} about demand, supply and margins.") for i in range(6)]
+    result = detect_sections(blocks, "10-K")
+    assert result.low_confidence
+    assert [(s.title, s.start_idx, s.end_idx) for s in result.sections] == [("Filing text", -1, 6)]
+    meta = FilingMeta(
+        document_id=1, company_id=1, company_name="Intel", filing_type="10-K", period_label="FY2025"
+    )
+    rows = chunk_filing(blocks, meta)
+    assert rows and all(r["section"] == "Filing text" for r in rows)
+    assert "Paragraph 0" in rows[0]["text"]

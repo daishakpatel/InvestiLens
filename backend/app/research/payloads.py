@@ -26,7 +26,14 @@ from app.research.evidence import from_metric, metric_source_id
 SECTION_METRICS: dict[str, list[str]] = {
     "executive_summary": ["revenue", "gross_margin"],
     "revenue_analysis": ["revenue"],
-    "profitability_analysis": ["gross_margin", "operating_margin", "net_margin", "ebitda"],
+    "profitability_analysis": [
+        "gross_margin",
+        "operating_margin",
+        "net_margin",
+        "ebitda",
+        "roe",  # returns carry the section for banks, where the margins above are N/A
+        "roa",
+    ],
     "balance_sheet_analysis": ["total_debt", "debt_to_equity", "current_ratio"],
     "cash_flow_analysis": ["free_cash_flow", "fcf_margin", "capex_intensity", "sbc_pct_revenue"],
     "valuation_analysis": ["market_cap", "pe_ratio", "ps_ratio"],
@@ -34,13 +41,19 @@ SECTION_METRICS: dict[str, list[str]] = {
 
 
 _NOT_APPLICABLE = "not applicable for this sector"
+# Recent history only: a report narrating two decades of a series reads as a list of numbers.
+_YEARS = 5
 
 
 def _series_block(
     session: Session, company_id: int, name: str
 ) -> tuple[dict[str, Any], list[EvidenceItem]]:
-    rows = metric_repo.get_metric_series(session, company_id=company_id, metric_name=name)
-    if not rows:
+    rows = metric_repo.get_metric_series(session, company_id=company_id, metric_name=name)[-_YEARS:]
+    if not any(row.metric_value is not None for row in rows):
+        reasons = {w for row in rows for w in (row.quality_flags or {}).get("warnings") or []}
+        # Said once (DR-001); a metric with no value and no sector reason is left out entirely.
+        if fin.NOT_APPLICABLE_SECTOR in reasons:
+            return {"not_applicable": _NOT_APPLICABLE}, []
         return {}, []
     unit = rows[0].unit
     series: dict[str, str] = {}

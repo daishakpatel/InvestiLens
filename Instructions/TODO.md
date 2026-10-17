@@ -1,78 +1,125 @@
 # InvestiLens — Remaining Work
 
-Audit date: 2026-10-12. All 25 task files and the 5 `UI_plan/` steps have been worked through;
-this is what is still open against `docs/InvestiLens_Spec_v2.md`.
+Audited 2026-10-12 against `docs/InvestiLens_Spec_v2.md`; last updated 2026-10-15. All 25 task
+files and the 5 `UI_plan/` steps have been worked through; this is what is still open.
 
-Tags: `[code]` = re-checked in the code/CI on the audit date. `[notes]` = carried from earlier
-session hand-offs, not re-checked.
+Tags: `[code]` = checked in the code, database or CI on the date shown in the item or, if none,
+the audit date. `[notes]` = carried from earlier session hand-offs, not re-checked.
+
+## State on 2026-10-14
+
+- CI on `develop` is green at `0b3cc01`.
+- **Not yet committed:** stored valuation metrics (ADR-0036), readable figures in AI reports
+  (prompt `report_v2`), the frontend's handling of multiples, their tests and docs. All 516
+  backend tests and 77 frontend tests pass with them; finance and citation coverage is 100%.
+- Gemini billing is on ($10 credit added 2026-10-14). Local `.env`: `LLM_PROVIDER=gemini`,
+  `LLM_MODEL_STRONG=gemini-3.5-flash-lite`, `EMBEDDING_PROVIDER=gemini`, `PRICE_PROVIDER=tiingo`,
+  `REFRESH_PRICES_ON_STARTUP=true`. News is still sample data.
+- Dev database: five companies (NVDA, AAPL, JPM, AMD, INTC) with real SEC financials, real prices
+  and stored valuations. Filing text is parsed and embedded for all five (19,808 passages).
+  Fresh research reports for JPM, AAPL and INTC (2026-10-15, `gemini-3.8-flash`); NVDA's and AMD's
+  are from earlier the same day.
 
 ## 0. Broken right now
 
-- [ ] **CI is red on `develop`** (last 4 pushes) — fixed locally 2026-10-12, not yet pushed.
-      `test_search_resolves_before_ticker` needed a seeded dev database; it now checks routing
-      offline. Tick this once a push shows CI green, including the image build. `[code]`
 - [ ] `GET /companies/{ticker}/research/latest` returns 500 when the stored report fails validation
-      (`ResearchReport.model_validate` is unguarded, `backend/app/api/companies.py:465`). `[code]`
-- [ ] Filings list pages by `id desc`, not filing date (`backend/app/repositories/filings.py:30`);
+      (`ResearchReport.model_validate` is unguarded in `backend/app/api/companies.py`). `[code]`
+- [ ] Filings list pages by `id desc`, not filing date (`backend/app/repositories/filings.py`);
       the Filings tab works around it by fetching 200 and sorting. `[code]`
-- [ ] INTC 10-K/10-Q parse to 0 chunks. `[notes]`
+- [ ] **Intel's filings have no sections**: its 10-K has no "Item N" headings (annual-report layout,
+      headings likely images), so it is kept as one flagged "Filing text" section. Chat and reports
+      work; section-aware features (management language, filing diff by section) do not. `[code]`
+- [ ] **JPM's 10-K is mis-sectioned**: 1,523 of its 2,463 passages are labelled "Item 15. Exhibits",
+      because JPM binds its annual report (MD&A, financials) after that heading. Answers still work,
+      but section-aware features (management commentary, language tracking) miss it. `[code]`
+- [ ] **Prolific filers get a one-year history**: EDGAR's "recent filings" list holds about 1,000
+      entries, and JPM files thousands of prospectus documents, so only one 10-K and three 10-Qs
+      were found. The loader should also read the older `filings.files` pages. `[code]`
+- [ ] **Table figures in millions fail the answer checker**: a claim quoting "$19,827 million" from
+      a table whose cells read "19,827" (in millions) is rejected as a mismatch. `[code]`
 - [ ] 10-Q Part I (financial statements + MD&A) is dropped by section detection, so language
       tracking and diffs miss 10-Q MD&A. Needs a `parser_version` bump. `[notes]`
+- [ ] **Browser tests assume AMD has no prices**: `e2e/tests/company.spec.ts`, `tools.spec.ts`
+      and `screenshots.spec.ts` use AMD for the "no price history" case, which is no longer true
+      in the dev DB. The visual suite replays recorded responses and is unaffected. `[code]`
 
-## 1. MVP Definition of Done (spec §36) — not yet met
+## 1. Decisions waiting on the project owner
 
-- [x] **Live LLM client** — Gemini behind `LLMClient` (`backend/app/providers/gemini.py`,
-      ADR-0032). Verified live 2026-10-12: a cited chat answer and a six-section NVDA report.
-- [ ] **Free tier allows 20 requests a day on `gemini-3.8-flash`; one report uses 10–14.**
-      Decide: enable billing (measured about $0.05 per report, under $0.01 per chat answer), or
-      point `LLM_MODEL_STRONG` at a model with a higher free limit. `[code]`
-- [x] **Chat declined every question** — fixed 2026-10-12: keyword search now falls back to
-      any-word matching, and the Gemini client rewrites the model's own citation styles into
-      `[SOURCE:id]`. Verified live on NVDA.
-- [ ] **Still no embeddings** (0 of 7,722 chunks): retrieval is keyword-only, so relevance is
-      weaker than designed and Recall@5 can't be measured. Needs a Voyage key or a Gemini
-      embedding client, then `scripts/embed_chunks.py`. `[code]`
-- [ ] **No way to regenerate a report from the UI** when one already exists; the Research tab only
-      offers "Generate" on a 404. `[code]`
-- [ ] **Chat follow-up rule misfires**: any question of four words or fewer gets the previous
-      message glued on, even when unrelated (`_is_followup` in `backend/app/chat/service.py`). `[code]`
-- [ ] **Trend questions go to document search**: "How has revenue grown over the last three
-      years?" is classed as an explanation, not answered from `financial_metrics`. `[code]`
+- [ ] **Main report/chat model.** With billing on, the free-tier cap on `gemini-3.8-flash` (20
+      requests a day) no longer binds. It wrote fuller reports than `gemini-3.5-flash-lite` (which
+      left revenue, profitability and management sections empty); measured about $0.05 per report
+      on either. Switching is one `.env` line: `LLM_MODEL_STRONG=gemini-3.8-flash`. `[code]`
+- [ ] **Commit** the uncommitted work listed above.
+- [ ] Product sign-off on AI budget placeholders ($5/user/month, $0.50 in demo, $25/day global). `[notes]`
+- [ ] Form 4 / 13F in scope or not (spec Appendix F #10). `[notes]`
+
+## 2. MVP Definition of Done (spec §36) — not yet met
+
+### AI answers and reports
+
 - [ ] **`gemini-3.5-flash-lite` is a weak main model**: it left revenue, profitability and
-      management sections empty where `gemini-3.8-flash` filled them, and varies its citation
-      syntax between runs. `[code]`
-- [ ] **Report prose shows raw numbers** ("215,938,000,000.00000000 USD"): the metric payload
-      hands the model unformatted Decimals. `[code]`
-- [ ] **Report took 171 s** against the 90 s target (NFR-003), with 4 s pacing between calls and
-      one 60 s timeout. `llm_calls` still logs estimated tokens, not Gemini's reported usage. `[code]`
-- [ ] **Publish measured numbers** (§36 #20): Recall@5, judge faithfulness, cost and latency per
-      report/chat are `_pending_` in `README.md`. Needs a live Voyage + LLM eval run. `[code]`
+      management sections empty where `gemini-3.8-flash` filled them, writes Markdown although told
+      not to (stripped before checking), and varies its citation syntax (the client normalises four
+      styles). `[code]`
+- [ ] **No way to regenerate a report from the UI** when one already exists; the Research tab only
+      offers "Generate" on a 404. Generating one costs about $0.05–0.10 on the paid tier. `[code]`
+- [ ] **News summary is empty in every report**: news is still sample data. `[code]`
+- [ ] **Report sections search with fixed keywords and no preference for recent filings**
+      (`_SECTION_QUERY` in `backend/app/research/report.py`): NVDA's bull case picked up crypto
+      "mining demand" from older 10-Ks, and AMD's management section quoted forward-looking-
+      statement boilerplate. `[code]`
+- [ ] **Price questions go to document search**: "what was the stock high on Sep 29" or "stock price
+      today" are not answered from `price_history` (prices have no citable source type yet). One
+      such question sent 23k tokens of context, well over the 6,000-token budget. Plain "margins"
+      is not in the metric lexicon, so "how did margins trend?" goes to the filings. `[code]`
+- [ ] **`llm_calls` logs estimated tokens**, not Gemini's reported usage (that goes to the
+      application log only), so cost tracking and budgets run on estimates. `[code]`
+- [ ] **Report speed**: about 70 s on `gemini-3.5-flash-lite` (18 calls), 171 s on `gemini-3.8-flash`
+      with free-tier pacing, against a 90 s target (NFR-003). `LLM_RATE_LIMIT_PER_SEC` (0.25) can be
+      raised now that billing is on. `[code]`
+- [ ] Comparison commentary and filing-diff adjudication have never run on a real model. `[notes]`
+
+### Measured numbers (§36 #20)
+
+- [ ] **Publish** Recall@5, judge faithfulness, cost and latency per report/chat; they are
+      `_pending_` in `README.md`. Now unblocked (corpus embedded, billing on): needs a live eval
+      run of about 106 questions, roughly $1–2. `[code]`
   - [ ] Judge calibration ≥ 0.85 against a 50-question human-labelled sample (none committed). `[notes]`
   - [ ] Re-tune `rag_sufficiency_min_score`, entailment and confidence thresholds on real
         embeddings; decide reranker (ADR-0014) and entailment verifier (ADR-0015). `[notes]`
-- [ ] **Hosted demo** (§36 #23): never deployed. `render.yaml`, Dockerfiles and `deploy.yml` exist;
-      needs a Render account, repo secrets, branch protection. Public live prices are blocked by the
-      Tiingo licence (ADR-0007), so the demo runs mock prices. `[notes]`
 - [ ] **Load test never run**: every row of the NFR table in `docs/testing.md` says `_not yet run_`. `[code]`
-- [ ] **E2E is manual-only** (`e2e.yml` is `workflow_dispatch`); Linux visual baselines are not
-      committed; behavioural specs assume the dev DB, not the CI seed. `[code]` / `[notes]`
-- [ ] **Price-derived metrics are not persisted** (market cap, EV, P/E, P/S, EV/EBITDA, FCF yield):
-      `ratio_builder.py` has none. Leaves the valuation report section, dashboard header P/E and
-      market cap, peer market-cap band and comparison valuation cells empty. `[code]`
+
+### Data
+
+- [ ] **Valuation uses fiscal-year figures, not TTM** (ADR-0036): P/E late in a fiscal year uses
+      earnings up to ten months old. Fixed by storing quarterly/TTM metrics (next item). `[code]`
+- [ ] **Five-year average multiples** (spec §10.7 "5Y Average P/E") are not computed; the
+      per-year history is stored, so this is a deterministic average in the report payload. `[code]`
+- [ ] **EV/EBITDA is N/A for AMD and Intel**: their depreciation & amortization is not mapped in
+      the concept map, so EBITDA is missing. `[code]`
+- [ ] A latest-close valuation is replaced on every price run, so a report that cited yesterday's
+      dated ID (`derived:NVDA:pe_ratio:<date>`) no longer resolves it. `[code]`
 - [ ] **Quarterly (Q1–Q3) and TTM metrics are not persisted** — only annual + derived Q4. The
-      Financials Q/TTM toggles show empty states. `[code]`
-- [ ] **Seed universe is 3 of 10**: fixtures cover NVDA, AAPL, JPM (AMD, INTC ingested live in dev).
-      Missing MSFT, AMZN, TSLA, GOOGL (multi-class shares), META, V, MA (§4.1). `[code]`
-- [ ] **Saved reports / research history / saved questions** (§26.2, §36 #24): reports carry a
-      `user_id` but there is no list endpoint and no UI. `[code]`
+      Financials Q/TTM toggles show empty states, and valuation multiples use fiscal-year figures. `[code]`
+- [ ] **Seed universe is 5 of 10 in dev, 3 in fixtures** (fixtures: NVDA, AAPL, JPM). Missing
+      MSFT, AMZN, TSLA, GOOGL (multi-class shares), META, V, MA (§4.1). `[code]`
+- [ ] **News is sample data** (placeholder headlines); live news needs a Finnhub key, and a
+      `NEWS_PROVIDER` switch like the ones for the LLM, embeddings and prices. `[code]`
+- [ ] **New SEC filings arrive only when ingestion is run by hand** locally. Prices catch up at
+      API start; filings have no equivalent. `[code]`
+- [ ] Prices refresh only at API start, and the check is "older than 12 hours", not "has the
+      market closed since". Fine for local use; a hosted deploy uses the `price-eod` schedule. `[code]`
+
+### Accounts and user features (§26.2, §36 #24)
+
+- [ ] **Saved reports / research history / saved questions**: reports carry a `user_id` but
+      there is no list endpoint and no UI. `[code]`
 - [ ] **Watchlist items**: no add/remove-item endpoint; each watched company is its own
       watchlist (ADR-0031 stand-in). Needs `POST/DELETE /watchlists/{id}/items` + a data migration. `[code]`
 - [ ] Alerts: `POST /alerts` takes no `config` (price-move threshold, news category);
       `Notification` has no ticker. `[code]` / `[notes]`
 - [ ] Email: no delivery provider for verify-email / password-reset; `email_verified_at` gates
       nothing; SMTP backend unproven. `[code]` / `[notes]`
-- [ ] API has no response compression (prices ≈ 179 kB per company); mobile Lighthouse on the
-      company page is 76–79 against a target of 90. `[code]` / `[notes]`
 
 ### Report-level features (§10.16)
 
@@ -80,7 +127,18 @@ session hand-offs, not re-checked.
 - [ ] `GET /research/{id}/diff` ("what changed since last report") is 501. `[code]`
 - [ ] Shareable read-only links: not built. `[code]`
 - [ ] Rejected-claims admin view: not built (data is logged in `claim_verifications`). `[notes]`
-- [ ] `POST /feedback/report` is a 204 no-op (`backend/app/api/watchlist.py:153`). `[code]`
+- [ ] `POST /feedback/report` is a 204 no-op (`backend/app/api/watchlist.py`). `[code]`
+
+### Deployment and tests
+
+- [ ] **Hosted demo** (§36 #23): never deployed. `render.yaml`, Dockerfiles and `deploy.yml` exist;
+      needs a Render account, repo secrets, branch protection. Tiingo's free plan is for personal
+      use, so a public demo must show sample prices or use a paid plan (ADR-0007, ADR-0035). The
+      Gemini key is on the paid tier now, so content is not used to improve Google's products. `[notes]`
+- [ ] **E2E is manual-only** (`e2e.yml` is `workflow_dispatch`); Linux visual baselines are not
+      committed; behavioural specs assume the dev DB, not the CI seed. `[code]` / `[notes]`
+- [ ] API has no response compression (prices ≈ 179 kB per company); mobile Lighthouse on the
+      company page is 76–79 against a target of 90. `[code]` / `[notes]`
 
 ### Before any public deploy
 
@@ -88,12 +146,13 @@ session hand-offs, not re-checked.
       `password` (unauthenticated), `FeedbackRequest.reason`, `WatchlistCreate.name`,
       `ChatRequest.company`, `metrics`, search `q`. No request body size limit found. `[code]`
 - [ ] DB gate in `get_db` (10 slots) has no wait timeout → queues in memory, never 503s. `[notes]`
-- [ ] Product sign-off on AI budget placeholders ($5/user/month, $0.50 in demo, $25/day global). `[notes]`
+- [ ] `HardenedHttpClient` retries every 4xx, not only 429/5xx, so a bad API key is retried
+      three times before failing. `[code]`
 
-## 2. Spec features not built (P2)
+## 3. Spec features not built (P2)
 
 - [ ] **Insiders & ownership** (§10.15): no Form 4 / 13F ingestion; endpoints return `[]`; the
-      `ownership` route redirects to overview. Appendix F #10 still undecided. `[code]`
+      `ownership` route redirects to overview. `[code]`
 - [ ] **DCF and scenario tools** (§37.6): nothing exists. `[code]`
 - [ ] **Earnings-quality dashboard** (§37.7): accruals, Piotroski and Altman formulas exist but
       are not persisted; Beneish M is missing; DSO/DIO/DPO/CCC, ROIC, dilution, CAGR also
@@ -110,19 +169,71 @@ session hand-offs, not re-checked.
       anomaly identity/YoY checks not wired; no endpoint for full in-app filing text. `[code]` / `[notes]`
 - [ ] **News**: tab shows 25 items with no paging; categorizer is rule-based; no sentiment
       (spec marks it optional). `[notes]`
-- [ ] Filing diff is recomputed per request (not cached); `q4_derived:<metric>` source IDs are
-      not company-scoped (`backend/app/finance/builder.py:230`). `[code]` / `[notes]`
+- [ ] Filing diff is recomputed per request, not cached. `[notes]`
 - [ ] §37.8 P3 candidates (screener, sector dashboards, Excel export, …): untouched by design.
 
-## 3. Never verified live
+## 4. Never verified live
 
-- [ ] Live Tiingo, Finnhub and Voyage paths (no API keys; parsing is unit-tested only). `[notes]`
+- [ ] Finnhub (news) and Voyage (embeddings) paths: no API keys; parsing is unit-tested only. `[notes]`
 - [ ] Prometheus / Grafana dashboards, OTLP exporter, MinIO object storage. `[notes]`
-- [ ] A research report or comparison commentary from a real LLM, and the Research layout against one. `[notes]`
+- [ ] The Celery Beat schedule and the full daily pipeline. `[notes]`
 - [ ] Light theme screen by screen; real print preview; no toast system. `[notes]`
 - [ ] `app/tasks/` wrappers are mostly 0% covered. `[notes]`
 
-## 4. Housekeeping
+## 5. Housekeeping
 
 - [ ] Definition of Done checkboxes in task files `01`–`25` were never ticked (every box is
       `[ ]`), although each phase was handed off as done. `UI_plan/` steps are ticked. `[code]`
+
+## Done since the audit
+
+- 2026-10-12 — **CI green**: an "offline" contract test needed a seeded database; the guard test
+  for ADR-0029 checked no routes and hid an `async` `/metrics` handler; a Dependabot major bump
+  (TypeScript 7) broke `npm ci`; the pinned Trivy release had been deleted. Dependabot no longer
+  groups major versions.
+- 2026-10-12 — **Live LLM**: Gemini behind `LLMClient` (ADR-0032), with `LLM_PROVIDER=gemini`.
+  The root `.env` is now actually loaded by the backend, and tests ignore `.env` entirely.
+- 2026-10-12 — **Chat answers**: keyword search falls back to any-word matching; the Gemini
+  client rewrites the model's citation styles into `[SOURCE:id]`.
+- 2026-10-12 — **Real embeddings**: Gemini `gemini-embedding-2` behind `EmbeddingClient`
+  (ADR-0033). Vector search is limited to the active model; retrieval falls back to keyword
+  search if the provider fails; `scripts/embed_chunks.py` is resumable.
+- 2026-10-12 — **Readable numbers in chat** and the citation panel
+  (`backend/app/finance/display.py`): "$215.94 billion", "71.07%".
+- 2026-10-13 — **Net income / operating income answered with revenue**: every stored metric now
+  has its own `source_id` (ADR-0034); dev metrics rebuilt (3,209 rows, 3,209 distinct IDs). The
+  same change fixed a 500 from `GET /sources` for derived fourth-quarter figures.
+- 2026-10-13 — **Real prices**: `PRICE_PROVIDER=tiingo` (ADR-0035), all five companies loaded
+  2021-10-14 to 2026-10-13, sample data removed, and prices caught up at API start with
+  `REFRESH_PRICES_ON_STARTUP=true`.
+- 2026-10-13 — A real research report exists for NVDA in the dev DB (`gemini-3.5-flash-lite`).
+- 2026-10-14 — **Embeddings complete**: all 7,722 parsed chunks embedded with Gemini on the paid
+  tier (about 1.7 million tokens in total, roughly $0.35).
+- 2026-10-14 — **Market cap, EV and multiples stored** (ADR-0036): per fiscal year and at the
+  latest close, rebuilt with every price run, split-adjusted, bank EV multiples N/A. They fill
+  the header, the Financials valuation panel, comparisons, peer market-cap bands and the report's
+  valuation section.
+- 2026-10-14 — **Readable figures in AI reports**: the report payload and evidence carry figures
+  as "$215.94 billion" / "71.07%" / "46.63x" (prompt `report_v2`); a fresh NVDA report had no raw
+  numbers in its 26 figure-bearing claims.
+- 2026-10-14 — **Chat answers on AMD** (user report): Markdown (`*`, `**`, `###`) is removed before
+  the answer is checked and the model is told not to write it; "risks"/"margins" now count as
+  factual terms, so a cited answer is no longer declined because only its uncited sentence looked
+  factual; a short question is no longer glued to the previous one unless it opens with a
+  follow-up word or leans on a pronoun ("what does management attribute it to?"); semicolon-
+  separated citations are split.
+- 2026-10-15 — **JPM questions declined** (user report): JPM's and Apple's filings had only come
+  from the sample set. Loaded five years from EDGAR, fixed the loader skipping a known filing whose
+  stored document was missing (ING-001), parsed and embedded them (5,342 passages, about $0.16).
+  `scripts/parse_filings.py` now takes tickers so other companies keep their embeddings.
+- 2026-10-15 — **Trend questions answered from stored figures**: "How has revenue grown over the
+  last three years?" (a "how", not a "why", naming a stored metric over several years) is answered
+  from `financial_metrics` with year-on-year growth, for every company.
+- 2026-10-15 — **Retrieval cap no longer starves single-filing companies**: the 3-per-filing cap
+  only reorders; it fills from the same filing when no other filing can.
+- 2026-10-15 — **Research reports for JPM, Apple and Intel** (user report): JPM's and Apple's were
+  fake-model placeholders from 2026-10-11 and Intel had none; all three regenerated. The report
+  payload now covers the last five fiscal years, says "not applicable for this sector" once
+  instead of per year, leaves out metrics with no value, and adds ROE/ROA to profitability, so a
+  bank's profitability section discusses net margin and returns. A 10-K with no "Item" headings
+  (Intel) is now kept as one flagged section instead of being dropped (6,744 passages).

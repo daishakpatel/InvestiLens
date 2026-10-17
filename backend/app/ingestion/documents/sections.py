@@ -64,6 +64,11 @@ def detect_sections(blocks: list[Block], filing_type: str) -> SectionResult:
         full_title = f"{label}. {title}".strip(". ") if title else label
         sections.append(Section(code, full_title, [label], idx, end))
 
+    if not sections and blocks:
+        # No "Item N" heading anywhere (an annual-report layout such as Intel's): keep the whole
+        # document as one section rather than dropping it; confidence stays 0, so it is flagged.
+        sections.append(Section("0", "Filing text", ["Filing text"], -1, len(blocks)))
+
     detected_core = {s.item_code for s in sections} & _CORE_10K
     confidence = (
         len(detected_core) / len(_CORE_10K)

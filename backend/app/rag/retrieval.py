@@ -106,6 +106,12 @@ def _select_diverse(
         if e.chunk_id in chosen_ids or per_doc.get(e.document_id, 0) >= max_per_doc:
             continue
         take(e)
+    # The cap spreads evidence across filings; it must not starve a company with one filing.
+    for e in evidence:
+        if len(chosen) >= effective_k:
+            break
+        if e.chunk_id not in chosen_ids:
+            take(e)
     return chosen
 
 
