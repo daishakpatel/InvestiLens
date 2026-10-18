@@ -19,7 +19,8 @@ code identifiers use `assay_desk` / `ASSAY_DESK`. The spec moved to `docs/AssayD
 UI copy, docs, package names, CI-only identifiers and observability labels were renamed.
 Earlier ADRs keep their content, dates and numbering; only the product name in their prose
 changed. Identifiers tied to existing data or deployments (`render.yaml` service names, Postgres
-database/user defaults, MinIO credentials, the `investilens-filings` bucket, the seed user's email,
+database/user defaults, the Docker Compose project name (which names the volumes), MinIO
+credentials, the `investilens-filings` bucket, the seed user's email,
 and the `il-*` localStorage keys) deliberately keep the old name until each one is migrated on
 purpose.
 
