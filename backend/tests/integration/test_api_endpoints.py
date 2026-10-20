@@ -262,6 +262,60 @@ def test_news_filters_and_body_cursor(client: TestClient, seed: dict[str, int]) 
     assert none_match["items"] == []
 
 
+def test_news_is_newest_published_first_across_pages(  # §24.2, API-003
+    client: TestClient, session: Session, seed: dict[str, int]
+) -> None:
+    # Finnhub delivers newest first, so the oldest article gets the highest id.
+    for day in (20, 18, 15):
+        session.add(
+            News(
+                company_id=seed["company"],
+                title=f"Late {day}",
+                category="product",
+                relevance_score=Decimal("0.9"),
+                published_at=datetime(2025, 1, day, tzinfo=UTC),
+            )
+        )
+    session.add(
+        News(
+            company_id=seed["company"],
+            title="Undated",
+            category="product",
+            relevance_score=Decimal("0.9"),
+        )
+    )
+    session.flush()
+
+    titles: list[str] = []
+    cursor = None
+    while True:
+        params: dict[str, str | int] = {"limit": 2, **({"cursor": cursor} if cursor else {})}
+        body = client.get(f"{_P}/companies/TST/news", params=params).json()
+        titles += [item["title"] for item in body["items"]]
+        cursor = body["next_cursor"]
+        if not cursor:
+            break
+    assert titles == ["Late 20", "Late 18", "Late 15", "Headline 1", "Headline 0", "Undated"]
+
+
+def test_news_hides_passing_mentions_by_default(  # §10.8
+    client: TestClient, session: Session, seed: dict[str, int]
+) -> None:
+    session.add(
+        News(
+            company_id=seed["company"],
+            title="Markets rise broadly",
+            relevance_score=Decimal("0.1"),
+            published_at=datetime(2025, 2, 1, tzinfo=UTC),
+        )
+    )
+    session.flush()
+    default = client.get(f"{_P}/companies/TST/news").json()["items"]
+    everything = client.get(f"{_P}/companies/TST/news", params={"min_relevance": 0}).json()
+    assert "Markets rise broadly" not in [item["title"] for item in default]
+    assert everything["items"][0]["title"] == "Markets rise broadly"
+
+
 def test_research_single_flight(client: TestClient, seed: dict[str, int]) -> None:
     h = auth_headers(seed["user"])
     assert client.post(f"{_P}/research", json={"ticker": "TST"}).status_code == 401  # ADR-0006

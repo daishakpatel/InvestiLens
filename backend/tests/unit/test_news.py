@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import httpx
+import pytest
 
 from app.ingestion.news.classify import CATEGORIES, categorize, publisher_tier
 from app.ingestion.news.dedup import ClusterInput, cluster_articles, content_hash
@@ -45,6 +46,26 @@ def test_relevance_scoring_and_passing_mention() -> None:
     )
     assert title_hit > threshold and summary_hit > threshold
     assert passing < threshold  # DoD: passing mention below the display threshold
+
+
+def test_relevance_matches_whole_words_only() -> None:  # §10.8 entity resolution
+    def title_hit(name: str, ticker: str, title: str) -> bool:
+        return relevance_score(name, ticker, title) == _D("0.9")
+
+    assert title_hit("INTEL CORP", "INTC", "Intel's foundry wins a customer")
+    assert not title_hit("INTEL CORP", "INTC", "US still sharing intelligence with Ukraine")
+    # "Advanced" alone is too common; the first two words of the name are used instead.
+    assert title_hit("ADVANCED MICRO DEVICES INC", "AMD", "Advanced Micro Devices beats")
+    assert not title_hit("ADVANCED MICRO DEVICES INC", "AMD", "Advanced packaging demand grows")
+    assert title_hit("ADVANCED MICRO DEVICES INC", "AMD", "Shares of NASDAQ:AMD jump")
+    assert not title_hit("ADVANCED MICRO DEVICES INC", "AMD", "Amdocs raises guidance")
+    assert title_hit("JPMORGAN CHASE & CO", "JPM", "JPMorgan raises its dividend")
+    assert title_hit("JPMORGAN CHASE & CO", "JPM", "One year in, JPMorganChase's security push")
+    # Tickers count only in capitals, and a one-letter ticker only as "(A)" or "NYSE:A".
+    assert not title_hit("ON Semiconductor Corp", "ON", "Stocks on the move")
+    assert title_hit("ON Semiconductor Corp", "ON", "Why ON stock fell today")
+    assert not title_hit("Agilent Technologies", "A", "A stock to buy now")
+    assert title_hit("Agilent Technologies", "A", "Agilent (A) tops estimates")
 
 
 def test_content_hash_normalizes() -> None:
@@ -103,3 +124,25 @@ def test_finnhub_parses_headline_level_only() -> None:
     assert len(articles) == 1
     assert articles[0].title == "NVIDIA unveils chip" and articles[0].publisher == "Reuters"
     assert articles[0].summary == "A short summary."  # no full body (LGL-004)
+
+
+def test_news_provider_switch_is_independent_of_provider_mode(  # DR-004, SEC-001
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.config import get_settings
+    from app.providers.news import get_news_source
+    from app.providers.news.mock import MockNewsSource
+
+    assert isinstance(get_news_source(), MockNewsSource)  # the suite's default stays offline
+    monkeypatch.setenv("NEWS_PROVIDER", "finnhub")
+    monkeypatch.setenv("FINNHUB_API_KEY", "")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="FINNHUB_API_KEY"):
+            get_news_source()
+        monkeypatch.setenv("FINNHUB_API_KEY", "test-key")
+        get_settings.cache_clear()
+        assert isinstance(get_news_source(), FinnhubNewsSource)  # PROVIDER_MODE is still mock
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()
