@@ -55,7 +55,9 @@ class Settings(BaseSettings):
     backfill_price_years: int = Field(default=5)  # 5y daily history for valuation bands
 
     # --- News: Finnhub (Phase 1e, ADR-0008) ---
-    finnhub_api_key: str = Field(default="")  # required only when PROVIDER_MODE=live
+    finnhub_api_key: str = Field(default="")  # required only when Finnhub is the news source
+    # Overrides PROVIDER_MODE for news alone (ADR-0038), so real news needs only this one key.
+    news_provider: Literal["mock", "finnhub"] | None = Field(default=None)
     news_rate_limit_per_sec: float = Field(default=1.0)  # Finnhub free: 60/min
     news_backfill_days: int = Field(default=30)  # recent window; free tier has 1y history
     news_relevance_threshold: float = Field(default=0.3)  # min score shown by default

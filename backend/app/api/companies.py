@@ -17,6 +17,7 @@ from app.api._support import freshness_for, metric_to_result
 from app.api.filings import to_summary
 from app.api.pagination import NEXT_CURSOR_HEADER, clamp_limit, decode_cursor, encode_cursor
 from app.cache import cache
+from app.config import get_settings
 from app.db import get_db
 from app.filings import topics
 from app.filings.earnings import earnings_reactions
@@ -406,8 +407,10 @@ def list_company_news(
 ) -> NewsResponse:
     company = _resolve(db, ticker)
     page_size = clamp_limit(limit)
+    if min_relevance is None:  # passing mentions stay out unless asked for (§10.8)
+        min_relevance = get_settings().news_relevance_threshold
     try:
-        rel = Decimal(str(min_relevance)) if min_relevance is not None else None
+        rel = Decimal(str(min_relevance))
     except InvalidOperation as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid min_relevance") from exc
     rows = news_repo.list_news(
