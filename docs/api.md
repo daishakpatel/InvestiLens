@@ -89,7 +89,7 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 ### News
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/companies/{ticker}/news?category=&from=&to=&source=&min_relevance=` | Headlines (LGL-004) |
+| GET | `/companies/{ticker}/news?category=&from=&to=&source=&min_relevance=` | Headlines, newest published first (LGL-004). Without `min_relevance`, rows below `NEWS_RELEVANCE_THRESHOLD` (0.3) are left out; pass `min_relevance=0` for all |
 
 ### Research (async job pattern, §25.1)
 | Method | Path | Notes |
