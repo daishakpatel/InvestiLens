@@ -1,7 +1,8 @@
 """Run news ingestion for seed companies (Phase 1e).
 
-PROVIDER_MODE=mock uses frozen fixtures (offline); PROVIDER_MODE=live uses Finnhub (needs
-FINNHUB_API_KEY). Companies must already exist (run SEC ingestion first).
+NEWS_PROVIDER (or PROVIDER_MODE when unset) picks the source: mock uses frozen fixtures (offline),
+finnhub/live uses Finnhub (needs FINNHUB_API_KEY, ADR-0038). Companies must already exist (run
+SEC ingestion first).
 
 Usage:
     cd backend && uv run python ../scripts/ingest_news.py NVDA AAPL JPM
@@ -20,7 +21,9 @@ from app.ingestion.news import ingest_news_for_tickers
 
 
 def main(tickers: list[str]) -> None:
-    print(f"PROVIDER_MODE={get_settings().provider_mode}; ingesting news for {', '.join(tickers)}")
+    settings = get_settings()
+    source = settings.news_provider or settings.provider_mode
+    print(f"news source={source}; ingesting news for {', '.join(tickers)}")
     for ticker, counts in ingest_news_for_tickers(_session_factory(), tickers).items():
         print(f"  {ticker}: {counts}")
 
