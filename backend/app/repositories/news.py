@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import ColumnElement, select
+from sqlalchemy import ColumnElement, func, select, tuple_
 from sqlalchemy.orm import Session
 
 from app.models import Document, News
+
+# Sorts undated rows after every dated one in the newest-first list.
+_UNDATED = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def publisher_tiers(session: Session, document_ids: list[int]) -> dict[int, int]:
@@ -33,7 +36,11 @@ def list_news(
     limit: int,
     after_id: int | None = None,
 ) -> list[News]:
-    """Filtered company news, newest first, keyset-paginated by descending id (LGL-004, §24.2)."""
+    """Filtered company news, newest published first, keyset-paginated (LGL-004, §24.2).
+
+    Providers don't deliver in time order, so ids aren't chronological: order by publish time
+    (undated rows last) with id as the tie-break, and resume after the cursor row's position.
+    """
     conditions: list[ColumnElement[bool]] = [News.company_id == company_id]
     if category is not None:
         conditions.append(News.category == category)
@@ -45,11 +52,16 @@ def list_news(
         conditions.append(News.published_at <= to_dt)
     if min_relevance is not None:
         conditions.append(News.relevance_score >= min_relevance)
+    published = func.coalesce(News.published_at, _UNDATED)
     if after_id is not None:
-        conditions.append(News.id < after_id)
-    return list(
-        session.scalars(select(News).where(*conditions).order_by(News.id.desc()).limit(limit))
-    )
+        anchor = session.get(News, after_id)
+        if anchor is None:  # cursor row deleted since: fall back to id order rather than restart
+            conditions.append(News.id < after_id)
+        else:
+            anchor_at = anchor.published_at or _UNDATED
+            conditions.append(tuple_(published, News.id) < tuple_(anchor_at, anchor.id))
+    stmt = select(News).where(*conditions).order_by(published.desc(), News.id.desc()).limit(limit)
+    return list(session.scalars(stmt))
 
 
 def get_recent_news(
