@@ -1,10 +1,12 @@
 import { Bell } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
+import { evidenceHref } from "../../lib/alertEvidence";
 import { formatDate } from "../../lib/format";
 import { useMarkNotificationsRead, useNotifications } from "../../lib/queries";
 import { IconButton } from "../ui/Button";
-import { Popover } from "../ui/Popover";
+import { Popover, PopoverClose } from "../ui/Popover";
 
 /** The reader's alerts, newest first (§26.2). An unread dot on the bell; opening the list marks
  *  what it shows as read, while the list itself keeps marking which ones were new. */
@@ -46,7 +48,7 @@ export function NotificationsBell({ userId }: { userId: string }) {
           </p>
         ) : items.length === 0 ? (
           <p className="px-1 py-4 text-sm text-muted">
-            Nothing yet. Turn on alerts from a company’s page and they will arrive here.
+            Nothing yet. Turn on alerts from a company’s page or the Alerts page and they will arrive here.
           </p>
         ) : (
           <ul className="max-h-80 divide-y divide-border/60 overflow-y-auto">
@@ -59,7 +61,15 @@ export function NotificationsBell({ userId }: { userId: string }) {
                 <div className="min-w-0">
                   <p className="text-sm">
                     {fresh.has(item.id) && <span className="sr-only">New: </span>}
-                    {item.title}
+                    {evidenceHref(item) ? (
+                      <PopoverClose asChild>
+                        <Link to={evidenceHref(item) ?? ""} className="hover:text-primary hover:underline">
+                          {item.title}
+                        </Link>
+                      </PopoverClose>
+                    ) : (
+                      item.title
+                    )}
                   </p>
                   {item.body && <p className="mt-0.5 text-caption text-muted">{item.body}</p>}
                   <p className="mt-0.5 text-caption text-subtle">{formatDate(item.created_at)}</p>

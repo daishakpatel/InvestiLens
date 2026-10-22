@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import type {
   Alert,
+  AlertEventType,
   AppNotification,
   ChatResponse,
   CompanyResponse,
@@ -488,10 +489,20 @@ const watchlist = z.object({
 });
 const alert = z.object({
   id: z.string(),
-  ticker: z.string(),
-  alert_type: z.enum(["new_10k", "new_10q", "new_8k", "price_move", "news_category", "new_risk_factor"]),
-  channel: channel.default("in_app"),
-  is_active: z.boolean().default(true),
+  event_type: z.string(),
+  ticker: z.string().nullish(),
+  params: z.record(z.string(), z.unknown()).default({}),
+  channels: z.array(channel).default(["in_app"]),
+  enabled: z.boolean().default(true),
+  supported: z.boolean().default(true),
+  created_at: z.string(),
+});
+const alertEventType = z.object({
+  key: z.string(),
+  label: z.string(),
+  description: z.string(),
+  params_schema: z.record(z.string(), z.unknown()),
+  default_enabled: z.boolean().default(true),
 });
 const notification = z.object({
   id: z.string(),
@@ -499,6 +510,10 @@ const notification = z.object({
   body: z.string().nullish(),
   channel,
   company_id: z.string().nullish(),
+  ticker: z.string().nullish(),
+  event_type: z.string().nullish(),
+  severity: z.enum(["info", "warning", "critical"]).nullish(),
+  source_ids: z.array(z.string()).default([]),
   read: z.boolean().default(false),
   created_at: z.string(),
 });
@@ -508,6 +523,8 @@ export const parse = {
   watchlists: (d: unknown): Watchlist[] => z.array(watchlist).parse(d) as Watchlist[],
   alert: (d: unknown): Alert => alert.parse(d) as Alert,
   alerts: (d: unknown): Alert[] => z.array(alert).parse(d) as Alert[],
+  alertEventTypes: (d: unknown): AlertEventType[] =>
+    z.array(alertEventType).parse(d) as AlertEventType[],
   notifications: (d: unknown): AppNotification[] =>
     z.array(notification).parse(d) as AppNotification[],
   filingDiff: (d: unknown): FilingDiffResponse => filingDiff.parse(d) as FilingDiffResponse,

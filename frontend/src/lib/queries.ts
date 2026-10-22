@@ -7,7 +7,9 @@ import { apiRequest } from "./apiClient";
 import { parse } from "./schemas";
 import type {
   Alert,
-  AlertType,
+  AlertCreate,
+  AlertEventType,
+  AlertUpdate,
   AppNotification,
   CompanyResponse,
   CompanySearchResult,
@@ -414,15 +416,38 @@ export function useAlerts(userId: string | null): UseQueryResult<Alert[]> {
   });
 }
 
-export function useCreateAlert(): UseMutationResult<
-  Alert,
-  Error,
-  { ticker: string; alert_type: AlertType }
-> {
+/** The alert kinds on offer and each one's params as JSON Schema (FR-AL-010). Static per
+ *  deploy, so cached for the session. */
+export function useAlertEventTypes(): UseQueryResult<AlertEventType[]> {
+  return useQuery({
+    queryKey: ["alert-event-types"],
+    staleTime: Infinity,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>("/alerts/event-types", { signal });
+      return parse.alertEventTypes(data);
+    },
+  });
+}
+
+/** Only `event_type` is required; the server fills in the defaults for the rest. */
+type NewAlert = Pick<AlertCreate, "event_type"> & Partial<AlertCreate>;
+
+export function useCreateAlert(): UseMutationResult<Alert, Error, NewAlert> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body) => {
       const { data } = await apiRequest<unknown>("/alerts", { method: "POST", body });
+      return parse.alert(data);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["alerts"] }),
+  });
+}
+
+export function useUpdateAlert(): UseMutationResult<Alert, Error, { id: string } & AlertUpdate> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...body }) => {
+      const { data } = await apiRequest<unknown>(`/alerts/${id}`, { method: "PATCH", body });
       return parse.alert(data);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["alerts"] }),

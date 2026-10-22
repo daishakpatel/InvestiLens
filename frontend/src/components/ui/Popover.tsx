@@ -28,3 +28,6 @@ export function Popover({
     </RadixPopover.Root>
   );
 }
+
+/** Wrap a link or button inside a popover so using it also closes the popover. */
+export const PopoverClose = RadixPopover.Close;

@@ -113,6 +113,29 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [{ "expr": "job_queue_depth" }]
+    },
+    {
+      "id": 10,
+      "title": "Alert dispatch latency (p50/p95; SLA 30 min)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(alert_dispatch_latency_seconds_bucket[1h])) by (le))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(alert_dispatch_latency_seconds_bucket[1h])) by (le))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Alerts fired / dispatch errors (per event type)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(increase(alerts_fired_total[1h])) by (event_type, channel)", "legendFormat": "fired {{event_type}} {{channel}}" },
+        { "expr": "sum(increase(alert_dispatch_errors_total[1h])) by (event_type)", "legendFormat": "errors {{event_type}}" }
+      ]
     }
   ]
 }

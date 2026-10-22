@@ -76,6 +76,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/alerts/event-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Alert Event Types
+         * @description The alert kinds a user can choose from, with each one's params as JSON Schema.
+         */
+        get: operations["list_alert_event_types_api_v1_alerts_event_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/alerts/{alert_id}": {
         parameters: {
             query?: never;
@@ -90,7 +110,8 @@ export interface paths {
         delete: operations["delete_alert_api_v1_alerts__alert_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Alert */
+        patch: operations["update_alert_api_v1_alerts__alert_id__patch"];
         trace?: never;
     };
     "/api/v1/auth/login": {
@@ -981,41 +1002,96 @@ export interface components {
         /** Alert */
         Alert: {
             /**
-             * Alert Type
-             * @enum {string}
+             * Channels
+             * @default [
+             *       "in_app"
+             *     ]
              */
-            alert_type: "new_10k" | "new_10q" | "new_8k" | "price_move" | "news_category" | "new_risk_factor";
+            channels: ("email" | "in_app")[];
+            /** Created At */
+            created_at: string;
             /**
-             * Channel
-             * @default in_app
-             * @enum {string}
+             * Enabled
+             * @default true
              */
-            channel: "email" | "in_app";
+            enabled: boolean;
+            /** Event Type */
+            event_type: string;
             /** Id */
             id: string;
             /**
-             * Is Active
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: unknown;
+            };
+            /**
+             * Supported
              * @default true
              */
-            is_active: boolean;
+            supported: boolean;
             /** Ticker */
-            ticker: string;
+            ticker?: string | null;
         };
         /** AlertCreate */
         AlertCreate: {
             /**
-             * Alert Type
-             * @enum {string}
+             * Channels
+             * @default [
+             *       "in_app"
+             *     ]
              */
-            alert_type: "new_10k" | "new_10q" | "new_8k" | "price_move" | "news_category" | "new_risk_factor";
+            channels: ("email" | "in_app")[];
             /**
-             * Channel
-             * @default in_app
-             * @enum {string}
+             * Enabled
+             * @default true
              */
-            channel: "email" | "in_app";
+            enabled: boolean;
+            /** Event Type */
+            event_type: string;
+            /**
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: unknown;
+            };
             /** Ticker */
-            ticker: string;
+            ticker?: string | null;
+        };
+        /**
+         * AlertEventType
+         * @description One entry of the alert event-type registry (FR-AL-010): enough for a client to render the
+         *     rule form without a hard-coded list.
+         */
+        AlertEventType: {
+            /**
+             * Default Enabled
+             * @default true
+             */
+            default_enabled: boolean;
+            /** Description */
+            description: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Params Schema */
+            params_schema: {
+                [key: string]: unknown;
+            };
+        };
+        /** AlertUpdate */
+        AlertUpdate: {
+            /** Channels */
+            channels?: ("email" | "in_app")[] | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * AuthMessage
@@ -1911,6 +1987,8 @@ export interface components {
             company_id?: string | null;
             /** Created At */
             created_at: string;
+            /** Event Type */
+            event_type?: string | null;
             /** Id */
             id: string;
             /**
@@ -1918,6 +1996,15 @@ export interface components {
              * @default false
              */
             read: boolean;
+            /** Severity */
+            severity?: ("info" | "warning" | "critical") | null;
+            /**
+             * Source Ids
+             * @default []
+             */
+            source_ids: string[];
+            /** Ticker */
+            ticker?: string | null;
             /** Title */
             title: string;
         };
@@ -2756,6 +2843,26 @@ export interface operations {
             };
         };
     };
+    list_alert_event_types_api_v1_alerts_event_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertEventType"][];
+                };
+            };
+        };
+    };
     delete_alert_api_v1_alerts__alert_id__delete: {
         parameters: {
             query?: never;
@@ -2775,6 +2882,43 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_alert_api_v1_alerts__alert_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                alert_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Alert"];
+                };
             };
             /** @description Validation Error */
             422: {

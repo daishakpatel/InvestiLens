@@ -52,7 +52,9 @@ export type LanguagePoint = Schemas["LanguagePoint"];
 // --- Watchlists, alerts & notifications (§26.2) ---
 export type Watchlist = Schemas["Watchlist"];
 export type Alert = Schemas["Alert"];
-export type AlertType = Alert["alert_type"];
+export type AlertCreate = Schemas["AlertCreate"];
+export type AlertUpdate = Schemas["AlertUpdate"];
+export type AlertEventType = Schemas["AlertEventType"];
 export type AppNotification = Schemas["Notification"]; // `Notification` is a DOM global
 
 // --- Phase 6a: company comparison & portfolio analysis (§37.1/§37.2) ---

@@ -302,9 +302,9 @@ def _seed_ai_and_user_rows(session: Session, company: Company, user: User) -> No
             Alert(
                 user_id=user.id,
                 company_id=company.id,
-                alert_type="new_10k",
-                channel="in_app",
-                is_active=True,
+                event_type="new_filing",
+                params={"form_types": ["10-K"]},
+                channels=["in_app"],
             ),
         ]
     )

@@ -22,6 +22,7 @@ const NewsTab = lazy(() => import("./pages/tabs/NewsTab"));
 const OpenAssistant = lazy(() => import("./components/panel/OpenAssistant"));
 const ComparePage = lazy(() => import("./pages/ComparePage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
+const AlertsPage = lazy(() => import("./pages/AlertsPage"));
 // Design-system review surface: dev server only, so it never ships in the production bundle.
 const UiGallery = import.meta.env.DEV ? lazy(() => import("./pages/UiGallery")) : null;
 
@@ -67,6 +68,7 @@ export function App() {
           <Route index element={<HomePage />} />
           <Route path="compare" element={<ComparePage />} />
           <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="alerts" element={<AlertsPage />} />
           <Route path="company/:ticker" element={<CompanyDashboard />}>
             <Route index element={<OverviewTab />} />
             <Route path="financials" element={<FinancialsTab />} />
