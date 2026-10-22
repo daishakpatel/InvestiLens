@@ -215,17 +215,31 @@ test.describe("financials (§10.2-§10.8, §12)", () => {
   });
 
   test("a period with no data says so instead of leading to empty charts", async ({ page }) => {
+    // A company with fewer than four reported quarters has no TTM (DR-QT-002): mocked here.
+    await page.route(
+      (url) => url.pathname.endsWith("/financials") && url.searchParams.get("period_type") === "TTM",
+      (route) =>
+        route.fulfill({
+          json: {
+            ticker: TICKER,
+            period_type: "TTM",
+            series: [{ metric_name: "revenue", points: [] }],
+            freshness: { as_of: new Date().toISOString(), source: "sec", freshness_status: "fresh" },
+          },
+        }),
+    );
     await loaded(page, `${company}/financials`);
     const trailing = page.getByText("TTM", { exact: true });
     await expect(trailing).toHaveAttribute("aria-disabled", "true");
     // The innermost focusable wrapper (the option itself, not the group around it).
     await tabTo(page, page.locator('[tabindex="0"]', { has: trailing }).last());
-    await expect(page.getByRole("tooltip")).toContainText("not computed yet");
+    await expect(page.getByRole("tooltip")).toContainText("need four reported quarters");
 
+    // Phase 7b: every fiscal quarter is stored now, balances included.
     await page.getByRole("radio", { name: "Quarterly" }).click();
-    await expect(page.getByText(/Only fiscal fourth quarters are available/)).toBeVisible();
+    await expect(page.getByText(/The latest eight fiscal quarters/)).toBeVisible();
     await expect(page.getByRole("figure").filter({ hasText: "Revenue" }).first()).toBeVisible();
-    await expect(page.getByRole("region", { name: "Balance sheet", exact: true })).toContainText(/No fiscal quarters figures/);
+    await expect(page.getByRole("region", { name: "Balance sheet", exact: true })).not.toContainText(/No fiscal quarters figures/);
   });
 
   test("show growth adds a change strip under each chart", async ({ page }) => {

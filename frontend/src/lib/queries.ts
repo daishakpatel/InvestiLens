@@ -23,6 +23,7 @@ import type {
   JobState,
   ManagementLanguageResponse,
   MetricResult,
+  MetricsCoverageResponse,
   NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
@@ -65,10 +66,12 @@ export function useFinancials(
   ticker: string,
   metrics: string[],
   periodType: string,
+  enabled = true,
 ): UseQueryResult<FinancialsResponse> {
   const metricsParam = metrics.join(",");
   return useQuery({
     queryKey: ["financials", ticker, metricsParam, periodType],
+    enabled,
     staleTime: 5 * MINUTE,
     // Switching Annual ↔ Quarterly keeps the previous figures on screen (dimmed by the caller via
     // `isPlaceholderData`) instead of flashing skeletons. Never across companies: another
@@ -83,6 +86,22 @@ export function useFinancials(
         signal,
       });
       return parse.financials(data);
+    },
+  });
+}
+
+/** Which quarters and TTM windows each metric has, and why the others are missing (FR-QT-010). */
+export function useMetricsCoverage(
+  ticker: string,
+  enabled = true,
+): UseQueryResult<MetricsCoverageResponse> {
+  return useQuery({
+    queryKey: ["metrics-coverage", ticker],
+    enabled,
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/metrics/coverage`, { signal });
+      return parse.metricsCoverage(data);
     },
   });
 }

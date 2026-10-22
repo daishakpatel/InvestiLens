@@ -21,6 +21,7 @@ import type {
   JobState,
   ManagementLanguageResponse,
   MetricResult,
+  MetricsCoverageResponse,
   NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
@@ -79,12 +80,29 @@ const metricPoint = z.object({
   period_end: z.string().nullish(),
   value: z.string().nullable(),
   unit: z.string(),
+  source_id: z.string().nullish(),
+  formula: z.string().nullish(),
 });
 
 const financials = z.object({
   ticker: z.string(),
   period_type: z.string(),
   series: z.array(z.object({ metric_name: z.string(), points: z.array(metricPoint) })),
+  freshness,
+});
+
+// Phase 7b (FR-QT-010): which quarters / TTM windows each metric has, and why the rest are missing.
+const metricsCoverage = z.object({
+  ticker: z.string(),
+  quarters: z.array(z.string()),
+  metrics: z.array(
+    z.object({
+      metric_name: z.string(),
+      applicable: z.boolean(),
+      present: z.array(z.string()),
+      missing: z.array(z.object({ period: z.string(), reason: z.string() })),
+    }),
+  ),
   freshness,
 });
 
@@ -536,6 +554,8 @@ export const parse = {
   searchResults: (d: unknown): CompanySearchResult[] =>
     z.array(searchResult).parse(d) as CompanySearchResult[],
   financials: (d: unknown): FinancialsResponse => financials.parse(d) as FinancialsResponse,
+  metricsCoverage: (d: unknown): MetricsCoverageResponse =>
+    metricsCoverage.parse(d) as MetricsCoverageResponse,
   valuation: (d: unknown): ValuationResponse => valuation.parse(d) as ValuationResponse,
   prices: (d: unknown): PricesResponse => prices.parse(d) as PricesResponse,
   filings: (d: unknown): FilingSummary[] => z.array(filing).parse(d) as FilingSummary[],

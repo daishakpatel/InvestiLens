@@ -11,6 +11,7 @@ import { Stat } from "../../components/ui/Stat";
 import { ErrorState } from "../../components/ui/States";
 import { Switch } from "../../components/ui/Switch";
 import { useApiStatus } from "../../lib/apiStatus";
+import { availabilityNote, latestTtmAvailability } from "../../lib/coverage";
 import { toNumber } from "../../lib/format";
 import { useActiveSection } from "../../lib/useActiveSection";
 import {
@@ -21,9 +22,9 @@ import {
   reasonText,
 } from "../../lib/metricCatalog";
 import type { FinancialSection } from "../../lib/metricCatalog";
-import { useFinancials, useMetricLineage, useValuation } from "../../lib/queries";
+import { useFinancials, useMetricLineage, useMetricsCoverage, useValuation } from "../../lib/queries";
 import { useScrollToHash } from "../../lib/useScrollToHash";
-import type { MetricSeries } from "../../types";
+import type { MetricSeries, MetricsCoverageResponse } from "../../types";
 
 type Period = "FY" | "Q" | "TTM";
 
@@ -39,7 +40,7 @@ const PERIODS: { value: Period; label: string; noun: string; missing: string }[]
     value: "TTM",
     label: "TTM",
     noun: "Trailing twelve months",
-    missing: "Trailing-twelve-month figures are not computed yet.",
+    missing: "Trailing-twelve-month figures need four reported quarters in a row; none are available yet.",
   },
 ];
 
@@ -87,6 +88,7 @@ function MetricPanel({
   period,
   showChange,
   loading,
+  note,
 }: {
   ticker: string;
   name: string;
@@ -94,13 +96,14 @@ function MetricPanel({
   period: Period;
   showChange: boolean;
   loading: boolean;
+  note: string | null; // TTM: "3 of 4 quarters available" (FR-QT-010)
 }) {
   const points = series?.points ?? [];
   const allNull = points.length > 0 && points.every((point) => toNumber(point.value) === null);
   const reason = useMetricLineage(ticker, name, points.at(-1)?.period ?? "", allNull);
   const emptyMessage = allNull
     ? `${reasonText(reason.data?.warnings[0])}.`
-    : `${metricLabel(name)} has not been reported in the filings we hold.`;
+    : (note ?? `${metricLabel(name)} has not been reported in the filings we hold.`);
   return (
     <MetricChart
       name={name}
@@ -109,6 +112,7 @@ function MetricPanel({
       showChange={showChange}
       loading={loading}
       emptyMessage={emptyMessage}
+      note={points.length > 0 ? note : null}
     />
   );
 }
@@ -120,6 +124,7 @@ function StatementSection({
   period,
   showChange,
   loading,
+  coverage,
 }: {
   ticker: string;
   section: FinancialSection;
@@ -127,11 +132,19 @@ function StatementSection({
   period: Period;
   showChange: boolean;
   loading: boolean;
+  coverage: MetricsCoverageResponse | undefined;
 }) {
   const find = (name: string) => series.find((s) => s.metric_name === name);
+  // A TTM card whose latest window is short of four quarters says how many exist (FR-QT-010).
+  const noteFor = (name: string) =>
+    period === "TTM" ? availabilityNote(latestTtmAvailability(coverage, name)) : null;
   // Annual shows every chart, explaining any that is N/A. Other period types hold far fewer
-  // metrics, so only the ones with data are drawn rather than a grid of apologies.
-  const charts = period === "FY" || loading ? section.charts : section.charts.filter((name) => hasPoints(find(name)));
+  // metrics, so only the ones with data, or with a quarter count to explain, are drawn rather
+  // than a grid of apologies.
+  const charts =
+    period === "FY" || loading
+      ? section.charts
+      : section.charts.filter((name) => hasPoints(find(name)) || noteFor(name) !== null);
   const noun = PERIODS.find((p) => p.value === period)?.noun ?? "";
   const empty = !loading && charts.length === 0 && !section.table.some((name) => hasPoints(find(name)));
 
@@ -154,6 +167,7 @@ function StatementSection({
                   period={period}
                   showChange={showChange}
                   loading={loading}
+                  note={noteFor(name)}
                 />
               ))}
             </div>
@@ -215,6 +229,7 @@ export default function FinancialsTab() {
   // Which period types hold anything at all for this company, so the others can say so up front.
   const quarterly = useFinancials(ticker, ["revenue"], "Q");
   const trailing = useFinancials(ticker, ["revenue"], "TTM");
+  const coverage = useMetricsCoverage(ticker, period === "TTM");
   const { online, reachable } = useApiStatus();
   useScrollToHash();
 
@@ -262,8 +277,10 @@ export default function FinancialsTab() {
           <p className="mb-10 flex flex-wrap items-center gap-x-3 text-caption text-subtle">
             <span>
               {period === "Q"
-                ? "Only fiscal fourth quarters are available so far, so quarterly charts show one point a year."
-                : "Figures as reported in SEC filings; ratios are computed from them."}
+                ? "The latest eight fiscal quarters. Fourth quarters, and cash-flow quarters after the first, are derived from annual and year-to-date figures."
+                : period === "TTM"
+                  ? "Trailing twelve months: the sum of four consecutive quarters, shown only when all four are reported."
+                  : "Figures as reported in SEC filings; ratios are computed from them."}
             </span>
             {financials.data && <FreshnessBadge freshness={financials.data.freshness} />}
           </p>
@@ -277,6 +294,7 @@ export default function FinancialsTab() {
                 period={period}
                 showChange={showChange}
                 loading={loading}
+                coverage={coverage.data}
               />
             ))}
             <Valuation ticker={ticker} />

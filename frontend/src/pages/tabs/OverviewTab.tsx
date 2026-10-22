@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { MetricChart } from "../../charts/MetricChart";
@@ -6,7 +7,9 @@ import { CitationChip } from "../../components/citations/CitationChip";
 import { KeyStats } from "../../components/company/KeyStats";
 import { PriceHero } from "../../components/company/PriceHero";
 import { Section } from "../../components/ui/Section";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { availabilityNote, latestTtmAvailability } from "../../lib/coverage";
 import { formatDate } from "../../lib/format";
 import { metricLabel } from "../../lib/metricCatalog";
 import {
@@ -14,6 +17,7 @@ import {
   useFilings,
   useFinancials,
   useLatestResearch,
+  useMetricsCoverage,
   useNews,
 } from "../../lib/queries";
 import { buildNumbering } from "../../lib/reportCitations";
@@ -33,14 +37,38 @@ function Lines({ count }: { count: number }) {
   );
 }
 
+type Granularity = "FY" | "Q";
+
 function Performance({ ticker }: { ticker: string }) {
-  const financials = useFinancials(ticker, PERFORMANCE, "FY");
+  const [granularity, setGranularity] = useState<Granularity>("FY");
+  const quarterly = granularity === "Q";
+  const annual = useFinancials(ticker, PERFORMANCE, "FY");
+  // Quarterly bars with the trailing twelve months as a line (FR-QT-012); the API returns the
+  // latest eight of each by default.
+  const quarters = useFinancials(ticker, PERFORMANCE, "Q", quarterly);
+  const trailing = useFinancials(ticker, PERFORMANCE, "TTM", quarterly);
+  const coverage = useMetricsCoverage(ticker, quarterly);
+  const financials = quarterly ? quarters : annual;
   return (
-    <Section title="Performance">
+    <Section
+      title="Performance"
+      actions={
+        <SegmentedControl
+          label="Period"
+          value={granularity}
+          onValueChange={setGranularity}
+          options={[
+            { value: "FY", label: "Annual" },
+            { value: "Q", label: "Quarterly" },
+          ]}
+        />
+      }
+    >
       <div className="grid gap-x-10 gap-y-8 pt-5 sm:grid-cols-2">
         {PERFORMANCE.map((name) => {
           const series = financials.data?.series.find((s) => s.metric_name === name);
-          const points = (series?.points ?? []).slice(-YEARS_SHOWN);
+          const points = quarterly ? (series?.points ?? []) : (series?.points ?? []).slice(-YEARS_SHOWN);
+
           return (
             <MetricChart
               key={name}
@@ -48,9 +76,19 @@ function Performance({ ticker }: { ticker: string }) {
               name={name}
               href={`/company/${ticker}/financials#income`}
               points={points}
-              csvName={`${ticker}_${name}_FY`}
-              loading={financials.isPending}
-              emptyMessage={`${metricLabel(name)} has not been reported in the filings we hold.`}
+              csvName={`${ticker}_${name}_${granularity}`}
+              loading={financials.isPending || (quarterly && trailing.isPending)}
+              emptyMessage={
+                quarterly
+                  ? `Quarterly ${metricLabel(name).toLowerCase()} is not available for this company yet.`
+                  : `${metricLabel(name)} has not been reported in the filings we hold.`
+              }
+              {...(quarterly
+                ? {
+                    trend: trailing.data?.series.find((s) => s.metric_name === name)?.points ?? [],
+                    note: availabilityNote(latestTtmAvailability(coverage.data, name)),
+                  }
+                : {})}
             />
           );
         })}

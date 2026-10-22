@@ -92,15 +92,23 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 ### Data
 
 - [ ] **Valuation uses fiscal-year figures, not TTM** (ADR-0036): P/E late in a fiscal year uses
-      earnings up to ten months old. Fixed by storing quarterly/TTM metrics (next item). `[code]`
+      earnings up to ten months old. TTM EPS, revenue, FCF and EBITDA are stored since Phase 7b
+      (ADR-0040, `period_type` TTM); switching `valuation_builder` to them is Phase 7h. `[code]`
+- [ ] **AMD pretax income and AMD/Intel D&A are not mapped quarterly**: their tags are missing
+      from the concept map, so `metric_gaps` lists them and their TTM effective tax rate, ROIC
+      and EBITDA are absent (checked 2026-10-21 on the dev DB). `[code]`
+- [ ] **Quarterly ratios are not stored** (quarterly gross/operating margin, ROE): only TTM
+      ratios are (Phase 7b scope). The Financials Quarterly view therefore hides the Margins
+      charts. `[code]`
+- [ ] **TTM EPS right after a split**: the identity takes each term's latest restatement, but a
+      split after the last 10-K and before any filing restates the prior year still mixes share
+      bases; the `share_count_changed` flag marks such windows (ADR-0040). `[code]`
 - [ ] **Five-year average multiples** (spec §10.7 "5Y Average P/E") are not computed; the
       per-year history is stored, so this is a deterministic average in the report payload. `[code]`
 - [ ] **EV/EBITDA is N/A for AMD and Intel**: their depreciation & amortization is not mapped in
       the concept map, so EBITDA is missing. `[code]`
 - [ ] A latest-close valuation is replaced on every price run, so a report that cited yesterday's
       dated ID (`derived:NVDA:pe_ratio:<date>`) no longer resolves it. `[code]`
-- [ ] **Quarterly (Q1–Q3) and TTM metrics are not persisted** — only annual + derived Q4. The
-      Financials Q/TTM toggles show empty states, and valuation multiples use fiscal-year figures. `[code]`
 - [ ] **Seed universe is 5 of 10 in dev, 3 in fixtures** (fixtures: NVDA, AAPL, JPM). Missing
       MSFT, AMZN, TSLA, GOOGL (multi-class shares), META, V, MA (§4.1). `[code]`
 - [ ] **News is sample data** (placeholder headlines); live news needs a Finnhub key, and a
@@ -242,3 +250,13 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   instead of per year, leaves out metrics with no value, and adds ROE/ROA to profitability, so a
   bank's profitability section discusses net margin and returns. A 10-K with no "Item" headings
   (Intel) is now kept as one flagged section instead of being dropped (6,744 passages).
+- 2026-10-21 — **Quarterly and TTM metrics persisted** (Phase 7b, ADR-0040): the last 12 fiscal
+  quarters of every flow metric and balance, cash flows de-cumulated from YTD facts (the derived
+  Q4 operating cash flow had never been produced), every complete TTM window with TTM margins
+  and ROIC, and a `metric_gaps` table behind `GET /companies/{ticker}/metrics/coverage`.
+  `/financials` takes `limit` and returns each point's source ID and formula; the Overview has
+  an Annual / Quarterly toggle (quarterly bars, TTM line). Dev metrics rebuilt for all five
+  companies. Caught on the way: TTM EPS mixed pre- and post-split figures (NVIDIA read -2.28),
+  and `get_latest_metrics` would have let a quarter of the year in progress displace the annual
+  figure in portfolio and research.
+

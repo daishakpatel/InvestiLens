@@ -477,6 +477,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/metrics/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Metrics Coverage
+         * @description Which quarters and TTM windows each metric has, which are missing and why (FR-QT-010).
+         */
+        get: operations["get_metrics_coverage_api_v1_companies__ticker__metrics_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/metrics/{metric_name}/lineage": {
         parameters: {
             query?: never;
@@ -1838,6 +1858,27 @@ export interface components {
             topic: "ai_demand" | "revenue_outlook" | "margins" | "capital_spending" | "competition" | "regulation" | "product_roadmap";
         };
         /**
+         * MetricCoverage
+         * @description Which quarterly / TTM periods of one metric exist, and why the others do not (FR-QT-010).
+         */
+        MetricCoverage: {
+            /** Applicable */
+            applicable: boolean;
+            /** Metric Name */
+            metric_name: string;
+            /** Missing */
+            missing: components["schemas"]["MetricGapItem"][];
+            /** Present */
+            present: string[];
+        };
+        /** MetricGapItem */
+        MetricGapItem: {
+            /** Period */
+            period: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
          * MetricInput
          * @description One input to a derived metric, linking to the source it came from (DR-040).
          */
@@ -1885,14 +1926,28 @@ export interface components {
         };
         /** MetricSeriesPoint */
         MetricSeriesPoint: {
+            /** Formula */
+            formula?: string | null;
             /** Period */
             period: string;
             /** Period End */
             period_end?: string | null;
+            /** Source Id */
+            source_id?: string | null;
             /** Unit */
             unit: string;
             /** Value */
             value: string | null;
+        };
+        /** MetricsCoverageResponse */
+        MetricsCoverageResponse: {
+            freshness: components["schemas"]["Freshness"];
+            /** Metrics */
+            metrics: components["schemas"]["MetricCoverage"][];
+            /** Quarters */
+            quarters: string[];
+            /** Ticker */
+            ticker: string;
         };
         /** NewsItem */
         NewsItem: {
@@ -3496,6 +3551,8 @@ export interface operations {
             query?: {
                 metrics?: string;
                 period_type?: string;
+                /** @description Latest N periods per metric; Q/TTM default 8 */
+                limit?: number | null;
                 from?: number | null;
                 to?: number | null;
             };
@@ -3579,6 +3636,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManagementLanguageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_metrics_coverage_api_v1_companies__ticker__metrics_coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricsCoverageResponse"];
                 };
             };
             /** @description Validation Error */
