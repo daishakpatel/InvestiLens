@@ -41,7 +41,8 @@ AI output        companies ──< research_reports ──< research_sources
 Users            users ──< refresh_tokens (replaced_by_id ─┐ self-ref, rotation chain)
                  users ──< auth_tokens (single-use email-verify / password-reset)
                  users ──< watchlists ──< watchlist_items >── companies
-                 users ──< alerts >── companies
+                 users ──< alerts >── companies   (company_id NULL = whole watchlist)
+                 users ──< notifications >── alerts, companies
                  users ──< chat_sessions ──< chat_messages
                  users ──< report_feedback >── research_reports
 
@@ -106,6 +107,23 @@ preserves a non-NULL profile value on a metadata-less re-ingest (`COALESCE(exclu
 - `document_chunks (document_id, chunk_index, parser_version)` unique — safe re-chunking.
 - `financial_metrics (company_id, period, metric_name, basis, as_reported_accession)` unique —
   one canonical value per as-reported period.
+- `notifications (alert_id, event_key)` unique (`uq_notifications_alert_id_event_key`) — the
+  alert-dispatch idempotency guard (FR-AL-007, ADR-0039). Dispatch inserts with
+  `ON CONFLICT DO NOTHING` and emails only rows it actually created, so a re-run, an overlapping
+  run, or a run whose watermark update failed never delivers an event twice.
+
+### Alerts and notifications (Phase 7a, ADR-0039)
+
+`alerts`: `event_type` (a key in `app/alerts/registry.py`), `params` JSONB (validated against that
+type's params model; `{}` = defaults), `channels` `VARCHAR(16)[]` (subset of `in_app`, `email`),
+`enabled`, `company_id` (nullable: NULL means every company on the owner's watchlist, read at
+dispatch time), `created_at`, and `watermark_at TIMESTAMPTZ NOT NULL`. Dispatch only considers
+events with `watermark_at < occurred_at <= run_started_at` and then sets `watermark_at` to the
+run's start. A new alert's `watermark_at` equals its `created_at`, so it never replays history.
+
+`notifications` adds `event_key` (deterministic, e.g. `new_filing:NVDA:<accession>`; a digest
+uses `digest:<hash>`) and `payload` JSONB `{event_type, severity, source_ids, event_keys}` — a
+digest's `event_keys` lists every event it covers.
 
 ## ON DELETE behaviour (DB-002)
 
@@ -140,3 +158,5 @@ Migrations are tested up and down, on empty and populated databases, in
 | `8c58e66dbdbc` | Add `document_chunks.embedding_dim` (per-row dimension beside `embedding_model`, EMB-001) and a nullable `embedding_new vector(1024)` staging column for zero-downtime model migration (Phase 2b, EMB-003, ADR-0013). |
 | `723724f0d34e` | Add the `auth_tokens` table (single-use, hashed email-verify / password-reset tokens, AUTH-003) and `users.deleted_at` (soft-delete marker set by `DELETE /auth/me`; hard-delete via a retention job, LGL-007). Phase 4b. |
 | `331b479d2be6` | Add `llm_calls.user_id` (nullable FK, `ON DELETE SET NULL`) — attributes each LLM call to its requesting user so `app.repositories.llm_calls.monthly_spend` can enforce the per-user AI budget (NFR-008). Nullable because embedding-batch calls happen at ingestion time with no requesting user. Phase 5c, ADR-0022. |
+| `8b0a53766648` | Add the `notifications` table (in-app records written by alert dispatch; `alert_id`/`company_id` `ON DELETE SET NULL`). Phase 5d, ADR-0025. |
+| `e4a7c2d91b30` | Alert framework v2: `alerts.alert_type/config/is_active/channel` → `event_type/params/enabled/channels[]`, `company_id` nullable, drop `last_triggered_at`, add `created_at` + `watermark_at` (existing rows backfilled with `now()` at migration time so deploying replays nothing); `new_10k/new_10q/new_8k` become `new_filing` with a `form_types` param. `notifications` gains `event_key`, `payload` and unique `(alert_id, event_key)`. Downgrade drops watchlist-wide alerts and keeps only the first form/channel. Phase 7a, ADR-0039. |

@@ -255,6 +255,115 @@ test.describe("watchlist, alerts and notifications (§26.2, FR-007)", () => {
     await page.goto("/");
     await expect(watchlist.getByText(/Nothing watched yet/)).toBeVisible();
   });
+
+  test("the Alerts page creates, toggles and deletes a rule from the server's event types (FR-AL-016)", async ({
+    page,
+  }) => {
+    await signUp(page);
+    // The alerts API is mocked: an in-memory list, plus one rule whose type was retired.
+    type Rule = Record<string, unknown> & { id: string };
+    const rules: Rule[] = [
+      {
+        id: "900",
+        event_type: "retired_type",
+        ticker: "NVDA",
+        params: {},
+        channels: ["in_app"],
+        enabled: true,
+        supported: false,
+        created_at: "2026-10-01T00:00:00+00:00",
+      },
+    ];
+    const posted: unknown[] = [];
+    const eventTypes = [
+      {
+        key: "price_move",
+        label: "Price move",
+        description: "A one-day close-to-close move larger than your threshold.",
+        params_schema: {
+          type: "object",
+          properties: {
+            threshold: { type: "number", title: "Move threshold", default: 0.05, exclusiveMinimum: 0, maximum: 1 },
+          },
+        },
+      },
+      {
+        key: "new_filing",
+        label: "New filing",
+        description: "The company files a new 10-K, 10-Q or 8-K with the SEC.",
+        params_schema: {
+          type: "object",
+          properties: {
+            form_types: {
+              type: "array",
+              title: "Forms",
+              items: { type: "string", enum: ["10-K", "10-Q", "8-K"] },
+              minItems: 1,
+              default: ["10-K", "10-Q", "8-K"],
+            },
+          },
+        },
+      },
+    ];
+    await page.route("**/api/v1/alerts**", async (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+      const id = path.split("/").pop() ?? "";
+      if (path.endsWith("/alerts/event-types")) return route.fulfill({ json: eventTypes });
+      if (request.method() === "GET") return route.fulfill({ json: rules });
+      if (request.method() === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        posted.push(body);
+        const rule = { id: String(901 + posted.length), enabled: true, supported: true, created_at: "2026-10-21T00:00:00+00:00", ...body };
+        rules.push(rule);
+        return route.fulfill({ status: 201, json: rule });
+      }
+      const index = rules.findIndex((r) => r.id === id);
+      if (request.method() === "PATCH") {
+        Object.assign(rules[index], request.postDataJSON());
+        return route.fulfill({ json: rules[index] });
+      }
+      rules.splice(index, 1); // DELETE
+      return route.fulfill({ status: 204 });
+    });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Alerts" }).click();
+    await expect(page).toHaveURL(/\/alerts$/);
+    const list = page.getByRole("region", { name: "Your alerts" });
+    await expect(list.getByText("No longer supported")).toBeVisible(); // retired, never hidden
+    await expect(list.getByRole("switch")).toBeDisabled();
+
+    // The form is built from the price_move schema: a bad threshold is caught before sending.
+    const form = page.getByRole("region", { name: "New alert" });
+    await form.getByLabel("Notify me about").selectOption("price_move");
+    await form.getByLabel("Company").fill("nvda");
+    await form.getByLabel("Move threshold").fill("5");
+    await form.getByRole("button", { name: "Create alert" }).click();
+    await expect(form.getByLabel("Move threshold")).toHaveAttribute("aria-invalid", "true");
+    expect(posted).toHaveLength(0);
+
+    await form.getByLabel("Move threshold").fill("0.08");
+    await form.getByRole("button", { name: "Create alert" }).click();
+    await expect(list.getByText("Move threshold: 0.08")).toBeVisible();
+    expect(posted).toEqual([
+      { event_type: "price_move", ticker: "NVDA", params: { threshold: 0.08 }, channels: ["in_app"] },
+    ]);
+
+    // Toggle off, then delete.
+    const rule = list.getByRole("switch", { name: /Price move/ });
+    await expect(rule).toBeChecked();
+    await rule.click();
+    await expect(rule).not.toBeChecked();
+    await list.getByRole("button", { name: "Delete Price move alert for NVDA" }).click();
+    await expect(list.getByText("Move threshold: 0.08")).toHaveCount(0);
+    expect(rules.map((r) => r.id)).toEqual(["900"]);
+
+    // The other type renders its own inputs: the forms, as checkboxes.
+    await form.getByLabel("Notify me about").selectOption("new_filing");
+    await expect(form.getByRole("checkbox", { name: "8-K" })).toBeChecked();
+  });
 });
 
 test.describe("across the app (UI-003)", () => {

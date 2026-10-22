@@ -3,82 +3,201 @@
     "schemas": {
       "Alert": {
         "properties": {
-          "alert_type": {
-            "enum": [
-              "new_10k",
-              "new_10q",
-              "new_8k",
-              "price_move",
-              "news_category",
-              "new_risk_factor"
-            ],
-            "title": "Alert Type",
-            "type": "string"
-          },
-          "channel": {
-            "default": "in_app",
-            "enum": [
-              "email",
+          "channels": {
+            "default": [
               "in_app"
             ],
-            "title": "Channel",
+            "items": {
+              "enum": [
+                "email",
+                "in_app"
+              ],
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "event_type": {
+            "title": "Event Type",
             "type": "string"
           },
           "id": {
             "title": "Id",
             "type": "string"
           },
-          "is_active": {
+          "params": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Params",
+            "type": "object"
+          },
+          "supported": {
             "default": true,
-            "title": "Is Active",
+            "title": "Supported",
             "type": "boolean"
           },
           "ticker": {
-            "title": "Ticker",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
           }
         },
         "required": [
           "id",
-          "ticker",
-          "alert_type"
+          "event_type",
+          "created_at"
         ],
         "title": "Alert",
         "type": "object"
       },
       "AlertCreate": {
         "properties": {
-          "alert_type": {
-            "enum": [
-              "new_10k",
-              "new_10q",
-              "new_8k",
-              "price_move",
-              "news_category",
-              "new_risk_factor"
-            ],
-            "title": "Alert Type",
-            "type": "string"
-          },
-          "channel": {
-            "default": "in_app",
-            "enum": [
-              "email",
+          "channels": {
+            "default": [
               "in_app"
             ],
-            "title": "Channel",
+            "items": {
+              "enum": [
+                "email",
+                "in_app"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Channels",
+            "type": "array"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "event_type": {
+            "maxLength": 64,
+            "title": "Event Type",
             "type": "string"
           },
+          "params": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Params",
+            "type": "object"
+          },
           "ticker": {
-            "title": "Ticker",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
           }
         },
         "required": [
-          "ticker",
-          "alert_type"
+          "event_type"
         ],
         "title": "AlertCreate",
+        "type": "object"
+      },
+      "AlertEventType": {
+        "description": "One entry of the alert event-type registry (FR-AL-010): enough for a client to render the\nrule form without a hard-coded list.",
+        "properties": {
+          "default_enabled": {
+            "default": true,
+            "title": "Default Enabled",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "params_schema": {
+            "additionalProperties": true,
+            "title": "Params Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "params_schema"
+        ],
+        "title": "AlertEventType",
+        "type": "object"
+      },
+      "AlertUpdate": {
+        "properties": {
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "email",
+                    "in_app"
+                  ],
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          }
+        },
+        "title": "AlertUpdate",
         "type": "object"
       },
       "AuthMessage": {
@@ -2713,6 +2832,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Type"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2721,6 +2851,41 @@
             "default": false,
             "title": "Read",
             "type": "boolean"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "enum": [
+                  "info",
+                  "warning",
+                  "critical"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
           },
           "title": {
             "title": "Title",
@@ -4875,6 +5040,32 @@
         ]
       }
     },
+    "/api/v1/alerts/event-types": {
+      "get": {
+        "description": "The alert kinds a user can choose from, with each one's params as JSON Schema.",
+        "operationId": "list_alert_event_types_api_v1_alerts_event_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertEventType"
+                  },
+                  "title": "Response List Alert Event Types Api V1 Alerts Event Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Alert Event Types",
+        "tags": [
+          "Watchlist & Alerts"
+        ]
+      }
+    },
     "/api/v1/alerts/{alert_id}": {
       "delete": {
         "operationId": "delete_alert_api_v1_alerts__alert_id__delete",
@@ -4921,6 +5112,72 @@
           }
         },
         "summary": "Delete Alert",
+        "tags": [
+          "Watchlist & Alerts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_alert_api_v1_alerts__alert_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "required": true,
+            "schema": {
+              "title": "Alert Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Alert"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Alert",
         "tags": [
           "Watchlist & Alerts"
         ]
