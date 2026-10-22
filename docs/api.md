@@ -69,7 +69,8 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 ### Financials & prices
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/companies/{ticker}/financials?metrics=&period_type=&from=&to=` | Metric series |
+| GET | `/companies/{ticker}/financials?metrics=&period_type=FY\|Q\|TTM&limit=&from=&to=` | Metric series. `period_type` is validated (422 otherwise). `limit` (1–20) keeps the latest N periods per metric; Q and TTM default to 8, FY returns every year unless `limit` is given (FR-QT-011). Each point carries its `source_id` (resolve via `/sources/{id}`) and, for a derived row, its `formula` text, e.g. `Q3 = 9M YTD - 6M YTD` or `TTM = Q4-FY2025 + Q1-FY2026 + Q2-FY2026 + Q3-FY2026` (Phase 7b, ADR-0040). |
+| GET | `/companies/{ticker}/metrics/coverage` | Quarterly / TTM coverage (Phase 7b, FR-QT-010): `quarters` (the stored window, up to 12, oldest first) and, per metric, `present` periods (`Q2-FY2026`, `TTM-Q2-FY2026`), `missing` periods with a `reason` (`missing_ytd_2q`, `missing_fy`, `missing_q2`, `missing_balance`, `not_additive`, `period_not_reported`, `incomplete_window`, or a stored NULL's reason code such as `NEGATIVE_BASE`), and `applicable` (false = not applicable to the sector, DR-042: render N/A, not missing). |
 | GET | `/companies/{ticker}/metrics/{metric_name}/lineage?period=` | Derivation lineage (CIT-003) |
 | GET | `/companies/{ticker}/valuation` | Valuation metrics: the multiples at the latest close where stored, else the latest fiscal year end (ADR-0036) |
 | GET | `/companies/{ticker}/prices?start=&end=&interval=` | OHLCV |

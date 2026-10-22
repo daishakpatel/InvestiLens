@@ -16,7 +16,7 @@ file in the same PR (DB-001).
 - **Constraint/index names** follow a fixed naming convention (see `app/models/base.py`) so
   migrations stay deterministic and reviewable.
 
-## Tables by domain (34 tables)
+## Tables by domain (35 tables)
 
 ```text
 Reference        companies ──< company_identifiers
@@ -28,6 +28,7 @@ Documents        companies ──< documents ──< filings (filings.amends_fil
 
 Financials       companies ──< financial_facts        (raw XBRL, point-in-time)
                  companies ──< financial_metrics       (computed, versioned)
+                 companies ──< metric_gaps             (quarters / TTM that could not be computed)
                  companies ──< price_history
                  companies ──< corporate_actions
 
@@ -76,6 +77,35 @@ metric used to carry its filing's accession number, which every metric from that
 the filing now lives only in `as_reported_accession`. Run `scripts/build_metrics.py` to apply the
 scheme to an existing database.
 
+### Quarterly and TTM rows (Phase 7b, ADR-0040)
+
+`financial_metrics` holds the last 12 fiscal quarters (`period_type` Q, `period` `Q{n}-FY{yr}`)
+and every complete trailing-twelve-month window (`period_type` TTM, `period` `TTM-Q{n}-FY{yr}`,
+`period_end` = the last quarter's end). No new column. Source IDs:
+
+| Row | `source_id` |
+|-----|-------------|
+| a quarter read directly from a filing (10-Q quarter or Q1 YTD, quarter-end balance) | `xbrl:<TICKER>:<metric>:Q<n>-FY<yr>` |
+| a computed quarter (de-cumulated from YTD, Q4 = FY − ΣQ, quarterly total debt) | `derived:<TICKER>:<metric>:Q<n>-FY<yr>` |
+| a TTM figure (four-quarter sum, TTM EPS, TTM margin/ROIC) | `derived:<TICKER>:<metric>:TTM-Q<n>-FY<yr>` |
+
+Derived rows keep the existing record: `formula_id` (`ytd_decumulation`, `q4_derivation`,
+`ttm_sum`, `ttm_eps_identity`, `gross_margin`, …), `quality_flags.derived` (the formula text,
+e.g. `Q3 = 9M YTD - 6M YTD`) and `quality_flags.inputs` (each input's name and source ID). A
+quarter's inputs cite the raw fact (`xbrl:<financial_facts.id>`) and the annual figure its own
+row (`xbrl:<TICKER>:<metric>:FY<yr>`); a TTM's inputs cite the stored quarters. A TTM EPS summed
+or computed across a >5% diluted-share change carries `quality_flags.quality_flag =
+"share_count_changed"` (also in `warnings`). Rows are as-reported (earliest filing unless an
+amendment, DR-QT-001), so Q1+Q2+Q3+Q4 equals the FY row exactly (DR-QT-004).
+
+`metric_gaps (company_id, metric, period_label, reason, detected_at)`, unique
+`(company_id, metric, period_label)`, `ON DELETE CASCADE` with the company: one row per quarter
+or TTM window a metric is missing, with a reason code (`missing_ytd_1q|2q|3q`, `missing_fy`,
+`missing_q1|2|3`, `missing_balance`, `not_additive`, `period_not_reported`,
+`incomplete_window`). Rebuilt on every metrics run (delete-per-company + insert). A metric the
+company never reports, or one not applicable to its sector (`sector_applicability.yaml`, DR-042),
+has no gaps: N/A is not missing data.
+
 ### Company profile enrichment (Phase 6a)
 
 `companies.sic_code`, `sector`, `industry`, `exchange`, and `fiscal_year_end` were nullable and
@@ -107,6 +137,8 @@ preserves a non-NULL profile value on a metadata-less re-ingest (`COALESCE(exclu
 - `document_chunks (document_id, chunk_index, parser_version)` unique — safe re-chunking.
 - `financial_metrics (company_id, period, metric_name, basis, as_reported_accession)` unique —
   one canonical value per as-reported period.
+- `metric_gaps (company_id, metric, period_label)` unique — one reason per missing quarter or
+  TTM window (FR-QT-010); its leading `company_id` also serves the per-company delete.
 - `notifications (alert_id, event_key)` unique (`uq_notifications_alert_id_event_key`) — the
   alert-dispatch idempotency guard (FR-AL-007, ADR-0039). Dispatch inserts with
   `ON CONFLICT DO NOTHING` and emails only rows it actually created, so a re-run, an overlapping
@@ -160,3 +192,4 @@ Migrations are tested up and down, on empty and populated databases, in
 | `331b479d2be6` | Add `llm_calls.user_id` (nullable FK, `ON DELETE SET NULL`) — attributes each LLM call to its requesting user so `app.repositories.llm_calls.monthly_spend` can enforce the per-user AI budget (NFR-008). Nullable because embedding-batch calls happen at ingestion time with no requesting user. Phase 5c, ADR-0022. |
 | `8b0a53766648` | Add the `notifications` table (in-app records written by alert dispatch; `alert_id`/`company_id` `ON DELETE SET NULL`). Phase 5d, ADR-0025. |
 | `e4a7c2d91b30` | Alert framework v2: `alerts.alert_type/config/is_active/channel` → `event_type/params/enabled/channels[]`, `company_id` nullable, drop `last_triggered_at`, add `created_at` + `watermark_at` (existing rows backfilled with `now()` at migration time so deploying replays nothing); `new_10k/new_10q/new_8k` become `new_filing` with a `form_types` param. `notifications` gains `event_key`, `payload` and unique `(alert_id, event_key)`. Downgrade drops watchlist-wide alerts and keeps only the first form/channel. Phase 7a, ADR-0039. |
+| `b7d3e9f1a2c4` | Add the `metric_gaps` table (`company_id` FK `ON DELETE CASCADE`, `metric`, `period_label`, `reason`, `detected_at` default `now()`, unique `(company_id, metric, period_label)`): quarters and TTM windows a metric could not be computed for, and why. Phase 7b, FR-QT-010, ADR-0040. |

@@ -57,7 +57,7 @@ Copied from spec §19.2. This separation is the central idea of the project and 
 
 | Layer | Owns | Never does |
 |-------|------|------------|
-| Deterministic finance (`app/finance/`) | Every number: metrics, ratios, growth, Q4 derivation | Call an LLM |
+| Deterministic finance (`app/finance/`) | Every number: metrics, ratios, growth, quarters and TTM | Call an LLM |
 | Retrieval (`app/rag/`) | Finding evidence; every item carries a backend-issued `source_id` | Generate text |
 | LLM (`app/providers/` → `LLMClient`) | Synthesis and explanation of the evidence it is given | Produce numbers, invent sources |
 | Citation validator (`app/citation/`) | Checking every claim against its cited source | Pass unverified claims through |
@@ -114,11 +114,21 @@ after the alert's `watermark_at`, inserts one notification per `(alert, event_ke
 `ON CONFLICT DO NOTHING`, then advances the watermark to the run's start. Each alert runs in its
 own savepoint so one failing detector is logged and counted, never fatal to the run.
 
+**Quarters and TTM** (Phase 7b, ADR-0040): `app/finance/quarterly.py` places each XBRL fact on the
+company's own fiscal calendar (fiscal years from its 10-K spans; a period ending ~91/182/273 days
+into a year ends Q1/Q2/Q3), never on calendar quarters, so NVIDIA's late-January year works the
+same as a December one. Cash-flow items arrive year-to-date in 10-Qs and are de-cumulated
+(Q2 = 6M − 3M, Q3 = 9M − 6M, Q4 = FY − 9M); income-statement items arrive as quarters, with
+Q4 = FY − (Q1 + Q2 + Q3); balances are read at each quarter end. `quarterly_builder.py`, run by
+`build_company_metrics`, stores the last 12 quarters and every complete four-quarter TTM (with
+TTM margins from TTM sums, never averaged quarterly ratios), each derived row citing its inputs,
+and writes a `metric_gaps` row, with a reason, for every quarter or window it cannot compute.
+
 ## Data stores (table names only; columns are designed in Phase 0b)
 
 - **Reference & filings:** `companies`, `company_identifiers`, `fiscal_calendars`,
   `documents`, `filings`, `document_chunks` (pgvector embeddings)
-- **Financial data:** `financial_facts`, `financial_metrics`, `price_history`,
+- **Financial data:** `financial_facts`, `financial_metrics`, `metric_gaps`, `price_history`,
   `corporate_actions`, `insider_transactions`, `institutional_holdings`
 - **News:** `news`
 - **Research & citations:** `research_reports`, `research_sources`, `claim_verifications`,

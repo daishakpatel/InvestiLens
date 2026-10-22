@@ -3308,6 +3308,27 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | FR-AL-017 | A rule whose event type is no longer supported MUST stay visible, marked as such. |
 | FR-AL-018 | Notifications MUST link to their evidence via `source_ids`, and notification text MUST NOT contain investment advice (checked against every registered type's sample output). |
 
+**Quarterly and TTM metrics (Phase 7b, ADR-0040)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-QT-001 | Every flow fact MUST be classified by duration as a quarter (80–100 days), 6M year-to-date (170–195), 9M year-to-date (260–285), full year (350–380) or other. |
+| FR-QT-002 | Cash-flow metrics (`cash_flow_metrics` in the concept map) MUST be de-cumulated from year-to-date facts: Q1 = 3M, Q2 = 6M − 3M, Q3 = 9M − 6M, Q4 = FY − 9M. |
+| FR-QT-003 | A derived quarterly or TTM row MUST store its formula text and the backend-issued source IDs of its inputs, each resolvable through `GET /sources/{id}`. |
+| FR-QT-004 | A quarter whose required input is missing MUST NOT be stored or estimated; a `metric_gaps` row records the reason (`missing_ytd_2q`, `missing_fy`, …). |
+| FR-QT-005 | Quarters MUST be placed on the company's own fiscal calendar (fiscal years from its 10-K spans), never calendar quarters; fiscal year and quarter are stored separately from dates. |
+| FR-QT-006 | An income-statement flow's Q4 MUST be FY − (Q1 + Q2 + Q3); per-share figures and share counts MUST NOT be derived by subtraction. |
+| FR-QT-007 | The last 12 fiscal quarters MUST be persisted (`period_type` Q) with source IDs `xbrl:{TICKER}:{metric}:Q{n}-FY{yr}` (read from a filing) or `derived:{TICKER}:{metric}:Q{n}-FY{yr}` (computed); nothing older is backfilled. |
+| FR-QT-008 | A flow's TTM MUST be the sum of four consecutive quarters, a balance's the latest balance. TTM EPS MUST be the four-quarter sum when quarterly EPS exist for all four, otherwise `FY_prior − YTD_prior + YTD_current` with every term on one share basis. TTM is stored as `period_type` TTM with `period_end` = the last quarter's end. |
+| FR-QT-009 | A TTM EPS spanning a move of more than 5% in diluted shares (first to last quarter that reports them) MUST carry `quality_flag = share_count_changed`. |
+| FR-QT-010 | `metric_gaps` MUST be refreshed on every metrics run and exposed by `GET /companies/{ticker}/metrics/coverage`, which MUST distinguish not applicable for the sector (DR-042) from missing data. A TTM-dependent card MUST say how many of the four quarters exist instead of showing an empty box. |
+| FR-QT-011 | `GET /companies/{ticker}/financials` MUST accept `period_type` FY, Q or TTM and `limit` (Q/TTM default 8, max 20); each point MUST carry its `source_id` and, when derived, its formula. |
+| FR-QT-012 | The Overview MUST offer an Annual / Quarterly toggle on its performance charts: quarterly bars with a TTM line, whose hover shows the source ID and, for a derived figure, its formula. |
+| DR-QT-001 | Among facts for the same concept, period and shape, the earliest filed MUST win unless one is an amendment, so restatements stay as-reported. |
+| DR-QT-002 | A TTM row MUST exist only when all four quarters exist; three quarters MUST NOT be annualized into a TTM. |
+| DR-QT-003 | A TTM ratio MUST be computed from the TTM numerator and TTM denominator, never by averaging quarterly ratios. |
+| DR-QT-004 | Q1 + Q2 + Q3 + Q4 MUST equal the stored FY value exactly (Decimal equality). |
+
 ---
 
 *End of document — Assay Desk Specification v2.0*
