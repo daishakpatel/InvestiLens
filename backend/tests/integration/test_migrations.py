@@ -13,9 +13,11 @@ from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Base
@@ -152,4 +154,37 @@ def test_alert_framework_v2_migration_backfills_and_reverses(
         ("new_10q", {}, "email", True),
         ("price_move", {"threshold": 0.1}, "in_app", True),
     ]
+    command.upgrade(alembic_cfg, "head")
+
+
+def test_metric_gaps_migration_up_and_down(alembic_cfg: Config, test_engine: Engine) -> None:
+    """FR-QT-010 / ADR-0040: `metric_gaps` holds one reason per (company, metric, period) and
+    cascades with its company; the downgrade drops it and nothing else."""
+    command.upgrade(alembic_cfg, "head")
+    insert_gap = (
+        "INSERT INTO metric_gaps (company_id, metric, period_label, reason)"
+        " SELECT id, 'operating_cash_flow', 'Q2-FY2026', :reason FROM companies"
+        " WHERE ticker = 'GAP'"
+    )
+    with test_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO companies (ticker, cik, name, status)"
+                " VALUES ('GAP', '0000000043', 'Gap', 'active')"
+            )
+        )
+        conn.execute(text(insert_gap), {"reason": "missing_ytd_2q"})
+        detected: datetime | None = conn.execute(
+            text("SELECT detected_at FROM metric_gaps")
+        ).scalar_one()
+        assert detected is not None  # server default now()
+    with pytest.raises(IntegrityError), test_engine.begin() as conn:
+        conn.execute(text(insert_gap), {"reason": "missing_fy"})  # same (company, metric, period)
+    with test_engine.begin() as conn:
+        conn.execute(text("DELETE FROM companies WHERE ticker = 'GAP'"))
+        assert conn.execute(text("SELECT count(*) FROM metric_gaps")).scalar_one() == 0
+
+    command.downgrade(alembic_cfg, "e4a7c2d91b30")
+    assert "metric_gaps" not in public_table_names(test_engine)
+    assert "financial_metrics" in public_table_names(test_engine)
     command.upgrade(alembic_cfg, "head")

@@ -71,6 +71,7 @@ def _derived(session: Session, company: Company, metric: str, fy: int) -> Financ
             FinancialMetric.company_id == company.id,
             FinancialMetric.metric_name == metric,
             FinancialMetric.fiscal_year == fy,
+            FinancialMetric.period_type == "FY",  # not the TTM ratio of the same fiscal year
             FinancialMetric.is_derived.is_(True),
         )
     ).first()

@@ -105,15 +105,17 @@ def test_every_latest_metric_has_its_own_source_id(session: Session, nvda: Compa
 
 
 def test_derived_quarter_cites_the_figures_it_came_from(session: Session, nvda: Company) -> None:
-    # CIT-003, DR-022: Q4 = FY - (Q1+Q2+Q3). Its source must resolve with that lineage: the annual
-    # figure by its own source ID, the three quarters by the filings they were reported in. The
-    # inputs used to be bare accession strings, which the resolver could not read (HTTP 500).
+    # CIT-003, DR-022, FR-QT-007: Q4 = FY - (Q1+Q2+Q3). Its source must resolve with that
+    # lineage: the annual figure by its own source ID, the three quarters by the raw facts they
+    # were read from (`xbrl:<fact_id>`), every one resolvable. The inputs used to be bare
+    # accession strings, which the resolver could not read (HTTP 500).
     build_company_metrics(session, nvda)
     q4 = session.scalars(
         select(FinancialMetric)
         .where(
             FinancialMetric.company_id == nvda.id,
             FinancialMetric.metric_name == "revenue",
+            FinancialMetric.period_type == "Q",
             FinancialMetric.fiscal_quarter == 4,
         )
         .order_by(FinancialMetric.fiscal_year.desc())
@@ -122,11 +124,16 @@ def test_derived_quarter_cites_the_figures_it_came_from(session: Session, nvda: 
 
     detail = resolve_source(session, q4.source_id)
     assert detail is not None and isinstance(detail.source, DerivedMetricSource)
-    assert detail.source.input_source_ids == [f"xbrl:NVDA:revenue:FY{q4.fiscal_year}"]
+    assert detail.source.input_source_ids[0] == f"xbrl:NVDA:revenue:FY{q4.fiscal_year}"
+    assert len(detail.source.input_source_ids) == 4
     assert [i["name"] for i in detail.lineage] == [f"FY{q4.fiscal_year}", "Q1", "Q2", "Q3"]
     assert all(i["accession"] for i in detail.lineage)
     annual = resolve_source(session, detail.source.input_source_ids[0])
     assert annual is not None and annual.source.source_id == detail.source.input_source_ids[0]
+    for sid in detail.source.input_source_ids[1:]:
+        quarter = resolve_source(session, sid)
+        assert quarter is not None and isinstance(quarter.source, XbrlFactSource)
+        assert quarter.source.concept_tag == "us-gaap:Revenues"
 
 
 def test_builder_persists_derived_q4_and_fiscal_calendar(session: Session, nvda: Company) -> None:
@@ -135,6 +142,7 @@ def test_builder_persists_derived_q4_and_fiscal_calendar(session: Session, nvda:
         select(FinancialMetric).where(
             FinancialMetric.company_id == nvda.id,
             FinancialMetric.metric_name == "revenue",
+            FinancialMetric.period_type == "Q",
             FinancialMetric.is_derived.is_(True),
             FinancialMetric.fiscal_quarter == 4,
         )
