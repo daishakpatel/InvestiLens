@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -75,20 +76,29 @@ class NotificationSender:
         session: Session,
         *,
         user: User,
-        alert_id: int | None,
+        alert_id: int,
         company_id: int | None,
+        event_key: str,
         title: str,
         body: str,
-        channel: str,
-    ) -> None:
-        notif_repo.create(
+        channels: list[str],
+        payload: dict[str, Any],
+    ) -> bool:
+        """Deliver once per (alert, event_key). False when it was already delivered, in which case
+        no email goes out either (FR-AL-007)."""
+        created = notif_repo.create_once(
             session,
             user_id=user.id,
             alert_id=alert_id,
             company_id=company_id,
+            event_key=event_key,
             title=title,
             body=body,
-            channel=channel,
+            channel="email" if "email" in channels else "in_app",
+            payload=payload,
         )
-        if channel == "email":
+        if created is None:
+            return False
+        if "email" in channels:
             self._email.send(to=user.email, subject=title, body=body)
+        return True

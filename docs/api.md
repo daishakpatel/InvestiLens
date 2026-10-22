@@ -144,11 +144,36 @@ but **may not** generate reports, use chat, or touch user-owned data (anonymous 
 | Method | Path |
 |--------|------|
 | GET / POST | `/watchlists`, `/watchlists/{id}` (DELETE) |
-| GET / POST | `/alerts`, `/alerts/{id}` (DELETE) |
+| GET | `/alerts/event-types` |
+| GET / POST | `/alerts` |
+| PATCH / DELETE | `/alerts/{id}` |
+| GET | `/notifications`, POST `/notifications/{id}/read` |
 | POST | `/feedback/report` |
 
-Alert types: `new_10k`, `new_10q`, `new_8k`, `price_move`, `news_category`, and `new_risk_factor`
-(Phase 6b): fires when the newest parsed 10-K/10-Q contains a risk factor its predecessor did not.
+**Alert rules (Phase 7a, ADR-0039).** `GET /alerts/event-types` returns the event-type registry:
+`{key, label, description, params_schema, default_enabled}` per type, where `params_schema` is
+the JSON Schema of that type's params, so a client renders the rule form with no hard-coded list.
+Types today: `new_filing` (`form_types` ⊆ `10-K`/`10-Q`/`8-K`), `price_move` (`threshold`, a
+fraction: 0.05 = 5%), `new_risk_factor` (no params; fires when the newest parsed 10-K/10-Q adds a
+risk factor its predecessor did not, Phase 6b), `news_category` (optional `category`).
+
+`POST /alerts` body: `{event_type, ticker?, params?, channels?, enabled?}`. `ticker` omitted or
+null = every company on the caller's watchlist, evaluated at dispatch time. `params` are
+validated against the type and returned with defaults filled in; an unknown `event_type` or bad
+params returns the RFC 7807 envelope with field-level `errors` (e.g. `body.params.threshold`).
+`channels` ⊆ `in_app`, `email` (default `["in_app"]`). At most `ALERT_MAX_PER_USER` (50) alerts
+per user; past that, 422. `PATCH /alerts/{id}` takes any of `params`, `channels`, `enabled`.
+Alerts are user-scoped: another user's id answers 404, never 403. Each `Alert` carries
+`supported: false` when its stored type is no longer in the registry (shown, never dropped).
+
+A new alert fires only on events that occur **after** it was created (per-alert watermark), and
+each event is delivered once per alert. More than 20 events for one alert in one run arrive as
+a single digest notification.
+
+**Notifications** add `ticker`, `event_type`, `severity` (`info|warning|critical`) and
+`source_ids`: backend-issued evidence ids the client links to — `filing:<filing id>`,
+`news:<news id>`, `price:<TICKER>:<from>:<to>`, or filing chunk ids. `filing:` and `price:` ids
+are not (yet) resolvable through `GET /sources/{id}`.
 
 ### Admin (internal)
 | Method | Path |

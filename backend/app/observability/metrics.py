@@ -93,6 +93,24 @@ QUEUE_DEPTH = Gauge(
     "Number of jobs currently queued.",
     registry=REGISTRY,
 )
+ALERTS_FIRED = Counter(
+    "alerts_fired_total",
+    "Notifications created by alert dispatch, per channel (FR-AL-014).",
+    ["event_type", "channel"],
+    registry=REGISTRY,
+)
+ALERT_DISPATCH_ERRORS = Counter(
+    "alert_dispatch_errors_total",
+    "Alerts whose evaluation raised; the rest of the run carried on (FR-AL-013).",
+    ["event_type"],
+    registry=REGISTRY,
+)
+ALERT_DISPATCH_LATENCY = Histogram(
+    "alert_dispatch_latency_seconds",
+    "Event occurred_at to notification created (Phase 5d 30-minute SLA, FR-AL-014).",
+    buckets=(60, 300, 600, 900, 1200, 1800, 3600, 7200, 21600, 86400),
+    registry=REGISTRY,
+)
 CACHE_ACCESS = Counter(
     "cache_access_total",
     "Cache accesses by key family and result (hit-rate per family = hit / (hit+miss), CACHE-004).",

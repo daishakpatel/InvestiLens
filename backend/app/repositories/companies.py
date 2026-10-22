@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
@@ -19,6 +21,14 @@ def get_many_by_ticker(session: Session, tickers: list[str]) -> dict[str, Compan
     upper = [t.upper() for t in tickers]
     rows = session.scalars(select(Company).where(Company.ticker.in_(upper)))
     return {c.ticker.upper(): c for c in rows}
+
+
+def tickers_by_id(session: Session, company_ids: Iterable[int]) -> dict[int, str]:
+    """{company id: ticker} for several companies in one query."""
+    rows = session.execute(
+        select(Company.id, Company.ticker).where(Company.id.in_(list(company_ids)))
+    )
+    return {company_id: ticker for company_id, ticker in rows}
 
 
 def list_active(session: Session) -> list[Company]:

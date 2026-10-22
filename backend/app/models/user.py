@@ -14,6 +14,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
+    func,
+    true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -100,19 +103,27 @@ class WatchlistItem(Base):
     added_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
-class Alert(Base):
-    """A user alert rule (new filing, price move, news category) [P2]."""
+class Alert(Base, TimestampMixin):
+    """A user alert rule (§26.2, FR-AL-009). `event_type` is a key in the alert event-type registry
+    (`app/alerts/registry.py`) and `params` is validated against that type's params model.
+    `company_id` NULL means "every company on the user's watchlist", resolved at dispatch time.
+    `watermark_at` (FR-AL-005): dispatch only considers events that occurred after it."""
 
     __tablename__ = "alerts"
 
     id: Mapped[intpk]
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
-    alert_type: Mapped[str] = mapped_column(String(32))
-    config: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
-    channel: Mapped[str] = mapped_column(String(16), default="in_app")  # email|in_app
-    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    event_type: Mapped[str] = mapped_column(String(64))
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    channels: Mapped[list[str]] = mapped_column(  # subset of in_app|email
+        ARRAY(String(16)), default=lambda: ["in_app"], server_default="{in_app}"
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    # Same now() as created_at on insert, so a new rule never replays older events.
+    watermark_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class ChatSession(Base, TimestampMixin):
@@ -161,6 +172,13 @@ class Notification(Base, TimestampMixin):
     body: Mapped[str | None] = mapped_column(Text)
     channel: Mapped[str] = mapped_column(String(16), default="in_app")  # in_app|email
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Deterministic id of the event(s) behind this row; unique per alert so a re-run or an
+    # overlapping run can never deliver the same event twice (FR-AL-007).
+    event_key: Mapped[str | None] = mapped_column(String(256))
+    # {event_type, severity, source_ids, event_keys}; a digest lists every event_key it covers.
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    __table_args__ = (UniqueConstraint("alert_id", "event_key"),)
 
 
 class ReportFeedback(Base, TimestampMixin):
