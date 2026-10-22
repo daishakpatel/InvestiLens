@@ -7,6 +7,7 @@ Thin HTTP layer over the repositories: resolve the company, read its data, attac
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -21,11 +22,15 @@ from app.config import get_settings
 from app.db import get_db
 from app.filings import topics
 from app.filings.earnings import earnings_reactions
+from app.finance.concept_map import load_concept_map
+from app.finance.metrics import NOT_APPLICABLE_SECTOR
+from app.finance.quarterly_builder import coverage_metrics
 from app.ingestion.documents.chunker import PARSER_VERSION
 from app.models import Company as CompanyModel
-from app.models import DocumentChunk
+from app.models import DocumentChunk, FinancialMetric, MetricGap
 from app.repositories import companies as company_repo
 from app.repositories import filings as filing_repo
+from app.repositories import gaps as gaps_repo
 from app.repositories import metrics as metric_repo
 from app.repositories import news as news_repo
 from app.repositories import prices as price_repo
@@ -36,6 +41,9 @@ from app.schemas.company import (
     CompanySearchResult,
     FinancialsResponse,
     InsiderTransaction,
+    MetricCoverage,
+    MetricGapItem,
+    MetricsCoverageResponse,
     MetricSeries,
     MetricSeriesPoint,
     OwnershipHolding,
@@ -148,16 +156,32 @@ def get_company(ticker: str, db: Session = _DB) -> CompanyResponse:
     return CompanyResponse.model_validate(payload)
 
 
+# Quarterly and TTM series default to the last two years of quarters (FR-QT-011).
+_DEFAULT_QUARTERS = 8
+
+
+def _formula(row: FinancialMetric) -> str | None:
+    """A derived row's formula text (CIT-003): the stored formula, else its formula id."""
+    if not row.is_derived:
+        return None
+    flags = row.quality_flags or {}
+    return str(flags["derived"]) if flags.get("derived") else row.formula_id
+
+
 @router.get("/{ticker}/financials", response_model=FinancialsResponse)
 def get_financials(
     ticker: str,
     metrics: str = Query(default="revenue,net_income"),
-    period_type: str = Query(default="FY"),
+    period_type: str = Query(default="FY", pattern="^(FY|Q|TTM)$"),
+    limit: int | None = Query(
+        default=None, ge=1, le=20, description="Latest N periods per metric; Q/TTM default 8"
+    ),
     from_: int | None = Query(default=None, alias="from"),
     to: int | None = None,
     db: Session = _DB,
 ) -> FinancialsResponse:
     company = _resolve(db, ticker)
+    keep = limit if limit is not None else (None if period_type == "FY" else _DEFAULT_QUARTERS)
     names = [m.strip() for m in metrics.split(",") if m.strip()]
     rows = metric_repo.get_series_multi(
         db,
@@ -175,13 +199,90 @@ def get_financials(
                 period_end=row.period_end.isoformat() if row.period_end else None,
                 value=row.metric_value,
                 unit=row.unit,
+                source_id=row.source_id,
+                formula=_formula(row),
             )
         )
-    series = [MetricSeries(metric_name=name, points=by_name.get(name, [])) for name in names]
+    series = [
+        MetricSeries(metric_name=name, points=by_name.get(name, [])[-keep if keep else 0 :])
+        for name in names
+    ]
     return FinancialsResponse(
         ticker=company.ticker,
         period_type=period_type,
         series=series,
+        freshness=freshness_for(db, company_id=company.id, source="sec"),
+    )
+
+
+_PERIOD = re.compile(r"^(TTM-)?Q(\d)-FY(\d{4})$")
+
+
+def _period_order(label: str) -> tuple[int, int, int]:
+    """Chronological sort key for "Q2-FY2026" / "TTM-Q2-FY2026" (a quarter before its TTM)."""
+    match = _PERIOD.match(label)
+    if match is None:
+        return (0, 0, 0)
+    return (int(match[3]), int(match[2]), 1 if match[1] else 0)
+
+
+def _coverage(
+    metric_names: list[str],
+    applies: dict[str, bool],
+    rows: list[FinancialMetric],
+    gaps: list[MetricGap],
+) -> tuple[list[str], list[MetricCoverage]]:
+    """Per metric: periods with a value, and missing periods with their reason (FR-QT-010).
+
+    A stored NULL (e.g. a tax rate on a pretax loss) is missing with its reason code; a sector
+    N/A is neither present nor missing, it is `applicable = false` (DR-042).
+    """
+    present: dict[str, list[str]] = {name: [] for name in metric_names}
+    missing: dict[str, list[MetricGapItem]] = {name: [] for name in metric_names}
+    for row in rows:
+        if row.metric_name not in present:
+            continue
+        warnings = [str(w) for w in (row.quality_flags or {}).get("warnings") or []]
+        if row.metric_value is not None:
+            present[row.metric_name].append(row.period)
+        elif NOT_APPLICABLE_SECTOR not in warnings:
+            reason = warnings[0] if warnings else "MISSING_INPUT"
+            missing[row.metric_name].append(MetricGapItem(period=row.period, reason=reason))
+    for gap in gaps:
+        if gap.metric in missing:
+            missing[gap.metric].append(MetricGapItem(period=gap.period_label, reason=gap.reason))
+    quarters = sorted(
+        {r.period for r in rows if r.period_type == "Q"}
+        | {g.period_label for g in gaps if not g.period_label.startswith("TTM-")},
+        key=_period_order,
+    )
+    return quarters, [
+        MetricCoverage(
+            metric_name=name,
+            applicable=applies[name],
+            present=sorted(present[name], key=_period_order),
+            missing=sorted(missing[name], key=lambda g: _period_order(g.period)),
+        )
+        for name in metric_names
+    ]
+
+
+@router.get("/{ticker}/metrics/coverage", response_model=MetricsCoverageResponse)
+def get_metrics_coverage(ticker: str, db: Session = _DB) -> MetricsCoverageResponse:
+    """Which quarters and TTM windows each metric has, which are missing and why (FR-QT-010)."""
+    company = _resolve(db, ticker)
+    cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
+    names = coverage_metrics(cmap)
+    quarters, metrics = _coverage(
+        names,
+        {name: cmap.applies(name) for name in names},
+        metric_repo.get_quarterly_rows(db, company_id=company.id),
+        gaps_repo.gaps_for_company(db, company.id),
+    )
+    return MetricsCoverageResponse(
+        ticker=company.ticker,
+        quarters=quarters,
+        metrics=metrics,
         freshness=freshness_for(db, company_id=company.id, source="sec"),
     )
 

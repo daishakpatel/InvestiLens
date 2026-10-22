@@ -1,4 +1,4 @@
-# Agent Prompt Template
+# Agent Instructions - Prompt Template
 
 Copy everything below the line into a new session and fill in the `<...>` placeholders.
 One task file per session. Before starting: make sure **Docker Desktop is running** (integration

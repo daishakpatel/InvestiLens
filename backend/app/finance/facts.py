@@ -36,6 +36,7 @@ def fact_view_from_orm(fact: FinancialFact) -> FactView:
         accession_number=fact.accession_number,
         filed_date=fact.filed_date,
         is_amended=fact.is_amended,
+        fact_id=fact.id,
     )
 
 

@@ -2,8 +2,9 @@
 
 Reads a company's raw `financial_facts`, applies the concept map (DR-020) and fiscal calendar
 (DR-021), and writes canonical `financial_metrics`: annual base values (with restatement rows,
-DR-023), derived Q4 flow values (DR-022), and `data_quality_issues` for unit/anomaly problems
-(DR-024/028). It does NOT compute ratios/growth — that is Phase 1c.
+DR-023), and `data_quality_issues` for unit/anomaly problems (DR-024/028). Quarterly and TTM
+rows, and the `metric_gaps` they leave, come from `quarterly_builder` over the same facts (Phase
+7b, ADR-0040). Annual ratios/growth are Phase 1c (`ratio_builder`).
 """
 
 from __future__ import annotations
@@ -11,12 +12,10 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date
-from typing import cast
 
 from sqlalchemy.orm import Session
 
 from app.finance.concept_map import ConceptMap, load_concept_map
-from app.finance.derivation import derive_q4
 from app.finance.facts import fact_view_from_orm
 from app.finance.periods import (
     derive_fiscal_calendar,
@@ -24,9 +23,9 @@ from app.finance.periods import (
     is_full_year,
     is_quarter,
 )
+from app.finance.quarterly_builder import build_quarterly_metrics
 from app.finance.selection import (
     FactView,
-    Selection,
     matching_facts,
     rank_restatements,
     select_metric,
@@ -38,14 +37,13 @@ from app.repositories import fiscal as fiscal_repo
 from app.repositories import metrics as metrics_repo
 from app.repositories import quality as quality_repo
 
-# Flow metrics eligible for Q4 derivation (DR-022). Stock items are instants, never derived.
-_Q4_METRICS = ["revenue", "net_income", "operating_income", "operating_cash_flow"]
-
 
 @dataclass
 class BuildCounts:
     annual_metrics: int = 0
-    derived_q4: int = 0
+    quarterly_metrics: int = 0
+    ttm_metrics: int = 0
+    metric_gaps: int = 0
     fiscal_periods: int = 0
     quality_issues: int = 0
 
@@ -66,17 +64,26 @@ def _fye_month(facts: list[FactView], revenue_tags: list[str]) -> int:
     return Counter(months).most_common(1)[0][0] if months else 12
 
 
-def _annual_fyes(facts: list[FactView], revenue_tags: list[str], fye_month: int) -> list[date]:
-    """Fiscal year-end dates = full-year revenue ends in the FYE month (drops calendar frames)."""
-    ends = {
-        f.period_end
+def _annual_spans(
+    facts: list[FactView], revenue_tags: list[str], fye_month: int
+) -> list[tuple[date, date]]:
+    """Fiscal-year (start, end) spans = full-year revenue periods ending in the FYE month (drops
+    calendar-aligned frames), oldest first."""
+    spans = {
+        (f.period_start, f.period_end)
         for f in facts
         if f.concept_tag in revenue_tags
+        and f.period_start
         and f.period_end
         and f.period_end.month == fye_month
         and is_full_year(f.period_start, f.period_end)
     }
-    return sorted(e for e in ends if e is not None)
+    return sorted(spans, key=lambda s: s[1])
+
+
+def _annual_fyes(spans: list[tuple[date, date]]) -> list[date]:
+    """Fiscal year-end dates, one per year."""
+    return sorted({end for _, end in spans})
 
 
 def _quarter_spans(facts: list[FactView], revenue_tags: list[str]) -> list[tuple[date, date]]:
@@ -92,22 +99,14 @@ def _quarter_spans(facts: list[FactView], revenue_tags: list[str]) -> list[tuple
 
 
 def _build_fiscal_calendar(
-    session: Session, company_id: int, facts: list[FactView], cmap: ConceptMap, fye_month: int
+    session: Session,
+    company_id: int,
+    facts: list[FactView],
+    cmap: ConceptMap,
+    fye_month: int,
+    annual: list[tuple[date, date]],
 ) -> int:
-    revenue_tags = cmap.tags("revenue")
-    annual = sorted(
-        {
-            (f.period_start, f.period_end)
-            for f in facts
-            if f.concept_tag in revenue_tags
-            and f.period_start
-            and f.period_end
-            and f.period_end.month == fye_month
-            and is_full_year(f.period_start, f.period_end)
-        },
-        key=lambda s: s[1],
-    )
-    quarterly = _quarter_spans(facts, revenue_tags)
+    quarterly = _quarter_spans(facts, cmap.tags("revenue"))
     fiscal_repo.clear_company_fiscal_calendars(session, company_id)  # idempotent rebuild
     periods = derive_fiscal_calendar(annual, quarterly, fye_month)
     for p in periods:
@@ -193,67 +192,6 @@ def _persist_annual_metric(
     return rows, issues
 
 
-def _derive_quarter_four(
-    session: Session,
-    *,
-    company_id: int,
-    ticker: str,
-    facts: list[FactView],
-    cmap: ConceptMap,
-    fye: date,
-    fiscal_year: int,
-    quarter_ends: list[date],
-    fye_month: int,
-) -> int:
-    """Derive Q4 = FY - (Q1+Q2+Q3) for flow metrics where all quarters exist (DR-022)."""
-    quarters = [e for e in quarter_ends if fiscal_year_of(e, fye_month) == fiscal_year][:3]
-    if len(quarters) < 3:
-        return 0
-    derived = 0
-    for metric in _Q4_METRICS:
-        fy = select_metric(facts, cmap, metric, period_end=fye)
-        q = [select_metric(facts, cmap, metric, period_end=qe, quarter=True) for qe in quarters]
-        if fy is None or any(s is None for s in q):
-            continue
-        q1, q2, q3 = cast(tuple[Selection, Selection, Selection], tuple(q))
-        result = derive_q4(fy, q1, q2, q3)
-        # Same shape as ratio lineage (CIT-003). The annual input has a metric of its own to cite;
-        # the three quarters are not stored as metrics, so they are named by their filing.
-        fy_accession, *quarter_accessions = result.input_accessions
-        lineage = [
-            {
-                "name": f"FY{fiscal_year}",
-                "source_id": f"xbrl:{ticker}:{metric}:FY{fiscal_year}",
-                "accession": fy_accession,
-            },
-            *(
-                {"name": f"Q{n}", "accession": accession}
-                for n, accession in enumerate(quarter_accessions, start=1)
-            ),
-        ]
-        metrics_repo.upsert_metric(
-            session,
-            company_id=company_id,
-            period=f"Q4-FY{fiscal_year}",
-            fiscal_year=fiscal_year,
-            fiscal_quarter=4,
-            period_start=None,
-            period_end=fye,
-            period_type="Q",
-            metric_name=metric,
-            metric_value=result.value,
-            unit=fy.unit,
-            is_derived=True,
-            source_tag=fy.source_tag,
-            source_id=f"derived:{ticker}:{metric}:Q4-FY{fiscal_year}",
-            as_reported_accession=None,
-            is_latest=True,
-            quality_flags={"derived": "Q4=FY-(Q1+Q2+Q3)", "inputs": lineage},
-        )
-        derived += 1
-    return derived
-
-
 def build_company_metrics(session: Session, company: Company) -> BuildCounts:
     """Build canonical metrics, fiscal calendar, and quality issues for one company."""
     cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
@@ -263,12 +201,14 @@ def build_company_metrics(session: Session, company: Company) -> BuildCounts:
     revenue_tags = cmap.tags("revenue")
     fye_month = _fye_month(facts, revenue_tags)
 
+    annual = _annual_spans(facts, revenue_tags, fye_month)
+
     metrics_repo.clear_company_metrics(session, company.id)
-    counts.fiscal_periods = _build_fiscal_calendar(session, company.id, facts, cmap, fye_month)
+    counts.fiscal_periods = _build_fiscal_calendar(
+        session, company.id, facts, cmap, fye_month, annual
+    )
 
-    quarter_ends = sorted({e for _, e in _quarter_spans(facts, revenue_tags)})
-
-    for fye in _annual_fyes(facts, revenue_tags, fye_month):
+    for fye in _annual_fyes(annual):
         fiscal_year = fiscal_year_of(fye, fye_month)
         for metric in cmap.flow_metrics + cmap.stock_metrics:
             rows, issues = _persist_annual_metric(
@@ -283,16 +223,9 @@ def build_company_metrics(session: Session, company: Company) -> BuildCounts:
             )
             counts.annual_metrics += rows
             counts.quality_issues += issues
-        counts.derived_q4 += _derive_quarter_four(
-            session,
-            company_id=company.id,
-            ticker=company.ticker,
-            facts=facts,
-            cmap=cmap,
-            fye=fye,
-            fiscal_year=fiscal_year,
-            quarter_ends=quarter_ends,
-            fye_month=fye_month,
-        )
 
+    quarterly = build_quarterly_metrics(session, company, facts, cmap, annual, fye_month)
+    counts.quarterly_metrics = quarterly.quarterly
+    counts.ttm_metrics = quarterly.ttm
+    counts.metric_gaps = quarterly.gaps
     return counts

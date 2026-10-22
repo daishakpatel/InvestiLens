@@ -9,16 +9,47 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from enum import StrEnum
 
 # Duration windows (days) used to classify a flow fact's period.
 FULL_YEAR = (350, 380)
 QUARTER = (80, 100)
+# 10-Q cash-flow statements are year-to-date (FR-QT-002): a Q2 10-Q covers ~182 days (91 x 2) and
+# a Q3 10-Q ~273 (91 x 3). The windows allow 52/53-week years (e.g. a 98-day 14-week Q1 makes
+# Apple's FY2023 6M YTD 189 days and its 9M 280).
+YTD_2Q = (170, 195)
+YTD_3Q = (260, 285)
+
+
+class PeriodShape(StrEnum):
+    QUARTER = "quarter"
+    YTD_2Q = "ytd_2q"
+    YTD_3Q = "ytd_3q"
+    FULL_YEAR = "full_year"
+    OTHER = "other"
+
+
+_SHAPES = (
+    (QUARTER, PeriodShape.QUARTER),
+    (YTD_2Q, PeriodShape.YTD_2Q),
+    (YTD_3Q, PeriodShape.YTD_3Q),
+    (FULL_YEAR, PeriodShape.FULL_YEAR),
+)
 
 
 def duration_days(start: date | None, end: date | None) -> int | None:
     if start is None or end is None:
         return None
     return (end - start).days + 1  # inclusive
+
+
+def classify_duration(days: int | None) -> PeriodShape:
+    """The shape of a duration: a single quarter, 6M or 9M year-to-date, a full year, or other."""
+    if days is not None:
+        for (low, high), shape in _SHAPES:
+            if low <= days <= high:
+                return shape
+    return PeriodShape.OTHER
 
 
 def is_full_year(start: date | None, end: date | None) -> bool:

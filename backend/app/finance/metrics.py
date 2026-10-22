@@ -118,12 +118,25 @@ def cagr(start: Num, end: Num, years: int, *, sources: Sources = None) -> Metric
     return _ok(value, RATIO, "cagr", inputs)
 
 
-def ttm_sum(quarters: Sequence[Num], *, sources: Sources = None) -> MetricResult:
-    """Trailing-twelve-months sum of the last four quarterly flow values."""
-    inputs = _inputs([(f"q{i}", v) for i, v in enumerate(quarters, 1)], sources)
+def ttm_sum(
+    quarters: Sequence[Num],
+    *,
+    sources: Sources = None,
+    labels: Sequence[str] | None = None,
+    unit: str = USD,
+) -> MetricResult:
+    """Trailing-twelve-months sum of the last four quarterly flow values.
+
+    `labels` names the inputs by their fiscal quarter ("Q3-FY2025"); the default is q1..qN.
+    Fewer than four quarters is MISSING_INPUT, never an annualized guess (DR-QT-002).
+    """
+    names = list(labels) if labels is not None else [f"q{i}" for i in range(1, len(quarters) + 1)]
+    inputs = _inputs(list(zip(names, quarters, strict=True)), sources)
     if len(quarters) < 4 or any(v is None for v in quarters[-4:]):
-        return _fail(MISSING_INPUT, USD, "ttm_sum", inputs)
-    return _ok(sum((v for v in quarters[-4:] if v is not None), Decimal(0)), USD, "ttm_sum", inputs)
+        return _fail(MISSING_INPUT, unit, "ttm_sum", inputs)
+    return _ok(
+        sum((v for v in quarters[-4:] if v is not None), Decimal(0)), unit, "ttm_sum", inputs
+    )
 
 
 # --- Profitability --------------------------------------------------------------------
@@ -534,6 +547,22 @@ def roa(net_income: Num, total_assets: Num, *, sources: Sources = None) -> Metri
     return _divide(net_income, total_assets, unit=RATIO, formula_id="roa", inputs=inputs)
 
 
+def effective_tax_rate(
+    income_tax_expense: Num, pretax_income: Num, *, sources: Sources = None
+) -> MetricResult:
+    """Income tax expense / pretax income; a pretax loss has no meaningful rate (NEGATIVE_BASE)."""
+    inputs = _inputs(
+        [("income_tax_expense", income_tax_expense), ("pretax_income", pretax_income)], sources
+    )
+    return _divide(
+        income_tax_expense,
+        pretax_income,
+        unit=RATIO,
+        formula_id="effective_tax_rate",
+        inputs=inputs,
+    )
+
+
 def roic(
     operating_income: Num,
     tax_rate: Num,
@@ -541,6 +570,7 @@ def roic(
     shareholders_equity: Num,
     cash_and_equivalents: Num,
     *,
+    applicable: bool = True,
     sources: Sources = None,
 ) -> MetricResult:
     """ROIC = NOPAT / (debt + equity - cash); NOPAT = operating_income * (1 - tax_rate)."""
@@ -554,6 +584,8 @@ def roic(
         ],
         sources,
     )
+    if not applicable:
+        return _fail(NOT_APPLICABLE_SECTOR, RATIO, "roic", inputs)
     if (
         operating_income is None
         or tax_rate is None

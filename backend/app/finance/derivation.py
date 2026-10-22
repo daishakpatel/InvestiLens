@@ -10,8 +10,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Protocol
 
-from app.finance.selection import Selection
+
+class Figure(Protocol):
+    """A reported value and the filing it came from (a `Selection` or a `FactView`)."""
+
+    @property
+    def value(self) -> Decimal: ...
+
+    @property
+    def accession_number(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -20,7 +29,7 @@ class DerivedQ4:
     input_accessions: list[str]  # lineage: FY, Q1, Q2, Q3 (CIT-003)
 
 
-def derive_q4(fy: Selection, q1: Selection, q2: Selection, q3: Selection) -> DerivedQ4:
+def derive_q4(fy: Figure, q1: Figure, q2: Figure, q3: Figure) -> DerivedQ4:
     """Q4 = FY - (Q1 + Q2 + Q3) for a flow metric, with lineage to the four inputs."""
     value = fy.value - (q1.value + q2.value + q3.value)
     lineage = [s.accession_number for s in (fy, q1, q2, q3)]

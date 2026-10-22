@@ -30,6 +30,7 @@ class ConceptMap:
     _stock: dict[str, list[str]]
     _units: dict[str, UnitFamily]
     _sector_applicability: dict[str, bool]
+    _cash_flow: frozenset[str] = frozenset()
 
     def tags(self, metric: str) -> list[str]:
         """Ordered XBRL tags to try for a canonical metric (first available wins)."""
@@ -44,6 +45,10 @@ class ConceptMap:
 
     def unit_family(self, metric: str) -> UnitFamily:
         return self._units.get(metric, "currency")
+
+    def is_cash_flow(self, metric: str) -> bool:
+        """Whether a flow is reported year-to-date in 10-Qs (cash-flow statement, FR-QT-002)."""
+        return metric in self._cash_flow
 
     def applies(self, metric: str) -> bool:
         """Whether a metric is applicable for this company's sector (DR-001/DR-042)."""
@@ -103,4 +108,5 @@ def load_concept_map(*, ticker: str = "", cik: str = "", sector: str | None = No
         _stock=stock,
         _units=base.get("units", {}),
         _sector_applicability=sector_map,
+        _cash_flow=frozenset(base.get("cash_flow_metrics", [])),
     )
