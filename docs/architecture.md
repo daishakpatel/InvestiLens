@@ -105,6 +105,15 @@ No business logic in routers; no SQL in services. External systems are reached o
 provider interfaces in `providers/` (`FilingsProvider`, `PriceProvider`, `NewsProvider`,
 `LLMClient`, `EmbeddingClient`), each with a mock backed by frozen fixtures.
 
+**Alerts** (Phase 7a, ADR-0039): `app/alerts/registry.py` holds one `AlertEventType` per kind
+of alert (key, label, params model, deterministic detector, sample output). Dispatch
+(`app/alerts/dispatch.py`, the 5-minute `send_alerts` job), the `/alerts` API and the frontend
+rule form all read the registry, so a new event type is one `register(...)` call beside its
+detector: no new query loop, dedupe or form. Dispatch asks each enabled alert's detector for events
+after the alert's `watermark_at`, inserts one notification per `(alert, event_key)` with
+`ON CONFLICT DO NOTHING`, then advances the watermark to the run's start. Each alert runs in its
+own savepoint so one failing detector is logged and counted, never fatal to the run.
+
 ## Data stores (table names only; columns are designed in Phase 0b)
 
 - **Reference & filings:** `companies`, `company_identifiers`, `fiscal_calendars`,
@@ -114,7 +123,7 @@ provider interfaces in `providers/` (`FilingsProvider`, `PriceProvider`, `NewsPr
 - **News:** `news`
 - **Research & citations:** `research_reports`, `research_sources`, `claim_verifications`,
   `report_feedback`
-- **Users:** `users`, `refresh_tokens`, `watchlists`, `watchlist_items`, `alerts`,
+- **Users:** `users`, `refresh_tokens`, `watchlists`, `watchlist_items`, `alerts`, `notifications`,
   `saved_reports`, `saved_questions`, `chat_sessions`, `chat_messages`
 - **Operational:** `ingestion_runs`, `ingestion_dead_letters`, `jobs`, `llm_calls`,
   `retrieval_logs`, `data_quality_issues`, `eval_runs`, `eval_results`, `data_freshness`

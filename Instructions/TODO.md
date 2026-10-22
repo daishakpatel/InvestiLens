@@ -116,10 +116,15 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       there is no list endpoint and no UI. `[code]`
 - [ ] **Watchlist items**: no add/remove-item endpoint; each watched company is its own
       watchlist (ADR-0031 stand-in). Needs `POST/DELETE /watchlists/{id}/items` + a data migration. `[code]`
-- [ ] Alerts: `POST /alerts` takes no `config` (price-move threshold, news category);
-      `Notification` has no ticker. `[code]` / `[notes]`
+- [x] Alerts: `POST /alerts` takes no `config` (price-move threshold, news category);
+      `Notification` has no ticker. Done in Phase 7a (ADR-0039): typed `params`, `ticker` on
+      notifications, `/alerts` settings page. `[code]` / `[notes]`
 - [ ] Email: no delivery provider for verify-email / password-reset; `email_verified_at` gates
       nothing; SMTP backend unproven. `[code]` / `[notes]`
+- [ ] Alerts (Phase 7a leftovers): `filing:<id>` / `price:…` evidence ids don't resolve via
+      `GET /sources/{id}` (the UI maps them to routes); email is sent before the dispatch job
+      commits, so a crash in that window can resend one (ADR-0039); `price_move` checks only the
+      newest bar per company; the generic form shows the price threshold as a raw fraction. `[code]`
 
 ### Report-level features (§10.16)
 

@@ -3281,6 +3281,33 @@ Each prompt file contains: purpose, inputs, output schema, safety rules (untrust
 
 **New features:** insider transactions (Form 4), institutional holdings (13F), 8-K item classification, earnings-quality scores (Piotroski, Altman, accruals), DCF/scenario calculator, peer percentile comparison, report/claim feedback loop, hosted demo mode, alerts expansion.
 
+## Appendix H — Phase 7 requirements (analyst depth)
+
+Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 wording as §3.
+
+**Alert framework v2 (Phase 7a, ADR-0039)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-AL-001 | Alert kinds MUST be defined in one event-type registry: stable `key`, label, description, a typed params model (may be empty), a detector, and `default_enabled`. |
+| FR-AL-002 | A detector MUST be deterministic (no LLM) and return events with a deterministic `event_key`, UTC `occurred_at`, company, plain-text title/body, backend-issued `source_ids`, and severity (`info`/`warning`/`critical`), only for `since < occurred_at <= until`. |
+| FR-AL-003 | The pre-Phase-7 alert kinds (new filing, price move, new risk factor, news) MUST be served through the registry with unchanged triggers. |
+| FR-AL-004 | Dispatch MUST NOT crash on a stored event type that is no longer registered; it logs a warning with the alert id and skips it. |
+| FR-AL-005 | Each alert MUST have a `watermark_at`; a new alert's equals its creation time, so it never fires on earlier events. Migrating existing alerts MUST set it to the migration time. |
+| FR-AL-006 | Dispatch MUST consider only events with `watermark_at < occurred_at <= run_started_at` and, after the alert's run succeeds, set `watermark_at = run_started_at`. |
+| FR-AL-007 | Each (alert, event_key) MUST be delivered at most once, enforced by a unique constraint with insert-or-nothing; email MUST be sent only for newly created rows. |
+| FR-AL-008 | If advancing the watermark fails after notifications were created, the next run MUST NOT deliver those events again. |
+| FR-AL-009 | An alert rule MUST store `event_type` (validated against the registry), `params` (validated against the type's params model), optional company (none = the user's watchlist), `channels` ⊆ {in_app, email}, and `enabled`. Invalid input returns 422 with field-level errors. |
+| FR-AL-010 | The API MUST expose the registry (`GET /alerts/event-types`, params as JSON Schema) and alert CRUD (`GET`/`POST /alerts`, `PATCH`/`DELETE /alerts/{id}`). |
+| FR-AL-011 | Users MUST only see and change their own alerts (others' answer 404). A watchlist-wide alert MUST read the watchlist at run time. |
+| FR-AL-012 | A user MAY hold at most `ALERT_MAX_PER_USER` (default 50) alerts; creating more returns 422 with a clear message. |
+| FR-AL-013 | One alert's failure MUST NOT stop the others in a run; it is logged (alert id, event type, exception class) and counted in `alert_dispatch_errors_total{event_type}`. |
+| FR-AL-014 | Dispatch MUST record `alerts_fired_total{event_type,channel}` and `alert_dispatch_latency_seconds` (event to notification), shown on the Grafana dashboard. |
+| FR-AL-015 | More than 20 events for one alert in one run MUST be delivered as one digest whose payload lists every `event_key`. |
+| FR-AL-016 | The UI MUST offer an Alerts settings page (list, toggle, delete, create) whose form is generated from the registry's params schemas, with no per-type form code. |
+| FR-AL-017 | A rule whose event type is no longer supported MUST stay visible, marked as such. |
+| FR-AL-018 | Notifications MUST link to their evidence via `source_ids`, and notification text MUST NOT contain investment advice (checked against every registered type's sample output). |
+
 ---
 
 *End of document — Assay Desk Specification v2.0*

@@ -67,6 +67,23 @@ condensed, actionable version of it.
 - `24_phase6a_comparison_and_portfolio.md`
 - `25_phase6b_filing_diff_and_mgmt_tracking.md`
 
+### Phase 7 — Analyst depth (optional, after Phase 6; built on what Phase 6 added)
+Do these in order. 26–28 are foundations (alerts, quarterly data, SEC exhibits); 29–36 are the
+analyst-facing features; 37 turns the project into something verifiable in five minutes.
+- `26_phase7a_alert_framework_v2.md`
+- `27_phase7b_quarterly_and_ttm_metrics.md`
+- `28_phase7c_sec_exhibits_and_extra_forms.md`
+- `29_phase7d_earnings_quality_and_beneish.md`
+- `30_phase7e_red_flag_panel.md`
+- `31_phase7f_footnote_extraction.md`
+- `32_phase7g_governance_def14a.md`
+- `33_phase7h_peer_sets_and_valuation_bands.md`
+- `34_phase7i_guidance_vs_actual.md`
+- `35_phase7j_earnings_briefs.md`
+- `36_phase7k_thesis_tracker.md`
+- `37_phase7l_measured_results_and_polish.md` (its Part A, live eval numbers, may start any time
+  after Phase 5b)
+
 ### UI rebuild (after Phase 6; frontend only)
 A five-step redesign of the whole frontend lives in `UI_plan/`. Start with
 `UI_plan/00_README.md` (design direction and shared rules), then one step file per session:
@@ -96,3 +113,20 @@ Phase 0 (all 4 files) ─┬─> Phase 1a SEC Ingestion ─┬─> Phase 1b Conc
 
 You can run Phase 1d, 1e, 3a, and 4b in parallel with Phase 1a–1c since they don't depend on
 each other. Everything converges at Phase 3b (report generation) and Phase 4a (API).
+
+### Phase 7 dependencies
+
+```text
+26 alerts v2 ─────────────────────────────┬──────────────┬──────────────┬─────────────┐
+27 quarterly/TTM ─┬─> 29 earnings quality ─┴─> 30 red flags ─┐         │             │
+                  ├─> 33 peers/valuation ──────────────────┐  │         │             │
+                  └─> 34 guidance vs actual ─┐             ▼  ▼         ▼             ▼
+28 exhibits/forms ─┬─> 30 red flags          └────────> 35 earnings briefs ─> 36 thesis tracker
+                   ├─> 31 footnotes                                              │
+                   ├─> 32 governance                                             ▼
+                   └─> 34 guidance                                  37 measured results & demo
+```
+
+26, 27 and 28 have no dependency on each other and can run in parallel. 31 and 32 depend only
+on 28 and can run any time after it. 35 needs 26, 27, 28, 29, 30 and 34; 33 is recommended but
+optional. 37 Part A can start early.
