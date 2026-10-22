@@ -240,7 +240,7 @@ def test_hard_delete_cascades_but_keeps_public_reports(
 
     chat = ChatSession(user_id=user.id, company_id=company.id)
     watchlist = Watchlist(user_id=user.id, name="Mine")
-    alert = Alert(user_id=user.id, company_id=company.id, alert_type="new_10k")
+    alert = Alert(user_id=user.id, company_id=company.id, event_type="new_filing")
     report = ResearchReport(company_id=company.id, user_id=user.id, status="complete")
     job = Job(job_type="research_report", params={}, created_by=user.id)
     session.add_all([chat, watchlist, alert, report, job])

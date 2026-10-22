@@ -279,12 +279,13 @@ def test_new_risk_factor_alert_fires_once_for_a_new_filing(session: Session) -> 
     user = User(email="risk-alerts@example.com", password_hash="x")  # noqa: S106
     session.add(user)
     session.flush()
-    alert = Alert(user_id=user.id, company_id=company.id, alert_type="new_risk_factor")
+    alert = Alert(user_id=user.id, company_id=company.id, event_type="new_risk_factor")
     session.add(alert)
     session.flush()
 
+    # The seeded filings are as old as the alert, so nothing replays (FR-AL-005).
     assert check_and_dispatch(session) == 0
-    assert alert.last_triggered_at == filings[-1].created_at  # watermark moved past it
+    assert alert.watermark_at > filings[-1].created_at  # watermark moved past them
 
     # Simulated new-filing scenario: next year's 10-K arrives with a supplier risk factor.
     period_end, risk_factors, mda = _YEARS[2]

@@ -348,7 +348,7 @@ def test_watchlist_and_alert_crud_requires_auth(client: TestClient, seed: dict[s
     assert client.delete(f"{_P}/watchlists/{wl.json()['id']}", headers=headers).status_code == 204
 
     al = client.post(
-        f"{_P}/alerts", json={"ticker": "TST", "alert_type": "new_10k"}, headers=headers
+        f"{_P}/alerts", json={"ticker": "TST", "event_type": "new_filing"}, headers=headers
     )
     assert al.status_code == 201 and al.json()["ticker"] == "TST"
     assert len(client.get(f"{_P}/alerts", headers=headers).json()) == 1
@@ -361,7 +361,7 @@ def test_alert_and_watchlist_lists_are_user_scoped(
     headers = auth_headers(seed["user"])
     assert (
         client.post(
-            f"{_P}/alerts", json={"ticker": "TST", "alert_type": "new_10k"}, headers=headers
+            f"{_P}/alerts", json={"ticker": "TST", "event_type": "new_filing"}, headers=headers
         ).status_code
         == 201
     )
