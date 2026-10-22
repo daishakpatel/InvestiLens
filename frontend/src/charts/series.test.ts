@@ -11,6 +11,7 @@ import {
   pickTableScale,
   shortPeriod,
   toRows,
+  trendByQuarter,
 } from "./series";
 
 // UI plan Step 3 chart system. DR-041: N/A is never 0, and growth from a non-positive base is
@@ -43,6 +44,35 @@ describe("toRows", () => {
     expect(rows.map((r) => r.value)).toEqual([100, null, 300]);
     expect(rows.map((r) => r.change)).toEqual([null, null, null]); // no prior on either side
     expect(rows[1]?.periodEnd).toBeNull();
+  });
+
+  it("carries each point's source ID and, for derived figures, its formula (CIT-003)", () => {
+    const [direct, derived] = toRows(
+      [
+        { period: "Q3-FY2026", value: "1", unit: "USD", source_id: "xbrl:NVDA:revenue:Q3-FY2026" },
+        {
+          period: "Q4-FY2026",
+          value: "2",
+          unit: "USD",
+          source_id: "derived:NVDA:revenue:Q4-FY2026",
+          formula: "Q4 = FY - (Q1 + Q2 + Q3)",
+        },
+      ],
+      "money",
+    );
+    expect(direct).toMatchObject({ sourceId: "xbrl:NVDA:revenue:Q3-FY2026", formula: null });
+    expect(derived?.formula).toBe("Q4 = FY - (Q1 + Q2 + Q3)");
+  });
+});
+
+describe("trendByQuarter", () => {
+  it("keys each TTM point by the quarter it ends with (FR-QT-012)", () => {
+    const trend = trendByQuarter([
+      { period: "TTM-Q1-FY2026", value: "10", unit: "USD" },
+      { period: "TTM-Q2-FY2026", value: "12", unit: "USD" },
+    ]);
+    expect(trend.get("Q2-FY2026")?.value).toBe("12");
+    expect(trend.has("TTM-Q2-FY2026")).toBe(false);
   });
 });
 
@@ -130,5 +160,6 @@ describe("scales and formatting", () => {
   it("shortens fiscal period labels for axes", () => {
     expect(shortPeriod("FY2026")).toBe("FY26");
     expect(shortPeriod("Q4-FY2026")).toBe("Q4 FY26");
+    expect(shortPeriod("TTM-Q4-FY2026")).toBe("TTM Q4 FY26");
   });
 });

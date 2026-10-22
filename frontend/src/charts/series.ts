@@ -9,6 +9,8 @@ export interface SeriesRow {
   periodEnd: string | null;
   value: number | null; // null = N/A for that period (never drawn as 0, DR-041)
   change: number | null;
+  sourceId: string | null; // backend-issued, opens in the citation drawer
+  formula: string | null; // derived figures only: "Q3 = 9M YTD - 6M YTD" (CIT-003)
 }
 
 /** How a metric is printed. The API's `unit` cannot say this alone: a margin and a current
@@ -46,8 +48,16 @@ export function toRows(points: readonly MetricSeriesPoint[], display: Display): 
       periodEnd: point.period_end ?? null,
       value,
       change: changeBetween(value, prior, display),
+      sourceId: point.source_id ?? null,
+      formula: point.formula ?? null,
     };
   });
+}
+
+/** TTM points keyed by the quarter they end with: "TTM-Q2-FY2026" → "Q2-FY2026", so a TTM line
+ *  sits on the bar of its last quarter. */
+export function trendByQuarter(trend: readonly MetricSeriesPoint[]): Map<string, MetricSeriesPoint> {
+  return new Map(trend.map((point) => [point.period.replace(/^TTM-/, ""), point]));
 }
 
 export interface Scale {
@@ -172,7 +182,8 @@ export function formatCell(value: number, display: Display, scale: Scale): strin
   return display === "perShare" ? formatValue(value, display).replace("$", "") : formatValue(value, display);
 }
 
-/** "FY2026" → "FY26", "Q4-FY2026" → "Q4 FY26": axis labels that fit under a bar. */
+/** "FY2026" → "FY26", "Q4-FY2026" → "Q4 FY26", "TTM-Q4-FY2026" → "TTM Q4 FY26": axis labels
+ *  that fit under a bar. */
 export function shortPeriod(period: string): string {
-  return period.replace("-", " ").replace(/FY(\d{2})(\d{2})/, "FY$2");
+  return period.replaceAll("-", " ").replace(/FY(\d{2})(\d{2})/, "FY$2");
 }

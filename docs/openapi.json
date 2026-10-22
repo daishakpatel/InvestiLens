@@ -2350,6 +2350,59 @@
         "title": "ManagementTopicStatement",
         "type": "object"
       },
+      "MetricCoverage": {
+        "description": "Which quarterly / TTM periods of one metric exist, and why the others do not (FR-QT-010).",
+        "properties": {
+          "applicable": {
+            "title": "Applicable",
+            "type": "boolean"
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MetricGapItem"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "present": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Present",
+            "type": "array"
+          }
+        },
+        "required": [
+          "metric_name",
+          "applicable",
+          "present",
+          "missing"
+        ],
+        "title": "MetricCoverage",
+        "type": "object"
+      },
+      "MetricGapItem": {
+        "properties": {
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "reason"
+        ],
+        "title": "MetricGapItem",
+        "type": "object"
+      },
       "MetricInput": {
         "description": "One input to a derived metric, linking to the source it came from (DR-040).",
         "properties": {
@@ -2469,6 +2522,17 @@
       },
       "MetricSeriesPoint": {
         "properties": {
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula"
+          },
           "period": {
             "title": "Period",
             "type": "string"
@@ -2483,6 +2547,17 @@
               }
             ],
             "title": "Period End"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
           },
           "unit": {
             "title": "Unit",
@@ -2507,6 +2582,39 @@
           "unit"
         ],
         "title": "MetricSeriesPoint",
+        "type": "object"
+      },
+      "MetricsCoverageResponse": {
+        "properties": {
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricCoverage"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "quarters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quarters",
+            "type": "array"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "quarters",
+          "metrics",
+          "freshness"
+        ],
+        "title": "MetricsCoverageResponse",
         "type": "object"
       },
       "NewsItem": {
@@ -6082,8 +6190,29 @@
             "required": false,
             "schema": {
               "default": "FY",
+              "pattern": "^(FY|Q|TTM)$",
               "title": "Period Type",
               "type": "string"
+            }
+          },
+          {
+            "description": "Latest N periods per metric; Q/TTM default 8",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 20,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latest N periods per metric; Q/TTM default 8",
+              "title": "Limit"
             }
           },
           {
@@ -6259,6 +6388,49 @@
         "tags": [
           "Company",
           "Filings"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/metrics/coverage": {
+      "get": {
+        "description": "Which quarters and TTM windows each metric has, which are missing and why (FR-QT-010).",
+        "operationId": "get_metrics_coverage_api_v1_companies__ticker__metrics_coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Metrics Coverage",
+        "tags": [
+          "Company"
         ]
       }
     },

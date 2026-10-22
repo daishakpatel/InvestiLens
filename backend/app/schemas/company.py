@@ -36,10 +36,12 @@ class CompanyResponse(BaseModel):
 
 
 class MetricSeriesPoint(BaseModel):
-    period: str  # e.g. "FY2025" (fiscal, kept separate from calendar dates)
+    period: str  # "FY2025", "Q3-FY2026", "TTM-Q3-FY2026" (fiscal, separate from calendar dates)
     period_end: str | None = None  # ISO-8601 calendar date
     value: Decimal | None
     unit: str
+    source_id: str | None = None  # backend-issued; resolves via GET /sources/{source_id}
+    formula: str | None = None  # derived rows only, e.g. "Q3 = 9M YTD - 6M YTD" (CIT-003)
 
 
 class MetricSeries(BaseModel):
@@ -51,6 +53,28 @@ class FinancialsResponse(BaseModel):
     ticker: str
     period_type: str  # FY|Q|TTM
     series: list[MetricSeries]
+    freshness: Freshness
+
+
+class MetricGapItem(BaseModel):
+    period: str  # "Q2-FY2026" or "TTM-Q2-FY2026"
+    reason: str  # missing_ytd_2q, missing_fy, incomplete_window, NEGATIVE_BASE, ...
+
+
+class MetricCoverage(BaseModel):
+    """Which quarterly / TTM periods of one metric exist, and why the others do not (FR-QT-010)."""
+
+    metric_name: str
+    # False = not applicable to the company's sector (DR-042): render N/A, never as missing data.
+    applicable: bool
+    present: list[str]  # periods with a stored value, oldest first
+    missing: list[MetricGapItem]
+
+
+class MetricsCoverageResponse(BaseModel):
+    ticker: str
+    quarters: list[str]  # the stored quarter window (up to 12), oldest first
+    metrics: list[MetricCoverage]
     freshness: Freshness
 
 
