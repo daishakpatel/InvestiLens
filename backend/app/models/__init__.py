@@ -11,6 +11,7 @@ from app.models.financial import (
     CorporateAction,
     FinancialFact,
     FinancialMetric,
+    MetricGap,
     PriceHistory,
 )
 from app.models.news import InsiderTransaction, InstitutionalHolding, News
@@ -65,6 +66,7 @@ __all__ = [
     "InstitutionalHolding",
     "Job",
     "LlmCall",
+    "MetricGap",
     "News",
     "Notification",
     "PriceHistory",

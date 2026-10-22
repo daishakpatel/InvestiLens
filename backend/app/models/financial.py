@@ -18,6 +18,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -76,7 +77,7 @@ class FinancialMetric(Base, TimestampMixin):
 
     id: Mapped[intpk]
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
-    period: Mapped[str] = mapped_column(String(32))  # "FY2025", "Q3-FY2026", "TTM-2026Q2"
+    period: Mapped[str] = mapped_column(String(32))  # "FY2025", "Q3-FY2026", "TTM-Q3-FY2026"
     fiscal_year: Mapped[int | None] = mapped_column(Integer)
     fiscal_quarter: Mapped[int | None] = mapped_column(Integer)
     period_start: Mapped[date | None] = mapped_column(Date)
@@ -96,6 +97,26 @@ class FinancialMetric(Base, TimestampMixin):
     as_reported_accession: Mapped[str | None] = mapped_column(String(32))
     is_latest: Mapped[bool] = mapped_column(Boolean, default=True)
     quality_flags: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+class MetricGap(Base):
+    """A quarter or TTM window a metric is missing, and why (FR-QT-010, ADR-0040).
+
+    Rebuilt with every metrics run. Sector inapplicability (DR-042) is never a gap: a bank's
+    gross margin is N/A, which `sector_applicability.yaml` decides, not missing data.
+    """
+
+    __tablename__ = "metric_gaps"
+    __table_args__ = (UniqueConstraint("company_id", "metric", "period_label"),)
+
+    id: Mapped[intpk]
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    metric: Mapped[str] = mapped_column(String(64))
+    period_label: Mapped[str] = mapped_column(String(32))  # "Q2-FY2026", "TTM-Q2-FY2026"
+    reason: Mapped[str] = mapped_column(String(64))  # missing_ytd_2q, missing_fy, ...
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class PriceHistory(Base):

@@ -86,10 +86,27 @@ def get_series_multi(
     )
 
 
+def get_quarterly_rows(session: Session, *, company_id: int) -> list[FinancialMetric]:
+    """A company's latest quarterly and TTM rows, for the coverage report (FR-QT-010)."""
+    return list(
+        session.scalars(
+            select(FinancialMetric).where(
+                FinancialMetric.company_id == company_id,
+                FinancialMetric.period_type.in_(("Q", "TTM")),
+                FinancialMetric.is_latest.is_(True),
+            )
+        )
+    )
+
+
 def get_latest_metrics(
     session: Session, *, company_id: int, metric_names: list[str]
 ) -> list[FinancialMetric]:
-    """The single most recent (by fiscal year) latest row per named metric, for valuation (§12)."""
+    """The single most recent (by fiscal year) latest row per named metric, for valuation (§12).
+
+    Annual and latest-close rows only: a quarter or TTM of the year in progress has a later
+    fiscal year than the last 10-K and would otherwise outrank the annual figure (ADR-0040).
+    """
     rows = list(
         session.scalars(
             select(FinancialMetric)
@@ -97,6 +114,7 @@ def get_latest_metrics(
                 FinancialMetric.company_id == company_id,
                 FinancialMetric.metric_name.in_(metric_names),
                 FinancialMetric.is_latest.is_(True),
+                FinancialMetric.period_type.in_(("FY", "LATEST")),
             )
             # A valuation at the latest close outranks the same multiple at a fiscal year end.
             .order_by(

@@ -3,6 +3,9 @@
 sectors:
   standard:
     gross_margin: true
+    gross_profit: true
+    cost_of_revenue: true
+    roic: true
     current_ratio: true
     ev_ebitda: true
     piotroski: true
@@ -12,6 +15,9 @@ sectors:
     net_interest_margin: false
   bank:
     gross_margin: false
+    gross_profit: false       # a bank has no cost of goods: N/A, not a missing quarter (FR-QT-010)
+    cost_of_revenue: false
+    roic: false               # deposits are funding, not invested capital
     current_ratio: false
     ev_ebitda: false
     piotroski: false
@@ -21,6 +27,9 @@ sectors:
     net_interest_margin: true   # [P2]
   reit:
     gross_margin: false
+    gross_profit: false
+    cost_of_revenue: false
+    roic: true
     current_ratio: false
     ev_ebitda: true
     piotroski: true

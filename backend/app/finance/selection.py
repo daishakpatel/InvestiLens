@@ -7,6 +7,7 @@ that has a value for the target period, preferring the latest-filed value (resta
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -26,6 +27,7 @@ class FactView:
     accession_number: str
     filed_date: date | None
     is_amended: bool = False
+    fact_id: int | None = None  # financial_facts.id, cited as `xbrl:<fact_id>` (CIT-003)
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,31 @@ def select_metric(
             return Selection(
                 metric, chosen.value, chosen.unit, tag, chosen.accession_number, chosen.filed_date
             )
+    return None
+
+
+def select_fact(
+    facts_by_tag: Mapping[str, list[FactView]],
+    concept_map: ConceptMap,
+    metric: str,
+    matches: Callable[[FactView], bool],
+    *,
+    latest_filed: bool = False,
+) -> tuple[str, FactView] | None:
+    """First tag in priority order with a matching fact, and its authoritative fact (DR-QT-001).
+
+    The same rule as `select_metric` (earliest-filed wins unless amended), over facts already
+    grouped by tag so quarterly selection does not rescan every fact for every period.
+    `latest_filed` takes the most recent filing's figure instead: later filings restate prior
+    periods for stock splits, so per-share figures from different years only share a share
+    basis in their latest restatement (ADR-0040).
+    """
+    for tag in concept_map.tags(metric):
+        candidates = [f for f in facts_by_tag.get(tag, []) if matches(f)]
+        if candidates:
+            if latest_filed:
+                return tag, max(candidates, key=lambda f: f.filed_date or date.min)
+            return tag, _select_best(candidates)
     return None
 
 

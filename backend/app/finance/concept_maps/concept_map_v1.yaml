@@ -33,6 +33,19 @@ flow_metrics:
     - us-gaap:EarningsPerShareDiluted
   shares_diluted_weighted:
     - us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding
+  # Effective tax rate for TTM ROIC (Phase 7b); reported by every fixture company.
+  income_tax_expense:
+    - us-gaap:IncomeTaxExpenseBenefit
+  pretax_income:
+    - us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest
+
+# Flow metrics a 10-Q reports year-to-date (the cash-flow statement), not per quarter. Their
+# quarters are de-cumulated: Q2 = 6M YTD - 3M YTD, Q3 = 9M - 6M, Q4 = FY - 9M (FR-QT-002).
+cash_flow_metrics:
+  - operating_cash_flow
+  - capex
+  - depreciation_amortization
+  - stock_based_compensation
 
 stock_metrics:
   shares_outstanding:

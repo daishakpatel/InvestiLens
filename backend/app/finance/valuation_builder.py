@@ -13,8 +13,8 @@ P/E uses the raw close with diluted EPS, and the share count is moved to the pri
 any stock split in between (DR-025/026). Every row stores its price date, close, share count,
 share record date and fiscal year, so it can be reproduced from stored data (FR-024).
 
-shortcut: TTM figures are not persisted, so "TTM" inputs use the fiscal year's figures; switch to
-TTM once quarterly metrics exist (Instructions/TODO.md).
+shortcut: "TTM" inputs use the fiscal year's figures. TTM rows are stored since Phase 7b
+(ADR-0040); switch these multiples to them with the Phase 7h valuation bands (Instructions/TODO.md).
 """
 
 from __future__ import annotations
@@ -266,7 +266,7 @@ def build_company_valuation(session: Session, company: Company) -> int:
             "price_date": price.day.isoformat(),
             "price_close": str(price.close),
             "fiscal_year": f"FY{fy}",
-            "figures": "fiscal year (TTM not yet persisted)",
+            "figures": "fiscal year (not TTM)",
         }
         if count is not None and shares is not None:
             basis.update(shares=str(shares), shares_record_date=count.record_date.isoformat())
