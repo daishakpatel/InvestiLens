@@ -1,158 +1,115 @@
-"""Alert evaluation + dispatch (§26.2, Phase 5d) — the piece Phase 4b's alert CRUD waited on.
+"""Alert evaluation + dispatch (§26.2, Phase 5d; registry + watermark since Phase 7a, ADR-0039).
 
-For each active `alerts` row, check whether a triggering event has occurred since the rule's
-watermark (`last_triggered_at`, or `created_at` on first evaluation) and, if so, deliver a
-notification and advance the watermark. Idempotent: re-running without a new event sends nothing,
-because the watermark only moves forward when something actually fired (JOB-001).
+For each enabled alert of an active user, ask its event type's detector for events with
+`watermark_at < occurred_at <= run_started_at`, deliver one notification per event (or one digest
+when there are many), then move the watermark to `run_started_at`. The run's *start* is used, not
+the time it finished, so an event that lands mid-run is picked up next time instead of lost.
 
-The triggering "event time" for filings/news is the *ingestion* time (`created_at`), so the
-30-minute SLA (DoD) is measured from when Assay Desk learns of the event — which is what the
-EDGAR poller (≤10 min) + this dispatch (every few min) together bound.
+Delivery is idempotent on its own, independent of the watermark: `notifications(alert_id,
+event_key)` is unique and inserts are `ON CONFLICT DO NOTHING`, so two overlapping runs, or a run
+whose watermark update failed, never deliver the same event twice (FR-AL-007/008). Each alert runs
+in its own savepoint: one failing detector is logged and counted, and the others still run
+(FR-AL-013).
 """
 
 from __future__ import annotations
 
+import hashlib
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.alerts import registry
+from app.alerts.registry import AlertEventType, DetectedEvent
 from app.config import Settings, get_settings
-from app.filings import service as diff_service
-from app.models import Alert, Company, Filing, News, PriceHistory, User
+from app.models import Alert, Company, User
 from app.notifications.sender import NotificationSender
+from app.observability.metrics import ALERT_DISPATCH_ERRORS, ALERT_DISPATCH_LATENCY, ALERTS_FIRED
+from app.repositories import notifications as notif_repo
+from app.utils.logging import get_logger, log_event
 
-_ALERT_FILING_TYPE = {"new_10k": "10-K", "new_10q": "10-Q", "new_8k": "8-K"}
+logger = get_logger(__name__)
 
 
-def _new_filing(
-    session: Session, *, company_id: int, filing_type: str, since: datetime
-) -> Filing | None:
-    return session.scalar(
-        select(Filing)
-        .where(
-            Filing.company_id == company_id,
-            Filing.filing_type == filing_type,
-            Filing.created_at > since,
-        )
-        .order_by(Filing.created_at.desc())
+def _digest(
+    session: Session, event_type: AlertEventType, events: list[DetectedEvent]
+) -> DetectedEvent:
+    """Collapse a large batch into one notification that still names every event (FR-AL-015).
+    Its key hashes the batch, so a re-run that detects the same batch is swallowed too."""
+    keys = sorted(event.event_key for event in events)
+    company_ids = {event.company_id for event in events}
+    tickers = sorted(session.scalars(select(Company.ticker).where(Company.id.in_(company_ids))))
+    shown = [event.title for event in events[:5]]
+    more = len(events) - len(shown)
+    return DetectedEvent(
+        event_key="digest:" + hashlib.sha256("\n".join(keys).encode()).hexdigest()[:40],
+        occurred_at=min(event.occurred_at for event in events),
+        company_id=events[0].company_id,
+        title=f"{len(events)} {event_type.label.lower()} alerts for {', '.join(tickers)}",
+        body="; ".join(shown) + (f"; and {more} more." if more else "."),
+        source_ids=tuple(dict.fromkeys(sid for event in events for sid in event.source_ids)),
+        severity=max(
+            (event.severity for event in events), key=("info", "warning", "critical").index
+        ),
     )
 
 
-def _new_news(
-    session: Session, *, company_id: int, category: str | None, since: datetime
-) -> News | None:
-    conditions = [News.company_id == company_id, News.created_at > since]
-    if category:
-        conditions.append(News.category == category)
-    return session.scalar(select(News).where(*conditions).order_by(News.created_at.desc()))
-
-
-def _price_move(
-    session: Session, *, company_id: int, threshold: float, since: datetime
-) -> tuple[PriceHistory, float] | None:
-    """Return the latest daily bar and its fractional move if |move| ≥ threshold and the bar was
-    ingested since the watermark; else None."""
-    bars = list(
-        session.scalars(
-            select(PriceHistory)
-            .where(PriceHistory.company_id == company_id)
-            .order_by(PriceHistory.date.desc())
-            .limit(2)
-        )
+def _deliver(
+    session: Session,
+    alert: Alert,
+    user: User,
+    event_type: AlertEventType,
+    *,
+    run_started_at: datetime,
+    sender: NotificationSender,
+    settings: Settings,
+) -> int:
+    events = event_type.detector(session, alert, alert.watermark_at, run_started_at)
+    delivered = notif_repo.delivered_event_keys(
+        session, alert_id=alert.id, since=alert.watermark_at
     )
-    if len(bars) < 2:
-        return None
-    latest, prev = bars[0], bars[1]
-    latest_close, prev_close = latest.close, prev.close
-    if latest_close is None or prev_close is None or prev_close == 0:
-        return None
-    # Only fire on a bar we learned about after the watermark (`ingested_at`).
-    if latest.ingested_at is not None and latest.ingested_at <= since:
-        return None
-    move = float((latest_close - prev_close) / prev_close)
-    if abs(move) >= threshold:
-        return latest, move
-    return None
-
-
-def _new_risk_factors(
-    session: Session, alert: Alert, *, ticker: str, since: datetime, settings: Settings
-) -> tuple[str, str] | None:
-    """Fire when the newest parsed 10-K/10-Q, ingested since the watermark, adds a risk factor
-    its predecessor did not have (§37.4). Deterministic diff only: no LLM in the alert loop."""
-    for filing_type in ("10-K", "10-Q"):
-        pair = diff_service.latest_pair(
-            session, company_id=alert.company_id, filing_type=filing_type
+    events = [event for event in events if event.event_key not in delivered]
+    if not events:
+        return 0
+    batch = (
+        [(_digest(session, event_type, events), events)]
+        if len(events) > settings.alert_digest_threshold
+        else [(event, [event]) for event in events]
+    )
+    created = 0
+    for event, covered in batch:
+        companies = {e.company_id for e in covered}
+        sent = sender.send(
+            session,
+            user=user,
+            alert_id=alert.id,
+            # A digest across several watchlist companies belongs to none of them.
+            company_id=event.company_id if len(companies) == 1 else None,
+            event_key=event.event_key,
+            title=event.title,
+            body=event.body,
+            channels=alert.channels,
+            payload={
+                "event_type": event_type.key,
+                "severity": event.severity,
+                "source_ids": list(event.source_ids),
+                "event_keys": [e.event_key for e in covered],
+            },
         )
-        if pair is None or pair[0].created_at <= since:
+        if not sent:
             continue
-        latest, previous = pair
-        added = [
-            item.new.heading
-            for item in diff_service.diff_filings(
-                session, latest, previous, settings=settings
-            ).items
-            if item.status == "new" and item.new is not None and item.new.kind == "risk_factor"
-        ]
-        if added:
-            return (
-                f"New risk factor in {ticker} {filing_type}",
-                f"{len(added)} risk factor(s) in {latest.accession_number} were not in the prior "
-                f"{filing_type}. First: “{added[0][:200]}”",
-            )
-        # Nothing new: move the watermark past this filing so it is not re-diffed every run.
-        alert.last_triggered_at = max(since, latest.created_at)
-    return None
+        created += 1
+        ALERT_DISPATCH_LATENCY.observe((datetime.now(UTC) - event.occurred_at).total_seconds())
+        for channel in alert.channels:
+            ALERTS_FIRED.labels(event_type=event_type.key, channel=channel).inc()
+    return created
 
 
-def _evaluate_alert(
-    session: Session, alert: Alert, *, settings: Settings
-) -> tuple[str, str] | None:
-    """Return (title, body) if the alert fires now, else None."""
-    # Alert rows have no created_at; on first evaluation the watermark is the epoch, so at most the
-    # single newest matching filing/news fires once (the queries return one row), then it advances.
-    since = alert.last_triggered_at or datetime.min.replace(tzinfo=UTC)
-    company = session.get(Company, alert.company_id)
-    ticker = company.ticker if company else str(alert.company_id)
-
-    if alert.alert_type in _ALERT_FILING_TYPE:
-        filing_type = _ALERT_FILING_TYPE[alert.alert_type]
-        filing = _new_filing(
-            session, company_id=alert.company_id, filing_type=filing_type, since=since
-        )
-        if filing is not None:
-            return (
-                f"New {filing_type} for {ticker}",
-                f"{ticker} filed a {filing_type} ({filing.accession_number}).",
-            )
-        return None
-
-    if alert.alert_type == "new_risk_factor":
-        return _new_risk_factors(session, alert, ticker=ticker, since=since, settings=settings)
-
-    if alert.alert_type == "news_category":
-        category = (alert.config or {}).get("category")
-        news = _new_news(session, company_id=alert.company_id, category=category, since=since)
-        if news is not None:
-            label = category or "news"
-            return (f"New {label} news for {ticker}", news.title)
-        return None
-
-    if alert.alert_type == "price_move":
-        threshold = float(
-            (alert.config or {}).get("threshold", settings.alert_price_move_threshold)
-        )
-        hit = _price_move(session, company_id=alert.company_id, threshold=threshold, since=since)
-        if hit is not None:
-            _bar, move = hit
-            return (
-                f"{ticker} moved {move:+.1%}",
-                f"{ticker} closed {move:+.1%} vs the prior session (threshold {threshold:.0%}).",
-            )
-        return None
-
-    return None
+def _advance_watermark(session: Session, alert: Alert, run_started_at: datetime) -> None:
+    alert.watermark_at = run_started_at
+    session.flush()
 
 
 def check_and_dispatch(
@@ -162,31 +119,53 @@ def check_and_dispatch(
     settings: Settings | None = None,
     now: datetime | None = None,
 ) -> int:
-    """Evaluate every active alert; deliver + advance the watermark on each that fires. Returns the
-    number of notifications sent."""
+    """Evaluate every enabled alert; returns the number of notifications created."""
     settings = settings or get_settings()
     sender = sender or NotificationSender()
-    now = now or datetime.now(UTC)
-    sent = 0
-    alerts = list(session.scalars(select(Alert).where(Alert.is_active.is_(True))))
-    for alert in alerts:
-        fired = _evaluate_alert(session, alert, settings=settings)
-        if fired is None:
+    run_started_at = now or datetime.now(UTC)
+    created = 0
+    rows = session.execute(
+        select(Alert, User)
+        .join(User, User.id == Alert.user_id)
+        .where(Alert.enabled.is_(True), User.is_active.is_(True))
+        .order_by(Alert.id)
+    ).all()
+    for alert, user in rows:
+        alert_id, key = alert.id, alert.event_type
+        event_type = registry.get(key)
+        if event_type is None:  # a type removed from the registry: skip, never crash (FR-AL-004)
+            log_event(
+                logger,
+                logging.WARNING,
+                "alert.unknown_event_type",
+                alert_id=alert_id,
+                event_type=key,
+            )
             continue
-        user = session.get(User, alert.user_id)
-        if user is None or not user.is_active:
-            continue
-        title, body = fired
-        sender.send(
-            session,
-            user=user,
-            alert_id=alert.id,
-            company_id=alert.company_id,
-            title=title,
-            body=body,
-            channel=alert.channel,
-        )
-        alert.last_triggered_at = now
-        sent += 1
+        try:
+            with session.begin_nested():
+                created += _deliver(
+                    session,
+                    alert,
+                    user,
+                    event_type,
+                    run_started_at=run_started_at,
+                    sender=sender,
+                    settings=settings,
+                )
+            # Separate step: if it fails, the notifications above stay and the next run's
+            # re-detection is swallowed by the (alert_id, event_key) constraint (FR-AL-008).
+            with session.begin_nested():
+                _advance_watermark(session, alert, run_started_at)
+        except Exception as exc:  # one bad alert must not stop the run
+            ALERT_DISPATCH_ERRORS.labels(event_type=key).inc()
+            log_event(
+                logger,
+                logging.ERROR,
+                "alert.dispatch_failed",
+                alert_id=alert_id,
+                event_type=key,
+                error=type(exc).__name__,
+            )
     session.flush()
-    return sent
+    return created

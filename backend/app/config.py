@@ -231,8 +231,9 @@ class Settings(BaseSettings):
     smtp_user: str = Field(default="")
     smtp_password: str = Field(default="")
     smtp_from: str = Field(default="alerts@assay-desk.example")
-    # Price-move alert threshold (fractional daily move that trips a `price_move` alert).
-    alert_price_move_threshold: float = Field(default=0.05)
+    # Alert framework v2 (Phase 7a, ADR-0039). The price-move threshold is now a per-alert param.
+    alert_max_per_user: int = Field(default=50)  # keeps the 5-minute dispatch loop bounded
+    alert_digest_threshold: int = Field(default=20)  # more events than this in a run -> 1 digest
 
     # --- Filing diff (Phase 6b, ADR-0027) ---
     # "lexical" (word-bigram overlap; offline default) or "embedding" (cosine via EmbeddingClient).
