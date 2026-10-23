@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup
+.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup reparse-8k
 
 install:
 	cd backend && uv sync
@@ -41,6 +41,11 @@ down:
 # fresh-clone → running-dashboard path (NFR-012, scope #12).
 seed:
 	cd backend && uv run python ../scripts/seed_demo.py --with-reports
+
+# Re-chunk 8-Ks with the current parser (dotted item codes, ADR-0041). Idempotent: a second run
+# finds every 8-K current and parses nothing.
+reparse-8k:
+	cd backend && uv run python ../scripts/reparse_8k.py
 
 # Evaluation smoke run (§18.4, Phase 5b). Full/gate variants: see scripts/run_eval.py.
 eval:
