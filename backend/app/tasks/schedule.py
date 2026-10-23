@@ -78,6 +78,11 @@ celery_app.conf.beat_schedule = {
         "task": "run_eval_suite",
         "schedule": crontab(hour=3, minute=0),
     },
+    # Red-flag backfill after the daily pipeline (FR-RF-007, Phase 7e).
+    "redflags-backfill": {
+        "task": "scan_red_flags",
+        "schedule": crontab(hour=5, minute=0),
+    },
     # Chat-log retention purge, daily (SEC-014).
     "retention-purge": {
         "task": "purge_chat_history",

@@ -23,6 +23,7 @@ from app.ingestion.news import ingest_news_for_tickers
 from app.ingestion.prices import ingest_prices_for_tickers
 from app.ingestion.sec import ingest_company
 from app.ingestion.sec.poller import find_new_accessions
+from app.redflags.detect import scan_company
 from app.repositories import companies as company_repo
 from app.tasks.base import RETRY_KWARGS, job_task
 from app.tasks.celery_app import celery_app
@@ -80,6 +81,7 @@ def parse_documents(self: Task, ticker: str) -> int:
         if company is None:
             raise ValueError(f"unknown ticker: {ticker}")
         summary = parse_company_documents(session, company.id, storage=get_object_storage())
+        scan_company(session, company)  # post-parse red-flag detection (FR-RF-007)
         progress.update(progress=100, stage=f"parsed:{summary.parsed}")
     return summary.parsed
 
@@ -148,6 +150,7 @@ def _refresh_one(ticker: str) -> None:
         build_company_ratios(session, company)
         build_company_valuation(session, company)
         build_company_earnings_quality(session, company)
+        scan_company(session, company)  # after metrics: the Beneish flag reads them (FR-RF-007)
 
 
 @celery_app.task(bind=True, queue="interactive", name="refresh_company_data", **RETRY_KWARGS)

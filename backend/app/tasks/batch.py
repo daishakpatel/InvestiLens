@@ -8,6 +8,8 @@ from celery import Task
 
 from app.alerts.dispatch import check_and_dispatch
 from app.config import get_settings
+from app.redflags.detect import scan_company
+from app.repositories import companies as company_repo
 from app.repositories.chat import purge_messages_before
 from app.tasks.base import RETRY_KWARGS, job_task
 from app.tasks.celery_app import celery_app
@@ -21,6 +23,17 @@ def send_alerts(self: Task) -> int:
     (EDGAR poll ≤10 min to ingest + this to notice)."""
     with job_task(self, job_type="send_alerts") as (session, _progress):
         return check_and_dispatch(session)
+
+
+@celery_app.task(bind=True, queue="batch", name="scan_red_flags", **RETRY_KWARGS)
+def scan_red_flags(self: Task) -> int:
+    """Nightly red-flag backfill over every active company (FR-RF-007). Idempotent: an event
+    already stored under the current taxonomy version is skipped. Returns new flags stored."""
+    with job_task(self, job_type="scan_red_flags") as (session, _progress):
+        return sum(
+            scan_company(session, company).new_flags
+            for company in company_repo.list_active(session)
+        )
 
 
 @celery_app.task(bind=True, queue="batch", name="purge_chat_history", **RETRY_KWARGS)
