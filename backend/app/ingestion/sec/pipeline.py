@@ -4,6 +4,11 @@ Resolves a company, discovers its filings, applies the backfill policy, download
 new filing, extracts 8-K items and amendment links, and upserts XBRL facts — all idempotently
 (ING-001) with run tracking (ING-003), dead-lettering (ING-004), and per-item failure isolation
 (ING-005). One filing's failure never aborts the rest.
+
+Phase 7c (ADR-0041): proxies (DEF 14A, DEFA14A), late-filing notices (NT 10-K, NT 10-Q) and 8-K/A
+are ingested too, each form with its own backfill window, older submission pages are read when
+the window reaches back past EDGAR's recent list, and an earnings 8-K's EX-99 press releases are
+stored as tier-2 `earnings_release` documents.
 """
 
 from __future__ import annotations
@@ -20,6 +25,8 @@ from sqlalchemy.orm import Session
 from app.cache.cache import invalidate_company
 from app.config import Settings, get_settings
 from app.finance.sic import sic_to_sector
+from app.ingestion.documents.eightk_items import item_codes_in_document
+from app.models import Document
 from app.providers.sec import get_sec_source
 from app.providers.sec.base import CompanyMetadata, CompanyRef, FilingRef, SecSource
 from app.repositories import companies as company_repo
@@ -32,7 +39,11 @@ from app.utils.logging import get_logger, log_event
 from app.utils.storage import ObjectStorage
 
 logger = get_logger(__name__)
-PARSER_VERSION = "sec-ingest-v1"
+_PROXY_FORMS = ("DEF 14A", "DEFA14A")
+_NOTICE_FORMS = ("NT 10-K", "NT 10-Q")
+# FR-EX-007: exhibits are fetched only for results (2.02) or Reg FD / other-event 8-Ks (7.01,
+# 8.01), and of those only EX-99.x; every other 8-K costs no extra SEC request.
+_EXHIBIT_ITEMS = frozenset({"2.02", "7.01", "8.01"})
 
 
 @dataclass
@@ -43,6 +54,7 @@ class IngestCounts:
     facts_skipped: int = 0
     dead_letters: int = 0
     documents_restored: int = 0  # filings already known whose stored HTML had gone missing
+    exhibits: int = 0  # EX-99 press releases stored as earnings_release documents
 
     def as_dict(self) -> dict[str, int]:
         return {
@@ -52,6 +64,7 @@ class IngestCounts:
             "facts": self.facts,
             "facts_skipped": self.facts_skipped,
             "dead_letters": self.dead_letters,
+            "exhibits": self.exhibits,
         }
 
 
@@ -62,28 +75,68 @@ def _to_date(value: str | None) -> date | None:
         return None
 
 
+def _backfill_cutoff(form: str, settings: Settings, today: date) -> date | None:
+    """The earliest filing date kept for a form (ING-002, FR-EX-010); None = not ingested."""
+    if form.startswith("10-K"):
+        return years_ago(today, settings.backfill_10k_years)
+    if form.startswith("10-Q"):
+        return months_ago(today, settings.backfill_10q_quarters * 3)
+    if form.startswith("8-K"):  # 8-K and 8-K/A
+        return months_ago(today, settings.backfill_8k_months)
+    if form in _PROXY_FORMS:
+        return years_ago(today, settings.backfill_proxy_years)
+    if form in _NOTICE_FORMS:
+        return years_ago(today, settings.backfill_nt_years)
+    return None  # Forms 3/4/5, 13F, S-3, 424B… are out of scope
+
+
 def _within_backfill(ref: FilingRef, settings: Settings, today: date) -> bool:
     """ING-002 backfill window per form type."""
+    cutoff = _backfill_cutoff(ref.form, settings, today)
+    if cutoff is None:
+        return False
     filed = _to_date(ref.filing_date)
-    if filed is None:
-        return True  # keep undated filings; let downstream decide
-    if ref.form.startswith("10-K"):
-        return filed >= years_ago(today, settings.backfill_10k_years)
-    if ref.form.startswith("10-Q"):
-        return filed >= months_ago(today, settings.backfill_10q_quarters * 3)
-    if ref.form.startswith("8-K"):
-        return filed >= months_ago(today, settings.backfill_8k_months)
-    return False  # other forms out of MVP scope for backfill
+    return filed is None or filed >= cutoff  # keep undated filings; let downstream decide
+
+
+def _listing_since(settings: Settings, today: date) -> date:
+    """How far back the filing list must reach: the longest backfill window (FR-EX-011)."""
+    cutoffs = (
+        _backfill_cutoff(f, settings, today)
+        for f in ("10-K", "10-Q", "8-K", *_PROXY_FORMS, *_NOTICE_FORMS)
+    )
+    return min(c for c in cutoffs if c is not None)
 
 
 def _resolve_items(ref: FilingRef, document: bytes) -> list[str] | None:
+    """An 8-K's items: the filing index's list, else the codes found in its text (FR-EX-003)."""
     if not ref.form.startswith("8-K"):
         return None
     if ref.items:
         return list(ref.items)
-    from app.ingestion.sec.items import parse_8k_items
+    return item_codes_in_document(document) or None
 
-    return parse_8k_items(document) or None
+
+def _accepted_at(ref: FilingRef) -> datetime | None:
+    try:
+        return datetime.fromisoformat(ref.accepted_at) if ref.accepted_at else None
+    except ValueError:
+        return None
+
+
+def _document_type(form: str) -> str:
+    return "late_filing_notice" if form in _NOTICE_FORMS else "filing"
+
+
+def _filing_metadata(ref: FilingRef) -> dict[str, Any]:
+    metadata: dict[str, Any] = {"form": ref.form, "accession_number": ref.accession_number}
+    if ref.form.startswith("8-K"):
+        # The index's own item list, kept apart from `filings.items` (which falls back to the
+        # codes parsed from the text) so the parse step can reconcile the two (FR-EX-003).
+        metadata["items_metadata"] = list(ref.items) if ref.items else None
+    if ref.form == "DEFA14A":
+        metadata["supplemental"] = True  # additional proxy soliciting material (FR-EX-009)
+    return metadata
 
 
 def _ingest_one_filing(
@@ -114,14 +167,15 @@ def _ingest_one_filing(
     document_id = filing_repo.get_or_create_document(
         session,
         company_id=company_id,
-        document_type="filing",
+        document_type=_document_type(ref.form),
         source_tier=1,
         content_hash=content_hash,
         title=f"{ticker} {ref.form}",
         source_url=ref.primary_doc_url,
         raw_document_location=storage_key,
-        parser_version=PARSER_VERSION,
-        doc_metadata={"form": ref.form, "accession_number": ref.accession_number},
+        parser_version=None,  # set by the parse step once chunked (ADR-0041)
+        doc_metadata=_filing_metadata(ref),
+        published_at=_accepted_at(ref),
     )
 
     period_end = _to_date(ref.report_date)
@@ -150,6 +204,54 @@ def _ingest_one_filing(
         counts.filings_ingested += 1
     else:
         counts.filings_skipped += 1
+
+
+def _ingest_exhibits(
+    session: Session,
+    *,
+    sec: SecSource,
+    storage: ObjectStorage,
+    company_id: int,
+    ticker: str,
+    ref: FilingRef,
+    counts: IngestCounts,
+) -> None:
+    """Store an earnings 8-K's EX-99 press releases as tier-2 documents (FR-EX-006…008).
+
+    Runs for new and already-known filings alike, so 8-Ks ingested before Phase 7c get their
+    exhibits too; `exhibits_checked` on the filing's document means the index is read once.
+    """
+    filing = filing_repo.get_by_accession(session, ref.accession_number)
+    if filing is None or not _EXHIBIT_ITEMS.intersection(filing.items or []):
+        return
+    parent = session.get(Document, filing.document_id)
+    if parent is None or (parent.doc_metadata or {}).get("exhibits_checked"):
+        return
+    accepted = _accepted_at(ref) or parent.published_at
+    folder = ref.accession_number.replace("-", "")
+    for exhibit in sec.list_exhibits(ref):
+        data = sec.fetch_exhibit(exhibit)
+        key = f"sec/{ref.cik}/{folder}/{exhibit.filename}"
+        storage.put(key, data)
+        filing_repo.get_or_create_document(
+            session,
+            company_id=company_id,
+            document_type="earnings_release",  # what EarningsReleaseSource and tier 2 expect
+            source_tier=2,
+            content_hash=hashlib.sha256(data).hexdigest(),
+            title=f"{ticker} {ref.form} {exhibit.exhibit_type}",
+            source_url=exhibit.url,
+            raw_document_location=key,
+            published_at=accepted,
+            doc_metadata={
+                "parent_accession": ref.accession_number,
+                "exhibit_type": exhibit.exhibit_type,
+                "filename": exhibit.filename,
+                "size_bytes": exhibit.size_bytes,
+            },
+        )
+        counts.exhibits += 1
+    filing_repo.merge_document_metadata(session, parent.id, {"exhibits_checked": True})
 
 
 def ingest_company(
@@ -226,7 +328,7 @@ def ingest_company(
     # data_freshness at all, so the API's freshness endpoint could never distinguish a healthy
     # company from one whose ingest has never succeeded or has been failing for days).
     try:
-        filings = list(sec.list_filings(ref.cik))
+        filings = list(sec.list_filings(ref.cik, since=_listing_since(settings, today)))
     except Exception as exc:
         dead_letter(
             session, source="sec", payload_ref=ref.cik, error=f"{type(exc).__name__}: {exc}"
@@ -277,6 +379,35 @@ def ingest_company(
                 accession=filing.accession_number,
                 error=str(exc),
             )
+            continue
+        # Exhibits in a savepoint of their own: a failed exhibit fetch keeps the filing and is
+        # retried on the next run (its `exhibits_checked` flag is not set).
+        try:
+            with session.begin_nested():
+                _ingest_exhibits(
+                    session,
+                    sec=sec,
+                    storage=storage,
+                    company_id=company_id,
+                    ticker=ref.ticker,
+                    ref=filing,
+                    counts=counts,
+                )
+        except Exception as exc:
+            counts.dead_letters += 1
+            dead_letter(
+                session,
+                source="sec",
+                payload_ref=f"exhibits:{filing.accession_number}",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            log_event(
+                logger,
+                logging.ERROR,
+                "sec.exhibits.failed",
+                accession=filing.accession_number,
+                error=str(exc),
+            )
 
     try:
         with session.begin_nested():  # SAVEPOINT: facts failure doesn't lose the filings
@@ -307,7 +438,7 @@ def ingest_company(
     )
     finish_run(session, run, status=status, counts=counts.as_dict())
     # `filing.ingested` event → drop this company's cached data so the API serves fresh (CACHE-002).
-    if counts.filings_ingested or counts.facts:
+    if counts.filings_ingested or counts.facts or counts.exhibits:
         invalidate_company(ref.ticker)
     log_event(logger, logging.INFO, "sec.company.ingested", ticker=ref.ticker, **counts.as_dict())
     return counts
