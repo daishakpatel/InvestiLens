@@ -16,7 +16,7 @@ file in the same PR (DB-001).
 - **Constraint/index names** follow a fixed naming convention (see `app/models/base.py`) so
   migrations stay deterministic and reviewable.
 
-## Tables by domain (35 tables)
+## Tables by domain (36 tables)
 
 ```text
 Reference        companies ──< company_identifiers
@@ -25,6 +25,7 @@ Reference        companies ──< company_identifiers
 Documents        companies ──< documents ──< filings (filings.amends_filing_id ─┐ self-ref)
                  documents ──< document_chunks                                   │
                  documents ──< news (news.document_id, nullable)                 │
+                 filings ──< red_flags >── companies, documents                    │
 
 Financials       companies ──< financial_facts        (raw XBRL, point-in-time)
                  companies ──< financial_metrics       (computed, versioned)
@@ -198,6 +199,27 @@ preserves a non-NULL profile value on a metadata-less re-ingest (`COALESCE(exclu
   `ON CONFLICT DO NOTHING` and emails only rows it actually created, so a re-run, an overlapping
   run, or a run whose watermark update failed never delivers an event twice.
 
+### Red flags (Phase 7e, ADR-0043)
+
+`red_flags (id, company_id, rule_key, taxonomy_version, filing_id, document_id, paragraph_id NULL,
+detected_at, event_date, severity, snippet, payload JSONB)`. Each row is one rule from
+`red_flag_taxonomy_v1` (`docs/red-flag-taxonomy.md`) firing on one filing:
+- The unique key is `uq_red_flags_event (company_id, rule_key, taxonomy_version, filing_id,
+  paragraph_id)` with **NULLS NOT DISTINCT**, so a flag that quotes no paragraph (a late-filing
+  notice) is still deduplicated. Detection inserts `ON CONFLICT DO NOTHING`, so re-runs are no-ops.
+- A new taxonomy version adds rows and leaves the old ones for audit. Readers filter on the
+  current version.
+- `detected_at` is the first detection of the event under any version (copied forward), and the
+  `red_flag` alert keys off it.
+- `event_date` is the filing's date, never the detection time.
+- `snippet` is the filing's own words.
+- `payload` holds rule details: `item`, `roles`, `classification`, `restated[]`, or Beneish
+  `score`/`fiscal_year`/`source_id`.
+- `company_id`, `filing_id` and `document_id` are `ON DELETE CASCADE`. Index:
+  `(company_id, event_date)`.
+- Each detection pass records an `ingestion_runs` row (source `red_flags`), whose `ended_at` is
+  the "scanned through" date. Source ID: `redflag:<TICKER>:<rule_key>:<accession>`.
+
 ### Alerts and notifications (Phase 7a, ADR-0039)
 
 `alerts`: `event_type` (a key in `app/alerts/registry.py`), `params` JSONB (validated against that
@@ -247,3 +269,4 @@ Migrations are tested up and down, on empty and populated databases, in
 | `8b0a53766648` | Add the `notifications` table (in-app records written by alert dispatch; `alert_id`/`company_id` `ON DELETE SET NULL`). Phase 5d, ADR-0025. |
 | `e4a7c2d91b30` | Alert framework v2: `alerts.alert_type/config/is_active/channel` → `event_type/params/enabled/channels[]`, `company_id` nullable, drop `last_triggered_at`, add `created_at` + `watermark_at` (existing rows backfilled with `now()` at migration time so deploying replays nothing); `new_10k/new_10q/new_8k` become `new_filing` with a `form_types` param. `notifications` gains `event_key`, `payload` and unique `(alert_id, event_key)`. Downgrade drops watchlist-wide alerts and keeps only the first form/channel. Phase 7a, ADR-0039. |
 | `b7d3e9f1a2c4` | Add the `metric_gaps` table (`company_id` FK `ON DELETE CASCADE`, `metric`, `period_label`, `reason`, `detected_at` default `now()`, unique `(company_id, metric, period_label)`): quarters and TTM windows a metric could not be computed for, and why. Phase 7b, FR-QT-010, ADR-0040. |
+| `c3f8a1d2e9b7` | Add `red_flags` (FKs to companies, filings, documents `ON DELETE CASCADE`; unique `uq_red_flags_event (company_id, rule_key, taxonomy_version, filing_id, paragraph_id)` NULLS NOT DISTINCT, named explicitly because the generated name passes Postgres's 63 characters; index `(company_id, event_date)`). Phase 7e, FR-RF-006, ADR-0043. |

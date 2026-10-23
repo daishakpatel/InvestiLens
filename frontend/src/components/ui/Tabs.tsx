@@ -6,6 +6,8 @@ import { NavLink, useLocation } from "react-router-dom";
 export interface TabDef {
   to: string; // path under `base`; "" is the index route
   label: string;
+  /** A small count beside the label, with what it counts for assistive tech. Hidden at 0. */
+  count?: { value: number; label: string } | undefined;
 }
 
 /** Page-level tabs backed by routes: an underline that slides to the active tab (UI-003). 48 px
@@ -71,6 +73,14 @@ export function RouteTabs({ base, tabs, label }: { base: string; tabs: TabDef[];
               }
             >
               {tab.label}
+              {tab.count && tab.count.value > 0 && (
+                <span
+                  aria-label={tab.count.label}
+                  className="ml-1.5 rounded-full bg-surface-2 px-1.5 text-caption tnum text-muted"
+                >
+                  {tab.count.value}
+                </span>
+              )}
             </NavLink>
           </li>
         ))}

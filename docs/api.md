@@ -107,7 +107,13 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 ### Sources (citation modal)
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/sources/{source_id}` | Source record + span + deep link (CIT-006) |
+| GET | `/sources/{source_id}` | Source record + span + deep link (CIT-006). A `redflag:<TICKER>:<rule_key>:<accession>` ID resolves to the flag's quoted filing text as a `text_chunk` (section path `[form, label]`), with the filing as `deep_link` (Phase 7e). |
+
+### Red flags (Phase 7e, FR-RF-009/010, ADR-0043)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/companies/{ticker}/red-flags?since=&severity=&limit=` | Reported filing events, newest `event_date` first, current taxonomy version only. `since` (ISO date) keeps events filed on or after it; `severity` is a **minimum** (`info` < `warning` < `critical`, 422 otherwise); `limit` 1–200, default 50. Each item: `source_id`, `ticker`, `rule_key`, `label`, `severity`, `explanation`, `rule_source` (the SEC form/standard), `event_date` (filing date), `snippet` (the filing's words), `filing {id, filing_type, accession_number, filing_date, url}`, `details` (item code, roles, …). The response always carries `last_scanned_at` (null until the first scan) and `taxonomy_version`, so an empty `items` means "scanned through that date, nothing reported". |
+| GET | `/red-flags?watchlist=true&since=&severity=&limit=` | The same, across every company on the caller's watchlists. Auth required (401); `watchlist=false` is 422 (only the watchlist feed exists). `last_scanned_at` is the oldest of those companies' last scans. |
 
 ### Chat
 | Method | Path | Notes |

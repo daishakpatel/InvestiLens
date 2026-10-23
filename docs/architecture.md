@@ -131,6 +131,14 @@ every measure as a derived FY row with its inputs. `GET /companies/{ticker}/earn
 reads them back with static explanations and peer percentiles. The claim verifier rejects fraud or
 manipulation wording attached to a screening-score source (`citation/advice.py`).
 
+**Red flags** (Phase 7e, ADR-0043): `app/redflags/` holds `taxonomy.py` (the rule registry,
+`red_flag_taxonomy_v1`), `patterns.py` and `going_concern.py` (guarded phrase rules), `detect.py`
+and `alerts.py`. `detect.scan_company` runs the rules over a company's 8-Ks, NT forms and
+10-K/10-Q text, after parsing (the `parse_documents` task and the refresh chain), nightly
+(`scan_red_flags`) and from `make redflags-backfill`. Flags are stored in `red_flags`, served by
+`/companies/{t}/red-flags` and `/red-flags?watchlist=true`, cited as `redflag:` source IDs, and
+alerted through the `red_flag` event type. No model is involved.
+
 **SEC ingestion** (Phase 1a; exhibits and extra forms in Phase 7c, ADR-0041). `SecSource`
 (`app/providers/sec/`, live EDGAR or frozen fixtures) offers `company_tickers`, `company_metadata`,
 `list_filings(cik, since=)` (EDGAR's recent block, plus older `filings.files[]` pages when

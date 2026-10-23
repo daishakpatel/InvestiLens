@@ -3389,6 +3389,28 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | DR-EQ-003 | Scaling every dollar input by the same factor MUST leave a score unchanged. |
 | DR-EQ-004 | A score MUST NOT be blended with others into a combined quality score. |
 
+**Red-flag panel (Phase 7e, ADR-0043)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-RF-001 | Red flags MUST come from one versioned rule registry (`red_flag_taxonomy_v1`). Each rule has a key, neutral label, severity, documented SEC source, matcher and explanation, and is tested with at least three positive and three negative cases. 8-K item numbers MUST be checked against SEC Form 8-K. |
+| FR-RF-002 | Detection MUST be deterministic (item codes, form types, phrase rules, stored figures); no model may classify a flag. |
+| FR-RF-003 | Going-concern detection MUST suppress negated and policy-description sentences, classify conditional wording as `going_concern_risk_language` and doubt alleviated by management's plans as `going_concern_alleviated`, and quote the exact sentence with its `paragraph_id`. |
+| FR-RF-004 | Executive-departure detection MUST use 8-K Item 5.02 text with the item title removed, ignore award terms and biographies, report only role keywords from the departure sentence (`exec_change_unspecified` when none), and never extract names. A 5.07 8-K MUST NOT yield a departure flag. |
+| FR-RF-005 | Every phrase pattern MUST be a compiled regex with a comment and an example string. |
+| FR-RF-006 | Flags MUST be stored in `red_flags` with the filing's date as `event_date`, unique per (company, rule, taxonomy version, filing, paragraph) with NULLs equal. |
+| FR-RF-007 | Detection MUST run after parsing, nightly and on demand (`make redflags-backfill`), and MUST be idempotent. |
+| FR-RF-008 | Each flag MUST have the source ID `redflag:{TICKER}:{rule_key}:{accession}`, resolvable through `GET /sources/{id}` to its snippet and a link to the filing. |
+| FR-RF-009 | `GET /companies/{ticker}/red-flags` (since, minimum severity, limit) and `GET /red-flags?watchlist=true` MUST return flags newest first with label, severity, date, snippet, filing summary and source ID. |
+| FR-RF-010 | An empty result MUST return `items: []` with `last_scanned_at`, so the UI can say what was scanned. |
+| FR-RF-011 | A `red_flag` alert type MUST exist with `min_severity` (default warning) and optional `rule_keys`, keyed by the source ID, firing once per event, with the body "Reported: {label} (filed {date})." |
+| FR-RF-012 | The Overview MUST show a Red flags section and a count on its tab. Severity uses the warning colour for warning/critical and neutral for info, always with words, never green or red. Each rule's explanation is shown as a tooltip. |
+| FR-RF-013 | The panel MUST render populated, empty (scanned-through date) and error states, and a row MUST open its source in the citation drawer. |
+| FR-RF-014 | No flag text may imply wrongdoing or give advice, and a "How to read this" note MUST say flags are reported events, not conclusions. |
+| DR-RF-001 | Re-running detection MUST NOT create duplicate flags. |
+| DR-RF-002 | A new taxonomy version MUST add rows, keep older rows for audit, keep each event's first detection time, and the API MUST serve only the newest version. |
+| DR-RF-003 | A flag on a filing dated more than 7 days before its detection MUST NOT alert: backfilled history is not news. |
+
 ---
 
 *End of document — Assay Desk Specification v2.0*

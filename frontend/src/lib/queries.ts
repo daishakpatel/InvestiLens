@@ -25,6 +25,7 @@ import type {
   MetricResult,
   MetricsCoverageResponse,
   EarningsQualityResponse,
+  RedFlagsResponse,
   NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
@@ -103,6 +104,21 @@ export function useMetricsCoverage(
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/metrics/coverage`, { signal });
       return parse.metricsCoverage(data);
+    },
+  });
+}
+
+/** Reported filing events, newest first, and when the company was last scanned (FR-RF-009). */
+export function useRedFlags(ticker: string): UseQueryResult<RedFlagsResponse> {
+  return useQuery({
+    queryKey: ["red-flags", ticker],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/red-flags`, {
+        query: { limit: "50" },
+        signal,
+      });
+      return parse.redFlags(data);
     },
   });
 }
