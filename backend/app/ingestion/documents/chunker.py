@@ -18,7 +18,10 @@ from app.ingestion.documents.drivers import is_driver_language
 from app.ingestion.documents.sections import Section, detect_sections
 from app.ingestion.documents.tokens import estimate_tokens
 
-PARSER_VERSION = "doc-parse-v1"
+# One version for the whole parse (ADR-0041): stamped on every chunk and, once a document is
+# parsed, on `documents.parser_version`, so up-to-date documents are skipped. v2: 8-K items are
+# full dotted codes and 10-Q items are part-qualified, which changes their chunk IDs.
+PARSER_VERSION = "sec-ingest-v2"
 _TARGET_TOKENS = 400
 _MAX_TOKENS = 800
 _OVERLAP_MAX_TOKENS = 60  # ~15% of target: carry one small paragraph into the next chunk
@@ -26,6 +29,8 @@ _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 _DIGITS = re.compile(r"\d")
 _SUBHEADING_MAX_CHARS = 140
 _NOTE_RE = re.compile(r"^note\s+\d+", re.I)
+# Risk factors and financial-statement notes start a new unit at each sub-heading (CH-002/008).
+_RISK_OR_NOTES = {"1A", "8", "P1-1", "P2-1A"}
 
 
 @dataclass
@@ -120,6 +125,7 @@ class _ChunkBuilder:
                 "content_hash": _content_hash(body),
                 "chunk_metadata": {
                     "context_header": _context_header(self.meta, section.section_path),
+                    "section_key": section.key,
                     "dedup_hash": _dedup_hash(body),
                     "is_driver_language": is_driver_language(body),
                 },
@@ -156,6 +162,7 @@ class _ChunkBuilder:
                 "content_hash": _content_hash(body),
                 "chunk_metadata": {
                     "context_header": _context_header(self.meta, section.section_path),
+                    "section_key": section.key,
                     "dedup_hash": _dedup_hash(table.markdown),
                     "table_id": table.table_id,
                     "row_labels": table.row_labels,
@@ -186,7 +193,7 @@ def chunk_filing(html_blocks: list[Block], meta: FilingMeta) -> list[dict[str, A
     result = detect_sections(html_blocks, meta.filing_type)
     builder = _ChunkBuilder(meta)
     for section in result.sections:
-        is_risk_or_notes = section.item_code in {"1A", "8"}
+        is_risk_or_notes = section.item_code in _RISK_OR_NOTES
         acc = _Acc()
         offset = 0
         for block in html_blocks[section.start_idx + 1 : section.end_idx]:

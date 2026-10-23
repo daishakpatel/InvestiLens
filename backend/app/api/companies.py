@@ -384,17 +384,8 @@ def list_company_filings(
     rows = rows[:page_size]
     if has_more and rows:
         response.headers[NEXT_CURSOR_HEADER] = encode_cursor(rows[-1].id)
-    return [
-        FilingSummary(
-            filing_id=str(f.id),
-            filing_type=f.filing_type,
-            filing_date=f.filing_date.isoformat() if f.filing_date else None,
-            period_end=f.period_end.isoformat() if f.period_end else None,
-            accession_number=f.accession_number,
-            primary_document_url=f.primary_document_url,
-        )
-        for f in rows
-    ]
+    types = filing_repo.document_types(db, [f.document_id for f in rows])
+    return [to_summary(f, document_type=types.get(f.document_id)) for f in rows]
 
 
 @router.get("/{ticker}/earnings", response_model=EarningsResponse, tags=["Filings"])

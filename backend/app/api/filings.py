@@ -54,6 +54,7 @@ def get_filing(filing_id: str, db: Session = _DB) -> FilingDetail:
         period_end=filing.period_end.isoformat() if filing.period_end else None,
         accession_number=filing.accession_number,
         primary_document_url=filing.primary_document_url,
+        document_type=filing_repo.document_types(db, [filing.document_id]).get(filing.document_id),
         company_ticker=company.ticker if company else "",
         items=filing.items,
         source_url=filing.source_url,
@@ -83,7 +84,7 @@ def get_filing_sections(filing_id: str, db: Session = _DB) -> FilingSectionsResp
     return FilingSectionsResponse(filing_id=str(filing.id), sections=sections)
 
 
-def to_summary(filing: Filing) -> FilingSummary:
+def to_summary(filing: Filing, *, document_type: str | None = None) -> FilingSummary:
     return FilingSummary(
         filing_id=str(filing.id),
         filing_type=filing.filing_type,
@@ -91,6 +92,7 @@ def to_summary(filing: Filing) -> FilingSummary:
         period_end=filing.period_end.isoformat() if filing.period_end else None,
         accession_number=filing.accession_number,
         primary_document_url=filing.primary_document_url,
+        document_type=document_type,
     )
 
 

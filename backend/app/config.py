@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     # Backfill policy (ING-002), configurable per deployment.
     backfill_10k_years: int = Field(default=5)
     backfill_10q_quarters: int = Field(default=12)
-    backfill_8k_months: int = Field(default=24)
+    backfill_8k_months: int = Field(default=24)  # 8-K and 8-K/A
+    backfill_proxy_years: int = Field(default=3)  # DEF 14A, DEFA14A (FR-EX-010)
+    backfill_nt_years: int = Field(default=3)  # NT 10-K, NT 10-Q late-filing notices
 
     # --- Prices: Tiingo (Phase 1d, ADR-0007) ---
     tiingo_api_key: str = Field(default="")  # required only when Tiingo is the price source
@@ -72,6 +74,10 @@ class Settings(BaseSettings):
     # Blended $/1M tokens for cost logging (EMB-002). Voyage voyage-finance-2 list price; an
     # estimate used only for the `llm_calls` cost column, never for financial output.
     embedding_cost_per_1m_tokens: Decimal = Field(default=Decimal("0.12"))
+    # FR-EX-013: embed EX-99 press releases and proxy statements too. A DEF 14A is ~1-2k chunks
+    # (about $0.10-0.30 a filing at Gemini's embedding price), so a cost-sensitive deployment
+    # turns this off and those documents stay keyword-searchable only.
+    embed_exhibits: bool = Field(default=True)
     # HNSW query-time breadth (EMB-004). Higher = better recall, slower. Tuned in docs/rag.md.
     hnsw_ef_search: int = Field(default=100)
 

@@ -69,10 +69,13 @@ def embed_pending(
     client = client or get_embedding_client()
     batch_size = batch_size or get_settings().embedding_batch_size
     model, dim = client.model_name, client.dimension
+    include_exhibits = get_settings().embed_exhibits  # FR-EX-013 cost guard
     counts = EmbedCounts()
 
     while max_batches is None or counts.batches < max_batches:
-        batch = embed_repo.fetch_pending_batch(session, model=model, limit=batch_size)
+        batch = embed_repo.fetch_pending_batch(
+            session, model=model, limit=batch_size, include_exhibits=include_exhibits
+        )
         if not batch:
             break
         ids = [cid for cid, _ in batch]
