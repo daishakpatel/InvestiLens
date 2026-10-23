@@ -16,16 +16,24 @@ from sqlalchemy.orm import Session
 
 from app.models import DocumentChunk
 
+# Proxy statements and EX-99 press releases: embedded only while EMBED_EXHIBITS is on (FR-EX-013).
+_GATED_FORMS = ("DEF 14A", "DEFA14A")
 
-def _pending_query(model: str) -> Select[int, str]:
+
+def _pending_query(model: str, *, include_exhibits: bool = True) -> Select[int, str]:
     """Chunks that still need an embedding under `model` (NULL, or a different/older model)."""
-    return (
-        select(DocumentChunk.id, DocumentChunk.text)
-        .where(
-            (DocumentChunk.embedding.is_(None)) | (DocumentChunk.embedding_model != model),
-        )
-        .order_by(DocumentChunk.id)
+    query = select(DocumentChunk.id, DocumentChunk.text).where(
+        (DocumentChunk.embedding.is_(None)) | (DocumentChunk.embedding_model != model),
     )
+    if not include_exhibits:
+        query = query.where(
+            DocumentChunk.filing_type.is_(None)
+            | ~(
+                DocumentChunk.filing_type.in_(_GATED_FORMS)
+                | DocumentChunk.filing_type.like("EX-99%")
+            )
+        )
+    return query.order_by(DocumentChunk.id)
 
 
 def _unstaged_query() -> Select[int, str]:
@@ -41,17 +49,20 @@ def _count(session: Session, query: Select[int, str]) -> int:
     return session.scalar(select(text("count(*)")).select_from(query.subquery())) or 0
 
 
-def count_pending(session: Session, *, model: str) -> int:
-    return _count(session, _pending_query(model))
+def count_pending(session: Session, *, model: str, include_exhibits: bool = True) -> int:
+    return _count(session, _pending_query(model, include_exhibits=include_exhibits))
 
 
 def count_unstaged(session: Session) -> int:
     return _count(session, _unstaged_query())
 
 
-def fetch_pending_batch(session: Session, *, model: str, limit: int) -> list[tuple[int, str]]:
+def fetch_pending_batch(
+    session: Session, *, model: str, limit: int, include_exhibits: bool = True
+) -> list[tuple[int, str]]:
     """Return up to `limit` (id, text) pairs needing embedding under `model`."""
-    return [(cid, txt) for cid, txt in session.execute(_pending_query(model).limit(limit))]
+    query = _pending_query(model, include_exhibits=include_exhibits).limit(limit)
+    return [(cid, txt) for cid, txt in session.execute(query)]
 
 
 def fetch_unstaged_batch(session: Session, *, limit: int) -> list[tuple[int, str]]:
