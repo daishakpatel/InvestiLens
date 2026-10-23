@@ -6,6 +6,7 @@ import { MetricChart } from "../../charts/MetricChart";
 import { CitationChip } from "../../components/citations/CitationChip";
 import { KeyStats } from "../../components/company/KeyStats";
 import { PriceHero } from "../../components/company/PriceHero";
+import { RedFlagsSection } from "../../components/company/RedFlags";
 import { Section } from "../../components/ui/Section";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -241,6 +242,7 @@ export default function OverviewTab() {
           <ResearchTeaser ticker={ticker} />
         </div>
         <div className="space-y-12">
+          <RedFlagsSection ticker={ticker} />
           <About ticker={ticker} />
           <Latest ticker={ticker} />
         </div>

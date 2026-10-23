@@ -23,6 +23,7 @@ import type {
   MetricResult,
   MetricsCoverageResponse,
   EarningsQualityResponse,
+  RedFlagsResponse,
   NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
@@ -142,6 +143,33 @@ const earningsQuality = z.object({
   peers: z.array(z.string()),
   notes: z.array(z.string()),
   freshness,
+});
+
+// Phase 7e (FR-RF-009/010): reported filing events; an empty list still says when it was scanned.
+const redFlags = z.object({
+  items: z.array(
+    z.object({
+      source_id: z.string(),
+      ticker: z.string(),
+      rule_key: z.string(),
+      label: z.string(),
+      severity: z.enum(["info", "warning", "critical"]),
+      explanation: z.string(),
+      rule_source: z.string(),
+      event_date: z.string().nullable(),
+      snippet: z.string(),
+      filing: z.object({
+        id: z.number(),
+        filing_type: z.string(),
+        accession_number: z.string(),
+        filing_date: z.string().nullish(),
+        url: z.string().nullish(),
+      }),
+      details: z.record(z.string(), z.unknown()),
+    }),
+  ),
+  last_scanned_at: z.string().nullable(),
+  taxonomy_version: z.string(),
 });
 
 const valuation = z.object({
@@ -595,6 +623,7 @@ export const parse = {
   metricsCoverage: (d: unknown): MetricsCoverageResponse =>
     metricsCoverage.parse(d) as MetricsCoverageResponse,
   valuation: (d: unknown): ValuationResponse => valuation.parse(d) as ValuationResponse,
+  redFlags: (d: unknown): RedFlagsResponse => redFlags.parse(d) as RedFlagsResponse,
   earningsQuality: (d: unknown): EarningsQualityResponse =>
     earningsQuality.parse(d) as EarningsQualityResponse,
   prices: (d: unknown): PricesResponse => prices.parse(d) as PricesResponse,

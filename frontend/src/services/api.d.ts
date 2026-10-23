@@ -592,6 +592,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/red-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Company Red Flags
+         * @description Reported events for one company, newest first (FR-RF-009).
+         */
+        get: operations["company_red_flags_api_v1_companies__ticker__red_flags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/research/latest": {
         parameters: {
             query?: never;
@@ -871,6 +891,26 @@ export interface paths {
          *     `True` until the Phase 5d worker exists to report its own health.
          */
         get: operations["ready_api_v1_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/red-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Watchlist Red Flags
+         * @description Reported events across every company on the caller's watchlists (FR-RF-009).
+         */
+        get: operations["watchlist_red_flags_api_v1_red_flags_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2330,6 +2370,67 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "degraded";
+        };
+        /** RedFlagFiling */
+        RedFlagFiling: {
+            /** Accession Number */
+            accession_number: string;
+            /** Filing Date */
+            filing_date?: string | null;
+            /** Filing Type */
+            filing_type: string;
+            /** Id */
+            id: number;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * RedFlagItem
+         * @description One reported event. `label` and `snippet` state what was reported, never a judgement.
+         */
+        RedFlagItem: {
+            /**
+             * Details
+             * @default {}
+             */
+            details: {
+                [key: string]: unknown;
+            };
+            /** Event Date */
+            event_date: string | null;
+            /** Explanation */
+            explanation: string;
+            filing: components["schemas"]["RedFlagFiling"];
+            /** Label */
+            label: string;
+            /** Rule Key */
+            rule_key: string;
+            /** Rule Source */
+            rule_source: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "info" | "warning" | "critical";
+            /** Snippet */
+            snippet: string;
+            /** Source Id */
+            source_id: string;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * RedFlagsResponse
+         * @description Empty `items` with a `last_scanned_at` means "scanned through that date, nothing reported";
+         *     `last_scanned_at` is null until the first scan.
+         */
+        RedFlagsResponse: {
+            /** Items */
+            items: components["schemas"]["RedFlagItem"][];
+            /** Last Scanned At */
+            last_scanned_at: string | null;
+            /** Taxonomy Version */
+            taxonomy_version: string;
         };
         /** RefreshAccepted */
         RefreshAccepted: {
@@ -3962,6 +4063,43 @@ export interface operations {
             };
         };
     };
+    company_red_flags_api_v1_companies__ticker__red_flags_get: {
+        parameters: {
+            query?: {
+                /** @description Only events filed on or after this date */
+                since?: string | null;
+                /** @description Minimum severity: info < warning < critical */
+                severity?: ("info" | "warning" | "critical") | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedFlagsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     latest_research_api_v1_companies__ticker__research_latest_get: {
         parameters: {
             query?: never;
@@ -4420,6 +4558,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Readiness"];
+                };
+            };
+        };
+    };
+    watchlist_red_flags_api_v1_red_flags_get: {
+        parameters: {
+            query: {
+                /** @description Must be true: the feed covers the caller's watchlist */
+                watchlist: boolean;
+                /** @description Only events filed on or after this date */
+                since?: string | null;
+                /** @description Minimum severity: info < warning < critical */
+                severity?: ("info" | "warning" | "critical") | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedFlagsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

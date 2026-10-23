@@ -15,8 +15,9 @@ import { WatchButton } from "../components/watch/WatchButton";
 import { ApiError } from "../lib/apiClient";
 import { useApiStatus } from "../lib/apiStatus";
 import { formatUsd } from "../lib/format";
-import { useCompany, usePrices } from "../lib/queries";
+import { useCompany, usePrices, useRedFlags } from "../lib/queries";
 import { latestQuote } from "../lib/quote";
+import { recentCount } from "../lib/redFlags";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import type { CompanyResponse } from "../types";
 import { NotFound } from "./NotFoundPage";
@@ -95,6 +96,12 @@ export default function CompanyDashboard() {
   const base = `/company/${ticker}`;
   const { pathname } = useLocation();
   const company = useCompany(ticker);
+  // The Overview tab counts the red flags filed in the last year (FR-RF-012).
+  const flags = useRedFlags(ticker);
+  const flagCount = flags.data ? recentCount(flags.data.items) : 0;
+  const tabs = TABS.map((tab) =>
+    tab.to === "" ? { ...tab, count: { value: flagCount, label: `${flagCount} red flags in the last year` } } : tab,
+  );
   const prices = usePrices(ticker);
   const { online, reachable } = useApiStatus();
   const quote = latestQuote(prices.data?.points);
@@ -157,7 +164,7 @@ export default function CompanyDashboard() {
           the strip is short, they appear only once the bar is pinned. */}
       <div className="sticky top-14 z-20 border-b border-border bg-bg/80 backdrop-blur-md print:hidden">
         <Container className="flex h-12 items-center justify-between gap-6">
-          <RouteTabs base={base} tabs={TABS} label="Company sections" />
+          <RouteTabs base={base} tabs={tabs} label="Company sections" />
           <div
             data-testid="pinned-quote"
             aria-hidden={!showQuote}
