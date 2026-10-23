@@ -17,13 +17,12 @@ from app.embeddings.pipeline import embed_pending
 from app.finance.builder import build_company_metrics
 from app.finance.ratio_builder import build_company_ratios
 from app.finance.valuation_builder import build_company_valuation
-from app.ingestion.documents.pipeline import parse_and_chunk
+from app.ingestion.documents.pipeline import parse_company_documents
 from app.ingestion.news import ingest_news_for_tickers
 from app.ingestion.prices import ingest_prices_for_tickers
 from app.ingestion.sec import ingest_company
 from app.ingestion.sec.poller import find_new_accessions
 from app.repositories import companies as company_repo
-from app.repositories import filings as filing_repo
 from app.tasks.base import RETRY_KWARGS, job_task
 from app.tasks.celery_app import celery_app
 from app.utils.storage import get_object_storage
@@ -71,8 +70,7 @@ def fetch_insider_and_holdings(self: Task, tickers: list[str]) -> dict[str, Any]
 
 @celery_app.task(bind=True, queue="ingestion", name="parse_documents", **RETRY_KWARGS)
 def parse_documents(self: Task, ticker: str) -> int:
-    storage = get_object_storage()
-    parsed = 0
+    """Parse the company's documents not yet at the current parser version (FR-EX-014)."""
     with job_task(self, job_type="parse_documents", params={"ticker": ticker}) as (
         session,
         progress,
@@ -80,16 +78,9 @@ def parse_documents(self: Task, ticker: str) -> int:
         company = company_repo.get_by_ticker(session, ticker)
         if company is None:
             raise ValueError(f"unknown ticker: {ticker}")
-        filings = filing_repo.list_filings(
-            session, company_id=company.id, filing_type=None, limit=1000, after_id=None
-        )
-        for i, filing in enumerate(filings):
-            if filing.raw_document_location:
-                parse_and_chunk(session, filing, storage=storage)
-                parsed += 1
-            if filings:
-                progress.update(progress=int((i + 1) / len(filings) * 100))
-    return parsed
+        summary = parse_company_documents(session, company.id, storage=get_object_storage())
+        progress.update(progress=100, stage=f"parsed:{summary.parsed}")
+    return summary.parsed
 
 
 @celery_app.task(bind=True, queue="ingestion", name="generate_embeddings", **RETRY_KWARGS)
@@ -147,11 +138,9 @@ def _refresh_one(ticker: str) -> None:
         company = company_repo.get_by_ticker(session, ticker)
         if company is None:
             raise ValueError(f"unknown ticker: {ticker}")
-        for filing in filing_repo.list_filings(
-            session, company_id=company.id, filing_type=None, limit=1000, after_id=None
-        ):
-            if filing.raw_document_location:
-                parse_and_chunk(session, filing, storage=storage)
+        # Same chain as the ingest: a new earnings 8-K's EX-99 exhibits, fetched above, are
+        # parsed and embedded here within one poll interval (FR-EX-015).
+        parse_company_documents(session, company.id, storage=storage)
         embed_pending(session)
         build_company_metrics(session, company)
         build_company_ratios(session, company)

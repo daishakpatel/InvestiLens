@@ -15,6 +15,8 @@ class FilingSummary(BaseModel):
     period_end: str | None = None
     accession_number: str
     primary_document_url: str | None = None
+    # "filing" or "late_filing_notice" (NT 10-K / NT 10-Q), FR-EX-009. None when not looked up.
+    document_type: str | None = None
 
 
 class FilingDetail(FilingSummary):

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
+from collections.abc import Collection
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -128,6 +129,7 @@ def get_or_create_document(
     raw_document_location: str | None = None,
     parser_version: str | None = None,
     doc_metadata: dict[str, Any] | None = None,
+    published_at: datetime | None = None,
 ) -> int:
     """Return the document id, inserting it only if (company_id, content_hash) is new."""
     stmt = (
@@ -142,6 +144,7 @@ def get_or_create_document(
             raw_document_location=raw_document_location,
             parser_version=parser_version,
             metadata=doc_metadata,
+            published_at=published_at,
         )
         .on_conflict_do_nothing(index_elements=[Document.company_id, Document.content_hash])
         .returning(Document.id)
@@ -157,6 +160,68 @@ def get_or_create_document(
     if existing is None:  # unreachable: the ON CONFLICT target guarantees the row exists
         raise RuntimeError("document upsert conflicted but no existing row found")
     return int(existing)
+
+
+# Documents the parse step reads: filings, late-filing notices and EX-99 press releases.
+_PARSEABLE = ("filing", "late_filing_notice", "earnings_release")
+
+
+def parseable_documents(
+    session: Session, *, company_id: int, filing_types: Collection[str] | None = None
+) -> list[tuple[Document, Filing | None]]:
+    """A company's stored documents with their filing (None for an exhibit), oldest first.
+
+    With `filing_types`, only filings of those forms (exhibits have no form and are left out).
+    """
+    query = (
+        select(Document, Filing)
+        .outerjoin(Filing, Filing.document_id == Document.id)
+        .where(
+            Document.company_id == company_id,
+            Document.document_type.in_(_PARSEABLE),
+            Document.raw_document_location.is_not(None),
+        )
+        .order_by(Document.id)
+    )
+    if filing_types is not None:
+        query = query.where(Filing.filing_type.in_(list(filing_types)))
+    return [(document, filing) for document, filing in session.execute(query).tuples()]
+
+
+def document_types(session: Session, document_ids: list[int]) -> dict[int, str]:
+    """`documents.document_type` per id, in one query (no N+1 for a filings page)."""
+    if not document_ids:
+        return {}
+    rows = session.execute(
+        select(Document.id, Document.document_type).where(Document.id.in_(document_ids))
+    )
+    return {doc_id: doc_type for doc_id, doc_type in rows}
+
+
+def exhibit_documents(
+    session: Session, *, company_id: int, parent_accession: str
+) -> list[Document]:
+    """The EX-99 exhibit documents stored for one filing (FR-EX-006)."""
+    return list(
+        session.scalars(
+            select(Document).where(
+                Document.company_id == company_id,
+                Document.document_type == "earnings_release",
+                Document.doc_metadata["parent_accession"].astext == parent_accession,
+            )
+        )
+    )
+
+
+def merge_document_metadata(session: Session, document_id: int, updates: dict[str, Any]) -> None:
+    """Merge keys into `documents.metadata` (the rest is kept)."""
+    document = session.get(Document, document_id)
+    if document is not None:
+        document.doc_metadata = {**(document.doc_metadata or {}), **updates}
+
+
+def get_by_accession(session: Session, accession_number: str) -> Filing | None:
+    return session.scalar(select(Filing).where(Filing.accession_number == accession_number))
 
 
 def filing_exists(session: Session, accession_number: str) -> bool:
