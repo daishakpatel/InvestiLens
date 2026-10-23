@@ -211,3 +211,24 @@ def upsert_metric(
         )
     )
     session.execute(stmt)
+
+
+def latest_annual_values(
+    session: Session, *, company_ids: list[int], metric_names: list[str]
+) -> dict[tuple[int, str], FinancialMetric]:
+    """Each company's most recent FY row with a value, per metric: one query for a peer set."""
+    rows = session.scalars(
+        select(FinancialMetric)
+        .where(
+            FinancialMetric.company_id.in_(company_ids),
+            FinancialMetric.metric_name.in_(metric_names),
+            FinancialMetric.period_type == "FY",
+            FinancialMetric.is_latest.is_(True),
+            FinancialMetric.metric_value.is_not(None),
+        )
+        .order_by(FinancialMetric.fiscal_year.desc())
+    )
+    latest: dict[tuple[int, str], FinancialMetric] = {}
+    for row in rows:
+        latest.setdefault((row.company_id, row.metric_name), row)
+    return latest

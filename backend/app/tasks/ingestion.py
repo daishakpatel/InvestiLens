@@ -15,6 +15,7 @@ from celery import Task
 from app.db import _session_factory, session_scope
 from app.embeddings.pipeline import embed_pending
 from app.finance.builder import build_company_metrics
+from app.finance.quality_builder import build_company_earnings_quality
 from app.finance.ratio_builder import build_company_ratios
 from app.finance.valuation_builder import build_company_valuation
 from app.ingestion.documents.pipeline import parse_company_documents
@@ -102,6 +103,7 @@ def update_financial_metrics(self: Task, ticker: str) -> dict[str, int]:
         base = build_company_metrics(session, company)
         ratios = build_company_ratios(session, company)
         build_company_valuation(session, company)
+        build_company_earnings_quality(session, company)
     return {"metrics": base.annual_metrics, "ratios": ratios}
 
 
@@ -145,6 +147,7 @@ def _refresh_one(ticker: str) -> None:
         build_company_metrics(session, company)
         build_company_ratios(session, company)
         build_company_valuation(session, company)
+        build_company_earnings_quality(session, company)
 
 
 @celery_app.task(bind=True, queue="interactive", name="refresh_company_data", **RETRY_KWARGS)
