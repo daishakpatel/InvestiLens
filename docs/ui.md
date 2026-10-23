@@ -115,6 +115,20 @@ Rules:
   colour.
 - The chart's series use categorical hues, because none of them is a gain or a loss.
 
+## Red flags (Phase 7e)
+
+The Overview's "Red flags" section (`components/company/RedFlags.tsx`) heads the right column.
+- Each row shows the label (the rule's explanation as a tooltip), a severity badge with words,
+  then the form and filing date and any roles. Below that come the filing's own words (two lines,
+  quoted, a button that opens the citation drawer) and an "Open filing" link.
+- Severity follows the gain/loss colour rule: `warning` tone for warning and critical (worded "Read
+  closely" / "Worth reading"), neutral for info ("For awareness"). Never green or red.
+- Three rows show, then "Show all n".
+- The empty state reads "Scanned through <date>; nothing reported.", and the error state offers
+  "Try again".
+- A "How to read this" disclosure says flags are reported events, not conclusions.
+- The Overview tab carries the count of flags filed in the last year (`TabDef.count`, hidden at 0).
+
 ## Adding a screen
 
 1. Add the route in `App.tsx` as a `lazy` import, so it is its own chunk.

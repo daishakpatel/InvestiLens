@@ -3715,6 +3715,162 @@
         "title": "Readiness",
         "type": "object"
       },
+      "RedFlagFiling": {
+        "properties": {
+          "accession_number": {
+            "title": "Accession Number",
+            "type": "string"
+          },
+          "filing_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filing Date"
+          },
+          "filing_type": {
+            "title": "Filing Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "filing_type",
+          "accession_number"
+        ],
+        "title": "RedFlagFiling",
+        "type": "object"
+      },
+      "RedFlagItem": {
+        "description": "One reported event. `label` and `snippet` state what was reported, never a judgement.",
+        "properties": {
+          "details": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Details",
+            "type": "object"
+          },
+          "event_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Date"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "filing": {
+            "$ref": "#/components/schemas/RedFlagFiling"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "rule_key": {
+            "title": "Rule Key",
+            "type": "string"
+          },
+          "rule_source": {
+            "title": "Rule Source",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "ticker",
+          "rule_key",
+          "label",
+          "severity",
+          "explanation",
+          "rule_source",
+          "event_date",
+          "snippet",
+          "filing"
+        ],
+        "title": "RedFlagItem",
+        "type": "object"
+      },
+      "RedFlagsResponse": {
+        "description": "Empty `items` with a `last_scanned_at` means \"scanned through that date, nothing reported\";\n`last_scanned_at` is null until the first scan.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RedFlagItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_scanned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Scanned At"
+          },
+          "taxonomy_version": {
+            "title": "Taxonomy Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "last_scanned_at",
+          "taxonomy_version"
+        ],
+        "title": "RedFlagsResponse",
+        "type": "object"
+      },
       "RefreshAccepted": {
         "properties": {
           "job_id": {
@@ -7104,6 +7260,103 @@
         ]
       }
     },
+    "/api/v1/companies/{ticker}/red-flags": {
+      "get": {
+        "description": "Reported events for one company, newest first (FR-RF-009).",
+        "operationId": "company_red_flags_api_v1_companies__ticker__red_flags_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only events filed on or after this date",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events filed on or after this date",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Minimum severity: info < warning < critical",
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "info",
+                    "warning",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum severity: info < warning < critical",
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedFlagsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Company Red Flags",
+        "tags": [
+          "Red flags"
+        ]
+      }
+    },
     "/api/v1/companies/{ticker}/research/latest": {
       "get": {
         "operationId": "latest_research_api_v1_companies__ticker__research_latest_get",
@@ -7849,6 +8102,121 @@
         "summary": "Ready",
         "tags": [
           "Health"
+        ]
+      }
+    },
+    "/api/v1/red-flags": {
+      "get": {
+        "description": "Reported events across every company on the caller's watchlists (FR-RF-009).",
+        "operationId": "watchlist_red_flags_api_v1_red_flags_get",
+        "parameters": [
+          {
+            "description": "Must be true: the feed covers the caller's watchlist",
+            "in": "query",
+            "name": "watchlist",
+            "required": true,
+            "schema": {
+              "description": "Must be true: the feed covers the caller's watchlist",
+              "title": "Watchlist",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Only events filed on or after this date",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events filed on or after this date",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Minimum severity: info < warning < critical",
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "info",
+                    "warning",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum severity: info < warning < critical",
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedFlagsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watchlist Red Flags",
+        "tags": [
+          "Red flags"
         ]
       }
     },
