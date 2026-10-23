@@ -18,6 +18,18 @@ def list_for_user(session: Session, *, user_id: int) -> list[Watchlist]:
     )
 
 
+def company_ids_for_user(session: Session, *, user_id: int) -> list[int]:
+    """Every company on any of the user's watchlists, read now (not when an alert was made)."""
+    return list(
+        session.scalars(
+            select(WatchlistItem.company_id)
+            .join(Watchlist, Watchlist.id == WatchlistItem.watchlist_id)
+            .where(Watchlist.user_id == user_id)
+            .distinct()
+        )
+    )
+
+
 def item_tickers(session: Session, *, watchlist_id: int) -> list[str]:
     """Tickers on a watchlist, in insertion order (joins items → companies)."""
     return list(
