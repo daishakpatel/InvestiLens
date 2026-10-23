@@ -2,17 +2,75 @@
 
 from __future__ import annotations
 
+import html
 import json
+import re
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from app.config import get_settings
-from app.providers.sec.base import CompanyMetadata, CompanyRef, FilingRef, SecSource
+from app.providers.sec.base import (
+    CompanyMetadata,
+    CompanyRef,
+    ExhibitRef,
+    FilingRef,
+    SecSource,
+    is_press_release_exhibit,
+)
 from app.utils.http import HardenedHttpClient
 
 # SEC-015: ingestion only ever fetches from these hosts.
 ALLOWED_HOSTS = frozenset({"www.sec.gov", "data.sec.gov", "sec.gov"})
 _COMPANY_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+# One document of a filing in its SGML header page: type, sequence, filename (FR-EX-005).
+_HEADER_DOCUMENT = re.compile(
+    r"<TYPE>([^\n<]+?)\s*\n<SEQUENCE>[^\n]*\n<FILENAME>([^\n<]+?)\s*\n", re.I
+)
+
+
+def parse_index_headers(page: str) -> list[tuple[str, str]]:
+    """(document type, filename) for every document in a filing's `-index-headers.html`.
+
+    EDGAR has no per-filing `-index.json`; the SGML header (HTML-escaped inside the page) is the
+    one listing that names each document's type, so exhibits are found from it.
+    """
+    return [(t.strip(), f.strip()) for t, f in _HEADER_DOCUMENT.findall(html.unescape(page))]
+
+
+def _refs(cik: str, block: dict[str, Any]) -> list[FilingRef]:
+    """FilingRefs from one columnar submissions block (`filings.recent` or an older shard)."""
+    count = len(block.get("accessionNumber", []))
+
+    def column(name: str) -> list[Any]:
+        return list(block.get(name) or [""] * count)
+
+    refs: list[FilingRef] = []
+    for form, accession, doc, filed, report, items, accepted in zip(
+        column("form"),
+        column("accessionNumber"),
+        column("primaryDocument"),
+        column("filingDate"),
+        column("reportDate"),
+        column("items"),
+        column("acceptanceDateTime"),
+        strict=True,
+    ):
+        accn = accession.replace("-", "")
+        refs.append(
+            FilingRef(
+                cik=cik,
+                form=form,
+                accession_number=accession,
+                primary_document=doc,
+                filing_date=filed,
+                report_date=report or None,
+                primary_doc_url=f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accn}/{doc}",
+                items=tuple(i.strip() for i in (items or "").split(",") if i.strip()) or None,
+                accepted_at=accepted or None,
+            )
+        )
+    return refs
 
 
 class LiveSecSource(SecSource):
@@ -24,6 +82,10 @@ class LiveSecSource(SecSource):
             rate_per_sec=settings.sec_rate_limit_per_sec,
         )
 
+    def _json(self, url: str) -> dict[str, Any]:
+        result: dict[str, Any] = json.loads(self._http.get_bytes(url))
+        return result
+
     def company_tickers(self) -> Sequence[CompanyRef]:
         raw = json.loads(self._http.get_bytes(_COMPANY_TICKERS_URL))
         rows = raw.values() if isinstance(raw, dict) else raw
@@ -33,9 +95,7 @@ class LiveSecSource(SecSource):
         ]
 
     def _submissions(self, cik: str) -> dict[str, Any]:
-        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-        result: dict[str, Any] = json.loads(self._http.get_bytes(url))
-        return result
+        return self._json(f"https://data.sec.gov/submissions/CIK{cik}.json")
 
     def company_metadata(self, cik: str) -> CompanyMetadata:
         sub = self._submissions(cik)
@@ -51,39 +111,47 @@ class LiveSecSource(SecSource):
             fiscal_year_end=fye_fmt,
         )
 
-    def list_filings(self, cik: str) -> Sequence[FilingRef]:
-        recent = self._submissions(cik)["filings"]["recent"]
-        refs: list[FilingRef] = []
-        for form, accession, doc, filed, report, items in zip(
-            recent["form"],
-            recent["accessionNumber"],
-            recent["primaryDocument"],
-            recent["filingDate"],
-            recent["reportDate"],
-            recent["items"],
-            strict=True,
-        ):
-            accn = accession.replace("-", "")
-            refs.append(
-                FilingRef(
-                    cik=cik,
-                    form=form,
-                    accession_number=accession,
-                    primary_document=doc,
-                    filing_date=filed,
-                    report_date=report or None,
-                    primary_doc_url=(
-                        f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accn}/{doc}"
-                    ),
-                    items=tuple(i.strip() for i in items.split(",") if i.strip()) or None,
-                )
-            )
-        return refs
+    def list_filings(self, cik: str, *, since: date | None = None) -> Sequence[FilingRef]:
+        filings = self._submissions(cik)["filings"]
+        refs = _refs(cik, filings["recent"])
+        if since is not None:
+            # Prolific filers (JPM files thousands of prospectuses) push 10-Ks out of the recent
+            # block; older pages are fetched only while they reach back to `since` (FR-EX-011).
+            for shard in filings.get("files") or []:
+                if date.fromisoformat(shard["filingTo"]) >= since:
+                    url = f"https://data.sec.gov/submissions/{shard['name']}"
+                    refs.extend(_refs(cik, self._json(url)))
+        unique = {r.accession_number: r for r in refs}  # a shard may overlap the recent block
+        return sorted(unique.values(), key=lambda r: r.filing_date, reverse=True)
 
     def companyfacts(self, cik: str) -> dict[str, Any]:
-        url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
-        result: dict[str, Any] = json.loads(self._http.get_bytes(url))
-        return result
+        return self._json(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json")
 
     def fetch_document(self, ref: FilingRef) -> bytes:
         return self._http.get_bytes(ref.primary_doc_url)
+
+    def list_exhibits(self, filing: FilingRef) -> Sequence[ExhibitRef]:
+        folder = filing.primary_doc_url.rsplit("/", 1)[0]
+        page = self._http.get_bytes(f"{folder}/{filing.accession_number}-index-headers.html")
+        wanted = [
+            (t, f)
+            for t, f in parse_index_headers(page.decode("utf-8", errors="ignore"))
+            if is_press_release_exhibit(t)
+        ]
+        if not wanted:
+            return []
+        listing = self._json(f"{folder}/index.json")["directory"]["item"]
+        sizes = {i["name"]: int(i["size"]) for i in listing if str(i.get("size", "")).isdigit()}
+        return [
+            ExhibitRef(
+                filing_accession=filing.accession_number,
+                exhibit_type=exhibit_type.upper(),
+                filename=filename,
+                url=f"{folder}/{filename}",
+                size_bytes=sizes.get(filename),
+            )
+            for exhibit_type, filename in wanted
+        ]
+
+    def fetch_exhibit(self, exhibit: ExhibitRef) -> bytes:
+        return self._http.get_bytes(exhibit.url)

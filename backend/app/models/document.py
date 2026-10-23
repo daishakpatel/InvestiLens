@@ -39,7 +39,7 @@ class Document(Base, TimestampMixin):
     company_id: Mapped[int] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
-    # filing|earnings_release|transcript|news|ir_material
+    # filing|late_filing_notice|earnings_release|transcript|news|ir_material (ADR-0041)
     document_type: Mapped[str] = mapped_column(String(32))
     source_tier: Mapped[int] = mapped_column(Integer)  # 1..5 source-quality hierarchy (§15)
     title: Mapped[str | None] = mapped_column(Text)

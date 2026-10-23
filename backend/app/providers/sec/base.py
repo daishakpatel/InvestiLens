@@ -8,10 +8,20 @@ by `PROVIDER_MODE`.
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
+
+# FR-EX-005: press-release exhibits only (EX-99, EX-99.1, EX-99.2, …); EX-10.x and the rest are
+# not fetched for now.
+_PRESS_RELEASE = re.compile(r"^EX-99(\.\d+)?$", re.I)
+
+
+def is_press_release_exhibit(exhibit_type: str) -> bool:
+    return bool(_PRESS_RELEASE.match(exhibit_type.strip()))
 
 
 @dataclass(frozen=True)
@@ -51,6 +61,19 @@ class FilingRef:
     primary_doc_url: str
     items: tuple[str, ...] | None = None  # 8-K item codes if provided by the source
     local_file: str | None = None  # mock only: fixture filename
+    accepted_at: str | None = None  # EDGAR acceptance time, ISO-8601 UTC
+
+
+@dataclass(frozen=True)
+class ExhibitRef:
+    """One exhibit of a filing, from the filing index (FR-EX-005)."""
+
+    filing_accession: str
+    exhibit_type: str  # "EX-99.1"
+    filename: str
+    url: str
+    size_bytes: int | None = None
+    local_file: str | None = None  # mock only: fixture filename
 
 
 class SecSource(ABC):
@@ -59,8 +82,12 @@ class SecSource(ABC):
         """Return the ticker↔CIK reference list."""
 
     @abstractmethod
-    def list_filings(self, cik: str) -> Sequence[FilingRef]:
-        """Return all discoverable filings for a company (newest first)."""
+    def list_filings(self, cik: str, *, since: date | None = None) -> Sequence[FilingRef]:
+        """Return the company's filings, newest first.
+
+        Without `since`, only what the source lists first (EDGAR's recent block, about 1,000
+        filings). With it, older pages are read too until they cover `since` (FR-EX-011).
+        """
 
     @abstractmethod
     def company_metadata(self, cik: str) -> CompanyMetadata:
@@ -73,3 +100,11 @@ class SecSource(ABC):
     @abstractmethod
     def fetch_document(self, ref: FilingRef) -> bytes:
         """Return the raw bytes of a filing's primary document."""
+
+    @abstractmethod
+    def list_exhibits(self, filing: FilingRef) -> Sequence[ExhibitRef]:
+        """Return the filing's press-release exhibits (EX-99.x), in filing order."""
+
+    @abstractmethod
+    def fetch_exhibit(self, exhibit: ExhibitRef) -> bytes:
+        """Return the raw bytes of one exhibit."""
