@@ -38,6 +38,12 @@ flow_metrics:
     - us-gaap:IncomeTaxExpenseBenefit
   pretax_income:
     - us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest
+  # Earnings-quality inputs (Phase 7d, ADR-0042): appended, existing selections unchanged.
+  sga_expense:
+    - us-gaap:SellingGeneralAndAdministrativeExpense
+  # Depreciation alone (Beneish DEPI), not D&A; companies disclose it in the 10-K PP&E note.
+  depreciation:
+    - us-gaap:Depreciation
 
 # Flow metrics a 10-Q reports year-to-date (the cash-flow statement), not per quarter. Their
 # quarters are de-cumulated: Q2 = 6M YTD - 3M YTD, Q3 = 9M - 6M, Q4 = FY - 9M (FR-QT-002).
@@ -46,6 +52,10 @@ cash_flow_metrics:
   - capex
   - depreciation_amortization
   - stock_based_compensation
+
+# Flows reported only in the 10-K (a note, not a statement line): no quarters to build or miss.
+annual_only_metrics:
+  - depreciation
 
 stock_metrics:
   shares_outstanding:
@@ -56,6 +66,7 @@ stock_metrics:
   short_term_investments:
     - us-gaap:MarketableSecuritiesCurrent
     - us-gaap:ShortTermInvestments
+    - us-gaap:DebtSecuritiesCurrent  # NVIDIA's tag from FY2026 (Phase 7d; fills a gap only)
   total_assets:
     - us-gaap:Assets
   current_assets:
@@ -79,6 +90,12 @@ stock_metrics:
     - us-gaap:InventoryNet
   payables:
     - us-gaap:AccountsPayableCurrent
+  # Earnings-quality inputs (Phase 7d, ADR-0042).
+  retained_earnings:
+    - us-gaap:RetainedEarningsAccumulatedDeficit
+  ppe_net:
+    - us-gaap:PropertyPlantAndEquipmentNet
+    - us-gaap:PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization
 
 # Expected unit family per metric for the unit-consistency check (DR-024).
 units:

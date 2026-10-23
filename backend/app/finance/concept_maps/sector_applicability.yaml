@@ -10,6 +10,7 @@ sectors:
     ev_ebitda: true
     piotroski: true
     altman: true
+    beneish: true
     pe: true
     ps: true
     net_interest_margin: false
@@ -22,6 +23,15 @@ sectors:
     ev_ebitda: false
     piotroski: false
     altman: false
+    # Beneish was estimated on non-financial firms; banks were excluded (ADR-0042, DR-EQ-001).
+    beneish: false
+    # No receivables/inventory/payables cycle and no SG&A line: working-capital days are N/A.
+    dso: false
+    dio: false
+    dpo: false
+    cash_conversion_cycle: false
+    accruals_ratio_bs: false  # deposits and loans are the operations: NOA has no meaning
+    sga_expense: false
     pe: true
     ps: true
     net_interest_margin: true   # [P2]
@@ -34,6 +44,7 @@ sectors:
     ev_ebitda: true
     piotroski: true
     altman: true
+    beneish: true
     pe: true
     ps: true
     net_interest_margin: false
