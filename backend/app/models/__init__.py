@@ -26,6 +26,7 @@ from app.models.ops import (
     LlmCall,
     RetrievalLog,
 )
+from app.models.redflag import RedFlag
 from app.models.research import ClaimVerification, ResearchReport, ResearchSource
 from app.models.user import (
     Alert,
@@ -70,6 +71,7 @@ __all__ = [
     "News",
     "Notification",
     "PriceHistory",
+    "RedFlag",
     "RefreshToken",
     "ReportFeedback",
     "ResearchReport",

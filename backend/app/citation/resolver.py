@@ -5,6 +5,8 @@ document-chunk anchor as the default) keeps resolution unambiguous:
 - ``news:<id>``     → news_item
 - ``xbrl:<fact_id>``→ xbrl_fact
 - ``derived:…`` (or a `financial_metrics.source_id` match) → derived_metric (with lineage, CIT-003)
+- ``redflag:<TICKER>:<rule>:<accession>`` → the flag's quoted filing text as a text_chunk, with
+  the filing as the deep link (Phase 7e, FR-RF-008)
 - otherwise the id is a chunk ``paragraph_id`` → text_chunk / table_chunk, or earnings_release /
   transcript when the parent document is one.
 """
@@ -16,6 +18,8 @@ from sqlalchemy.orm import Session
 
 from app.finance.display import describe_metric
 from app.models import Document, DocumentChunk, FinancialFact, FinancialMetric, News
+from app.redflags import taxonomy
+from app.repositories import red_flags as red_flag_repo
 from app.schemas.citations import SourceDetail
 from app.schemas.sources import (
     DerivedMetricSource,
@@ -141,6 +145,8 @@ def resolve_source(session: Session, source_id: str) -> SourceDetail | None:
     if source_id.startswith("news:"):
         row = session.get(News, _as_int(source_id.split(":", 1)[1]))
         return _news(row) if row else None
+    if source_id.startswith(taxonomy.SOURCE_PREFIX):
+        return _red_flag(session, source_id)
     # A canonical metric's own source_id (base or derived) resolves first — its scheme may itself
     # start with "xbrl:"/"derived:", so this precedes the raw-fact prefix branch below.
     metric = session.scalar(
@@ -155,6 +161,38 @@ def resolve_source(session: Session, source_id: str) -> SourceDetail | None:
         return _xbrl(fact) if fact else None
     chunk = session.scalar(select(DocumentChunk).where(DocumentChunk.paragraph_id == source_id))
     return _chunk(session, chunk) if chunk else None
+
+
+def _red_flag(session: Session, source_id: str) -> SourceDetail | None:
+    """A red flag: its quoted filing text, the rule that fired, and a link to the filing."""
+    parts = taxonomy.parse_source_id(source_id)
+    if parts is None:
+        return None
+    ticker, rule_key, accession = parts
+    found = red_flag_repo.by_source(
+        session,
+        ticker=ticker,
+        rule_key=rule_key,
+        accession=accession,
+        taxonomy_version=taxonomy.TAXONOMY_VERSION,
+    )
+    rule = taxonomy.RULES_BY_KEY.get(rule_key)
+    if found is None or rule is None:
+        return None
+    flag, filing = found
+    source = TextChunkSource(
+        source_id=source_id,
+        tier=1,
+        document_id=str(flag.document_id),
+        section_path=[filing.filing_type, rule.label],
+        paragraph_id=flag.paragraph_id,
+        text=flag.snippet,
+    )
+    return SourceDetail(
+        source=source,
+        text=flag.snippet,
+        deep_link=filing.primary_document_url or filing.source_url,
+    )
 
 
 def _as_int(value: str) -> int:

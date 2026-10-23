@@ -15,10 +15,10 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Alert, Watchlist, WatchlistItem
+from app.models import Alert
+from app.repositories import watchlists as watchlist_repo
 
 Severity = Literal["info", "warning", "critical"]
 
@@ -81,11 +81,4 @@ def scope_company_ids(session: Session, alert: Alert) -> list[int]:
     (FR-AL-011)."""
     if alert.company_id is not None:
         return [alert.company_id]
-    return list(
-        session.scalars(
-            select(WatchlistItem.company_id)
-            .join(Watchlist, Watchlist.id == WatchlistItem.watchlist_id)
-            .where(Watchlist.user_id == alert.user_id)
-            .distinct()
-        )
-    )
+    return watchlist_repo.company_ids_for_user(session, user_id=alert.user_id)
