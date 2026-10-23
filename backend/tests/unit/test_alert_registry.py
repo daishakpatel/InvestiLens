@@ -23,7 +23,11 @@ def test_every_detector_sample_is_free_of_advice(event_type: registry.AlertEvent
     assert not contains_advice(sample.title)
     assert not contains_advice(sample.body)
     assert sample.source_ids, "every event carries backend-issued evidence ids"
-    assert sample.event_key.startswith(f"{event_type.key}:")
+    # Keys never collide across types: each is prefixed by its type, or is itself a
+    # type-unique evidence ID (`red_flag` events use the flag's `redflag:` source ID, FR-RF-011).
+    assert sample.event_key.startswith(f"{event_type.key}:") or (
+        sample.event_key in sample.source_ids
+    )
 
 
 @pytest.mark.parametrize("event_type", registry.all_types(), ids=lambda t: t.key)
