@@ -62,7 +62,7 @@ def test_concept_map_defaults() -> None:
 
 
 def test_canonical_skips_null_fiscal_year_and_flow_instant_mismatch() -> None:
-    from app.finance.ratio_builder import _Canonical
+    from app.finance.ratio_builder import Canonical
     from app.models import FinancialMetric
 
     rows = [
@@ -71,7 +71,7 @@ def test_canonical_skips_null_fiscal_year_and_flow_instant_mismatch() -> None:
             fiscal_year=2025, metric_name="revenue", metric_value=Decimal(10), source_id="acc-1"
         ),
     ]
-    canonical = _Canonical(rows)
+    canonical = Canonical(rows)
     assert canonical.fiscal_years == [2025]  # the null-year row is skipped
     assert canonical.value(2025, "revenue") == Decimal(10)
 
