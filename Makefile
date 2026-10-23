@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup reparse-8k
+.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup reparse-8k redflags-backfill
 
 install:
 	cd backend && uv sync
@@ -46,6 +46,10 @@ seed:
 # finds every 8-K current and parses nothing.
 reparse-8k:
 	cd backend && uv run python ../scripts/reparse_8k.py
+
+# Red-flag detection over stored filings (Phase 7e); idempotent, also runs nightly.
+redflags-backfill:
+	cd backend && uv run python ../scripts/scan_red_flags.py
 
 # Evaluation smoke run (§18.4, Phase 5b). Full/gate variants: see scripts/run_eval.py.
 eval:

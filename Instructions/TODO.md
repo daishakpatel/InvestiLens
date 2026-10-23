@@ -195,6 +195,14 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] Filing diff is recomputed per request, not cached. `[notes]`
 - [ ] §37.8 P3 candidates (screener, sector dashboards, Excel export, …): untouched by design.
 
+- [ ] **Red-flag phrase rules have no real positive examples for going concern or material
+      weakness** (Phase 7e): none of the five dev companies reports one, so those rules are
+      tested on labelled synthetic sentences. Add a real 10-K with each once such a company is
+      ingested, and check the guards against it. `[code]`
+- [ ] **Red flags quote one paragraph per rule per filing**: a filing with two separate
+      departures shows one flag (with all roles from the departure sentences); the second
+      person's sentence is not quoted separately. `[code]`
+
 ## 4. Never verified live
 
 - [ ] Finnhub (news) and Voyage (embeddings) paths: no API keys; parsing is unit-tested only. `[notes]`
@@ -289,3 +297,13 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   been read as zero; NVIDIA's FY2022 dilution read +304% because the 2021 split predates the
   price history (now taken from the 10-K's restated comparative); derived lineage stored no input
   values.
+- 2026-10-22 — **Red-flag panel** (Phase 7e, ADR-0043): a rule registry,
+  `red_flag_taxonomy_v1`, with 8-K items 1.03, 1.05, 2.05, 2.06, 3.01, 4.01, 4.02, 5.01 and 5.02
+  checked against SEC Form 8-K (SEC 873, 02-25), NT 10-K/10-Q (Form 12b-25), guarded going-concern
+  and material-weakness phrase rules, Beneish above threshold and restated XBRL values. Flags are
+  stored in `red_flags` (versioned, NULLS NOT DISTINCT unique key) after parsing, nightly and via
+  `make redflags-backfill`, cited as `redflag:` IDs, and served by
+  `GET /companies/{t}/red-flags` and `GET /red-flags?watchlist=true` with a scanned-through date.
+  A `red_flag` alert type was added, and the Overview has a Red flags section with a count on the
+  tab. Caught on real 8-Ks: "Mr." split sentences, "Vice President" counted as President, award
+  terms and director bios read as departures, and a neighbouring sentence's role misattributed.
