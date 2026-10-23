@@ -3187,6 +3187,7 @@ cash_and_equivalents:
 short_term_investments:
   - us-gaap:MarketableSecuritiesCurrent
   - us-gaap:ShortTermInvestments
+  - us-gaap:DebtSecuritiesCurrent          # Phase 7d: NVIDIA's tag from FY2026
 total_assets:
   - us-gaap:Assets
 current_assets:
@@ -3220,6 +3221,16 @@ inventory:
   - us-gaap:InventoryNet
 payables:
   - us-gaap:AccountsPayableCurrent
+# Phase 7b: income_tax_expense, pretax_income (TTM ROIC). Phase 7d (ADR-0042), earnings-quality inputs:
+sga_expense:
+  - us-gaap:SellingGeneralAndAdministrativeExpense
+depreciation:                               # annual_only: a 10-K PP&E-note figure, no quarters
+  - us-gaap:Depreciation
+retained_earnings:
+  - us-gaap:RetainedEarningsAccumulatedDeficit
+ppe_net:
+  - us-gaap:PropertyPlantAndEquipmentNet
+  - us-gaap:PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization
 ```
 > Starter list only; the Financial Data agent must validate against seed companies and extend with company-level overrides. Bank/insurer taxonomies (interest income, net interest margin, provision for credit losses, CET1) are a separate sector map.
 
@@ -3231,6 +3242,8 @@ payables:
 | Current ratio | ✓ | N/A | N/A |
 | EV/EBITDA | ✓ | N/A | ✓ (FFO preferred, later) |
 | Piotroski/Altman | ✓ | N/A | caution |
+| Beneish M (Phase 7d) | ✓ | N/A | caution |
+| DSO/DIO/DPO/CCC, balance-sheet accruals (Phase 7d) | ✓ | N/A | ✓ |
 | P/E, P/S | ✓ | ✓ | ✓ (P/FFO later) |
 | Net interest margin | N/A | ✓ [P2] | N/A |
 
@@ -3351,6 +3364,30 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | DR-EX-001 | A re-parse MUST replace all of a document's chunks; a citation to a superseded chunk MUST resolve to not-found, never to different text. |
 | DR-EX-002 | Re-parsing unchanged text MUST NOT discard its embedding (carried over by `content_hash`). |
 | DR-EX-003 | A fixture standing in for a form the company never filed MUST say it is synthetic, in its text and in the manifest. |
+
+**Earnings quality (Phase 7d, ADR-0042)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-EQ-001 | The concept map MUST map the Beneish and Altman inputs (`sga_expense`, `depreciation`, `retained_earnings`, `ppe_net`, plus the existing receivables, current assets/liabilities, total liabilities and income tax), each with a hand-verified golden value for NVIDIA and Apple and a sector-applicability entry. A 10-K-only flow MUST be marked annual-only, so it has no quarters or gaps. |
+| FR-EQ-002 | Beneish, Altman and Piotroski MUST be not applicable for banks, set in `sector_applicability.yaml` and not in code. |
+| FR-EQ-003 | The Beneish M-score MUST use the eight-variable Beneish (1999) model with the coefficients and −1.78 threshold quoted in ADR-0042. |
+| FR-EQ-004 | A Beneish result MUST expose the eight indices, the score, a band (`below_threshold`, `above_threshold`, `insufficient_data` or `not_applicable`) and the source ID of every input. |
+| FR-EQ-005 | Score formulas MUST be covered by a hand-computed worked example with exact Decimal expectations. |
+| FR-EQ-006 | Altman Z MUST use the original model for SIC 20–39 manufacturers and Z″ (book equity, no sales term) otherwise, MUST be not applicable for financials, and MUST store the variant used and why. |
+| FR-EQ-007 | Piotroski MUST expose each of its nine criteria (null = not computable); the 0–9 total MUST exist only when all nine are computable. |
+| FR-EQ-008 | Accruals (cash-flow and balance-sheet), DSO, DIO, DPO, CCC, FCF conversion, dilution, Beneish, Altman and Piotroski MUST be persisted per fiscal year as `derived:<TICKER>:<metric>:FY<yr>` with resolvable inputs. TTM FCF conversion and TTM accruals MUST come from 7b TTM figures. Dilution MUST compare shares on one basis (the prior year as restated in the current 10-K, else split-adjusted). |
+| FR-EQ-009 | `GET /companies/{ticker}/earnings-quality?years=` MUST return, per measure and fiscal year, the value, status (`ok`, `insufficient_data` or `not_applicable`), band, inputs (source IDs) and a static explanation (no LLM text). |
+| FR-EQ-010 | Each measure MUST carry a peer percentile from the Phase 6a peer set, withheld when fewer than three peers report it, with a note saying so. |
+| FR-EQ-011 | The company page MUST have an Earnings quality tab: five measure cards, a five-year trend table, and an inputs disclosure whose every figure opens the citation drawer. |
+| FR-EQ-012 | Green and red MUST mean gain or loss only. Above the Beneish threshold uses the warning colour, everything else neutral, and colour MUST always come with a text label. |
+| FR-EQ-013 | Every score MUST show the caveat "Screening heuristic. Calibrated on US non-financial companies. Not a conclusion about this company's accounting." A not-applicable state MUST say why. |
+| FR-EQ-014 | The tab MUST chart net income against operating cash flow and FCF per year, with the accruals ratio as a line. |
+| FR-EQ-015 | Generated text MUST NOT describe a company as committing fraud or manipulation. The report prompt states it, and the claim verifier MUST reject such wording when it cites a screening-score source. |
+| DR-EQ-001 | A model MUST NOT be computed where it does not apply. The stored value is NULL with `NOT_APPLICABLE_SECTOR`, never a score. |
+| DR-EQ-002 | A missing input or zero denominator MUST yield insufficient data naming the input, never a substituted zero. A balance reported in only one of the two years is missing, not zero. |
+| DR-EQ-003 | Scaling every dollar input by the same factor MUST leave a score unchanged. |
+| DR-EQ-004 | A score MUST NOT be blended with others into a combined quality score. |
 
 ---
 

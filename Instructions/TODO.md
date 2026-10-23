@@ -98,6 +98,14 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] **AMD pretax income and AMD/Intel D&A are not mapped quarterly**: their tags are missing
       from the concept map, so `metric_gaps` lists them and their TTM effective tax rate, ROIC
       and EBITDA are absent (checked 2026-10-21 on the dev DB). `[code]`
+- [ ] **AMD and Intel have no total liabilities tag** (Phase 7d): their Altman Z is
+      `insufficient_data` (missing `total_liabilities`), and so are their balance-sheet accruals.
+      Deriving it as assets − equity was rejected because of temporary equity (ADR-0042). Altman's
+      original Z also needs a fiscal-year-end price, so years before the stored price history
+      are insufficient. `[code]`
+- [ ] **Peer percentiles compare latest fiscal years, not calendar years** (Phase 7d): NVIDIA's
+      January year sits beside December years; the comparison engine's calendarization is not
+      used here. `[code]`
 - [ ] **Quarterly ratios are not stored** (quarterly gross/operating margin, ROE): only TTM
       ratios are (Phase 7b scope). The Financials Quarterly view therefore hides the Margins
       charts. `[code]`
@@ -168,9 +176,9 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] **Insiders & ownership** (§10.15): no Form 4 / 13F ingestion; endpoints return `[]`; the
       `ownership` route redirects to overview. `[code]`
 - [ ] **DCF and scenario tools** (§37.6): nothing exists. `[code]`
-- [ ] **Earnings-quality dashboard** (§37.7): accruals, Piotroski and Altman formulas exist but
-      are not persisted; Beneish M is missing; DSO/DIO/DPO/CCC, ROIC, dilution, CAGR also
-      unpersisted; no UI. `[code]`
+- [ ] **ROIC (annual) and revenue CAGR are still unpersisted** (§37.7 leftovers): Phase 7d
+      stores the earnings-quality measures (below, "Done") and 7b stores TTM ROIC, but no annual
+      ROIC or multi-year CAGR row exists. `[code]`
 - [ ] **Guidance vs actual** (§37.3): EX-99.1 press releases are ingested since Phase 7c
       (`earnings_release` documents); extracting the guidance numbers is Phase 7i. Transcripts
       are deferred (ADR-0011). `[code]`
@@ -268,4 +276,16 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   DEFA14A, NT 10-K/NT 10-Q (`late_filing_notice`) and 8-K/A are ingested with per-form backfill
   windows; older submission pages are read, so JPM now has five years of 10-Ks and 10-Qs; the
   parse step skips current documents and keeps embeddings of unchanged text; `make reparse-8k`.
-
+- 2026-10-22 — **Earnings-quality dashboard** (Phase 7d, ADR-0042): the Beneish M-score (8
+  variables, −1.78 threshold, checked against a second source), the Altman Z variant chosen by SIC
+  (original or Z″, stored with the result), Piotroski with all nine criteria, accruals
+  (cash-flow and balance-sheet), DSO/DIO/DPO/CCC, FCF conversion and split-safe dilution. These
+  are persisted per fiscal year with resolvable inputs, plus TTM FCF conversion and accruals.
+  `GET /companies/{ticker}/earnings-quality` serves them with peer percentiles (hidden below
+  three peers). The new Earnings quality tab has five cards, the caveat strip, a cash-vs-earnings
+  chart, a five-year table and an inputs disclosure that opens the citation drawer. The verifier
+  rejects fraud or manipulation wording on a cited score (`report_v3`). Caught on the way:
+  NVIDIA's FY2026 marketable securities moved to a new tag, and the missing value would have
+  been read as zero; NVIDIA's FY2022 dilution read +304% because the 2021 split predates the
+  price history (now taken from the 10-K's restated comparative); derived lineage stored no input
+  values.
