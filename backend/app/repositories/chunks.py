@@ -1,4 +1,4 @@
-"""document_chunks persistence (Phase 2a). Idempotent by (document_id, parser_version)."""
+"""document_chunks persistence (Phase 2a). A re-parse replaces a document's chunks (ADR-0041)."""
 
 from __future__ import annotations
 
@@ -45,19 +45,34 @@ def get_section_siblings(
 
 
 def replace_document_chunks(
-    session: Session, *, document_id: int, parser_version: str, rows: list[dict[str, Any]]
+    session: Session, *, document_id: int, rows: list[dict[str, Any]]
 ) -> int:
-    """Delete this parser version's chunks for the document, then bulk-insert. Returns count.
+    """Replace ALL of the document's chunks (any parser version) with `rows`. Returns count.
 
-    Chunk IDs are deterministic (DP-006), so reprocessing with the same parser version yields
-    identical rows.
+    Chunk IDs are deterministic (DP-006), so reprocessing yields identical rows. Chunks of an
+    older parser version are removed too: a stale `paragraph_id` must stop resolving rather than
+    keep pointing at a superseded parse (ADR-0041). Embeddings carry over to new rows with the
+    same text (`content_hash`), so re-parsing unchanged text costs no embedding spend.
     """
-    session.execute(
-        delete(DocumentChunk).where(
-            DocumentChunk.document_id == document_id,
-            DocumentChunk.parser_version == parser_version,
+    previous = {
+        content_hash: (embedding, model, dim)
+        for content_hash, embedding, model, dim in session.execute(
+            select(
+                DocumentChunk.content_hash,
+                DocumentChunk.embedding,
+                DocumentChunk.embedding_model,
+                DocumentChunk.embedding_dim,
+            ).where(
+                DocumentChunk.document_id == document_id,
+                DocumentChunk.embedding.is_not(None),
+            )
         )
-    )
+    }
+    session.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document_id))
+    for row in rows:
+        carried = previous.get(row.get("content_hash"))
+        if carried is not None:
+            row["embedding"], row["embedding_model"], row["embedding_dim"] = carried
     if rows:
         session.bulk_insert_mappings(DocumentChunk, rows)
     return len(rows)
