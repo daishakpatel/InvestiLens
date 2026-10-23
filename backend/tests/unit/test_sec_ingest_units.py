@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from app.config import Settings
-from app.ingestion.sec.items import parse_8k_items
+from app.ingestion.documents.eightk_items import item_codes_in_document
 from app.ingestion.sec.pipeline import _within_backfill
 from app.ingestion.sec.xbrl import parse_companyfacts
 from app.providers.mocks._fixtures import fixture_gzip_bytes
@@ -14,7 +14,8 @@ from app.providers.sec.mock import MockSecSource
 
 
 def test_parse_8k_items_from_fixture() -> None:
-    items = parse_8k_items(fixture_gzip_bytes("aapl", "8k.htm.gz"))
+    # FR-EX-003: the fallback item list read from the 8-K's own HTML.
+    items = item_codes_in_document(fixture_gzip_bytes("aapl", "8k.htm.gz"))
     assert "2.02" in items and "9.01" in items  # AAPL earnings 8-K
 
 
@@ -80,9 +81,19 @@ def test_within_backfill_window() -> None:
     assert _within_backfill(old_10k, settings, today) is False
 
 
-def test_mock_source_lists_three_filings_and_facts() -> None:
+def test_mock_source_lists_filings_and_facts() -> None:
+    # FR-EX-009: the NVDA fixtures cover every ingested form type.
     source = MockSecSource()
     filings = source.list_filings("0001045810")
-    assert {f.form for f in filings} == {"10-K", "10-Q", "8-K"}
+    assert {f.form for f in filings} == {
+        "10-K",
+        "10-Q",
+        "8-K",
+        "8-K/A",
+        "DEF 14A",
+        "DEFA14A",
+        "NT 10-K",
+        "NT 10-Q",
+    }
     facts = source.companyfacts("0001045810")
     assert "facts" in facts and "us-gaap" in facts["facts"]

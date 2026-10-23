@@ -8,6 +8,7 @@ offline (no DB) via the integration conftest.
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,9 @@ from app.providers.sec.mock import MockSecSource
 from app.utils.storage import FilesystemObjectStorage
 
 NVDA_CIK = "0001045810"
+# Every NVDA fixture filing is inside the backfill windows (FR-EX-009/010).
+FIXTURE_FILINGS = len(MockSecSource().list_filings(NVDA_CIK))
+EIGHT_KS = sum(1 for f in MockSecSource().list_filings(NVDA_CIK) if f.form == "8-K")
 
 
 @pytest.fixture(scope="module")
@@ -64,7 +68,7 @@ def _count(session: Session, model: type) -> int:
 
 def test_ingest_populates_all_tables(session: Session, storage: FilesystemObjectStorage) -> None:
     counts = ingest_company(session, "NVDA", sec=MockSecSource(), storage=storage)
-    assert counts.filings_ingested == 3
+    assert counts.filings_ingested == FIXTURE_FILINGS
     assert counts.facts > 1000 and counts.dead_letters == 0
 
     # OBS-002/§28.2: a successful ingest must leave data_freshness fresh — this was a real gap
@@ -81,16 +85,23 @@ def test_ingest_populates_all_tables(session: Session, storage: FilesystemObject
 
     assert _count(session, Company) == 1
     assert _count(session, CompanyIdentifier) == 2  # ticker + cik
-    assert _count(session, Document) == 3
-    assert _count(session, Filing) == 3
+    # One document per filing, plus the earnings 8-K's EX-99.1 and EX-99.2 (FR-EX-006).
+    assert _count(session, Filing) == FIXTURE_FILINGS
+    assert _count(session, Document) == FIXTURE_FILINGS + counts.exhibits
+    assert counts.exhibits == 2
     assert _count(session, FinancialFact) == counts.facts
 
     filing = session.scalars(select(Filing).where(Filing.filing_type == "10-K")).one()
     assert filing.accession_number and filing.content_hash and filing.source_url
     assert filing.raw_document_location  # raw preserved (ING-008)
 
-    eightk = session.scalars(select(Filing).where(Filing.filing_type == "8-K")).one()
-    assert eightk.items and "9.01" in eightk.items  # 8-K item codes populated
+    items = {
+        f.accession_number: f.items
+        for f in session.scalars(select(Filing).where(Filing.filing_type == "8-K"))
+    }
+    # 8-K item codes populated as full dotted codes from the filing index (FR-EX-001/003).
+    assert items["0001045810-26-000073"] == ["2.02", "9.01"]
+    assert items["0001045810-26-000024"] == ["5.02", "9.01"]
 
     fact = session.scalars(select(FinancialFact).limit(1)).one()
     assert fact.accession_number and fact.concept_tag
@@ -103,7 +114,8 @@ def test_reingest_is_idempotent(session: Session, storage: FilesystemObjectStora
 
     second = ingest_company(session, "NVDA", sec=MockSecSource(), storage=storage)
     assert second.filings_ingested == 0
-    assert second.filings_skipped == 3
+    assert second.filings_skipped == FIXTURE_FILINGS
+    assert second.exhibits == 0  # the earnings 8-K's exhibits were stored once (FR-EX-006)
     assert _count(session, Filing) == filings_after_first  # no duplicate filings (ING-001)
     assert _count(session, FinancialFact) == facts_after_first  # facts replaced, not duplicated
     assert first.facts == second.facts
@@ -123,7 +135,7 @@ def test_reingest_restores_a_missing_document(
 
     again = ingest_company(session, "NVDA", sec=MockSecSource(), storage=storage)
     assert storage.exists(tenk.raw_document_location)
-    assert again.documents_restored == 1 and again.filings_skipped == 3
+    assert again.documents_restored == 1 and again.filings_skipped == FIXTURE_FILINGS
     assert _count(session, Filing) == filings_before
 
 
@@ -140,12 +152,13 @@ def test_partial_failure_is_dead_lettered(
     session: Session, storage: FilesystemObjectStorage
 ) -> None:
     counts = ingest_company(session, "NVDA", sec=_FailOn8KSource(), storage=storage)
-    # The 8-K failed, but the 10-K and 10-Q still landed (savepoint isolation, ING-005).
-    assert counts.filings_ingested == 2
-    assert counts.dead_letters == 1
-    assert _count(session, Filing) == 2
+    # The 8-Ks failed, but every other filing still landed (savepoint isolation, ING-005).
+    assert counts.filings_ingested == FIXTURE_FILINGS - EIGHT_KS
+    assert counts.dead_letters == EIGHT_KS
+    assert _count(session, Filing) == FIXTURE_FILINGS - EIGHT_KS
     dead = session.scalars(select(IngestionDeadLetter)).all()
-    assert len(dead) == 1 and "simulated download failure" in (dead[0].error or "")
+    assert len(dead) == EIGHT_KS
+    assert all("simulated download failure" in (d.error or "") for d in dead)
 
     run = session.scalars(select(IngestionRun).order_by(IngestionRun.id.desc())).first()
     assert run is not None and run.status == "partial"
@@ -161,7 +174,7 @@ class _OutageSecSource(MockSecSource):
     company — distinct from the unknown-ticker case above, which is a client error, not an
     outage."""
 
-    def list_filings(self, cik: str) -> Sequence[FilingRef]:
+    def list_filings(self, cik: str, *, since: date | None = None) -> Sequence[FilingRef]:
         raise RuntimeError("simulated SEC EDGAR outage")
 
 
@@ -193,7 +206,7 @@ def test_provider_outage_degrades_without_crashing(
 def test_poller_detects_new_then_none(session: Session, storage: FilesystemObjectStorage) -> None:
     source = MockSecSource()
     before: Sequence[str] = find_new_accessions(session, NVDA_CIK, sec=source)
-    assert len(before) == 3  # nothing ingested yet
+    assert len(before) == FIXTURE_FILINGS  # nothing ingested yet
     ingest_company(session, "NVDA", sec=source, storage=storage)
     after = find_new_accessions(session, NVDA_CIK, sec=source)
     assert after == []  # all ingested

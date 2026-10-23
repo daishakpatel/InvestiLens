@@ -23,6 +23,7 @@ from app.alerts.dispatch import check_and_dispatch
 from app.config import get_settings
 from app.db import get_db
 from app.filings.service import change_statuses, diff_filings
+from app.ingestion.documents.chunker import PARSER_VERSION
 from app.main import app
 from app.models import (
     Alert,
@@ -150,7 +151,7 @@ def _add_filing(
                 char_end=len(text),
                 tier=1,
                 filing_type=filing_type,
-                parser_version="doc-parse-v1",
+                parser_version=PARSER_VERSION,  # the diff reads current-parser chunks only
             )
         )
     session.flush()
