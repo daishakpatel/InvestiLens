@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 
+from app.citation.advice import accuses_on_screening_score
 from app.citation.confidence import score_claim
 from app.citation.entailment import Entailer, get_entailer
 from app.citation.evidence import EvidenceItem
@@ -117,6 +118,10 @@ def verify_claim(
     if any(sid not in evidence for sid in claim.source_ids):
         return _reject(claim, "UNKNOWN_SOURCE")
     cited = [evidence[sid] for sid in claim.source_ids]
+
+    # A screening score is a signal, never a finding: no fraud/manipulation wording on one.
+    if accuses_on_screening_score(claim.text, list(claim.source_ids)):
+        return _reject(claim, "OVERREACH")
 
     # L2 numeric match.
     numbers = extract_numbers(claim.text)

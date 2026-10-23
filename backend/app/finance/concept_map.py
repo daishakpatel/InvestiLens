@@ -31,6 +31,7 @@ class ConceptMap:
     _units: dict[str, UnitFamily]
     _sector_applicability: dict[str, bool]
     _cash_flow: frozenset[str] = frozenset()
+    _annual_only: frozenset[str] = frozenset()
 
     def tags(self, metric: str) -> list[str]:
         """Ordered XBRL tags to try for a canonical metric (first available wins)."""
@@ -49,6 +50,10 @@ class ConceptMap:
     def is_cash_flow(self, metric: str) -> bool:
         """Whether a flow is reported year-to-date in 10-Qs (cash-flow statement, FR-QT-002)."""
         return metric in self._cash_flow
+
+    def is_annual_only(self, metric: str) -> bool:
+        """Whether a flow is disclosed only in the 10-K, so it has no quarters (Phase 7d)."""
+        return metric in self._annual_only
 
     def applies(self, metric: str) -> bool:
         """Whether a metric is applicable for this company's sector (DR-001/DR-042)."""
@@ -109,4 +114,5 @@ def load_concept_map(*, ticker: str = "", cik: str = "", sector: str | None = No
         _units=base.get("units", {}),
         _sector_applicability=sector_map,
         _cash_flow=frozenset(base.get("cash_flow_metrics", [])),
+        _annual_only=frozenset(base.get("annual_only_metrics", [])),
     )
