@@ -14,9 +14,9 @@ Sector applicability (DR-042) is passed in as `applicable` by the caller (which 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from decimal import Decimal
-from typing import cast
+from typing import Any, Literal, cast
 
 from app.schemas.sources import MetricInput, MetricResult
 
@@ -512,6 +512,56 @@ def accruals_ratio(
     )
 
 
+@dataclass(frozen=True)
+class OperatingBalances:
+    """Year-end balances for net operating assets (balance-sheet accruals). None = not reported."""
+
+    total_assets: Num = None
+    cash_and_equivalents: Num = None
+    short_term_investments: Num = None  # unreported in both years means none held (as net_cash)
+    total_liabilities: Num = None
+    total_debt: Num = None
+
+
+def net_operating_assets(b: OperatingBalances) -> Num:
+    """NOA = (total assets - cash - short-term investments) - (total liabilities - total debt)."""
+    if (
+        b.total_assets is None
+        or b.cash_and_equivalents is None
+        or b.total_liabilities is None
+        or b.total_debt is None
+    ):
+        return None
+    operating_assets = b.total_assets - b.cash_and_equivalents - (b.short_term_investments or 0)
+    return operating_assets - (b.total_liabilities - b.total_debt)
+
+
+def accruals_ratio_balance_sheet(
+    current: OperatingBalances,
+    prior: OperatingBalances,
+    *,
+    applicable: bool = True,
+    sources: Sources = None,
+) -> MetricResult:
+    """Balance-sheet aggregate accruals: (NOA_t - NOA_t-1) / average NOA (ADR-0042)."""
+    inputs = year_pair_inputs(current, prior, sources)
+    if not applicable:
+        return _fail(NOT_APPLICABLE_SECTOR, RATIO, "accruals_ratio_bs", inputs)
+    noa, noa_prior = net_operating_assets(current), net_operating_assets(prior)
+    # Securities reported in one year only is a tagging change, not a disposal: treating the
+    # unreported year as zero would book the whole balance as an accrual.
+    one_sided = (current.short_term_investments is None) != (prior.short_term_investments is None)
+    if noa is None or noa_prior is None or one_sided:
+        return _fail(MISSING_INPUT, RATIO, "accruals_ratio_bs", inputs)
+    return _divide(
+        noa - noa_prior,
+        (noa + noa_prior) / 2,
+        unit=RATIO,
+        formula_id="accruals_ratio_bs",
+        inputs=inputs,
+    )
+
+
 def sbc_pct_revenue(
     stock_based_comp: Num, revenue: Num, *, sources: Sources = None
 ) -> MetricResult:
@@ -599,19 +649,96 @@ def roic(
     return _divide(nopat, invested_capital, unit=RATIO, formula_id="roic", inputs=inputs)
 
 
+def year_pair_inputs(current: Any, prior: Any, sources: Sources) -> list[MetricInput]:
+    """Lineage for a two-year score: every field of year t, then of t-1 as `prior_<field>`.
+
+    `sources` uses the same keys, so each input links to its own year's source ID (DR-040).
+    """
+    pairs: list[tuple[str, Num]] = [(f.name, getattr(current, f.name)) for f in fields(current)]
+    pairs += [(f"prior_{f.name}", getattr(prior, f.name)) for f in fields(prior)]
+    return _inputs(pairs, sources)
+
+
+def ratio_or_none(numerator: Num, denominator: Num) -> Num:
+    """numerator / denominator, or None when either is missing or the denominator is zero."""
+    if numerator is None or denominator is None or denominator == 0:
+        return None
+    return numerator / denominator
+
+
+def _greater(left: Num, right: Num) -> bool | None:
+    return None if left is None or right is None else left > right
+
+
 @dataclass(frozen=True)
 class YearFinancials:
-    """One fiscal year's figures used by the Piotroski F-score."""
+    """One fiscal year's figures used by the Piotroski F-score. None = not reported."""
 
-    net_income: Decimal
-    operating_cash_flow: Decimal
-    total_assets: Decimal
-    long_term_debt: Decimal
-    current_assets: Decimal
-    current_liabilities: Decimal
-    shares_diluted: Decimal
-    gross_profit: Decimal
-    revenue: Decimal
+    net_income: Num = None
+    operating_cash_flow: Num = None
+    total_assets: Num = None
+    long_term_debt: Num = None
+    current_assets: Num = None
+    current_liabilities: Num = None
+    shares_diluted: Num = None  # the prior year's count is moved across any stock split first
+    gross_profit: Num = None
+    revenue: Num = None
+
+
+PIOTROSKI_CRITERIA = (
+    "positive_net_income",
+    "positive_operating_cash_flow",
+    "rising_roa",
+    "cash_flow_exceeds_net_income",
+    "falling_leverage",
+    "rising_current_ratio",
+    "no_share_dilution",
+    "rising_gross_margin",
+    "rising_asset_turnover",
+)
+
+
+def piotroski_criteria(current: YearFinancials, prior: YearFinancials) -> dict[str, bool | None]:
+    """Each of Piotroski's (2000) nine binary tests; None = could not be computed (FR-EQ-007)."""
+    c, p = current, prior
+    zero = Decimal(0)
+    shares = (
+        None
+        if c.shares_diluted is None or p.shares_diluted is None
+        else c.shares_diluted <= p.shares_diluted
+    )
+    return dict(
+        zip(
+            PIOTROSKI_CRITERIA,
+            (
+                _greater(c.net_income, zero),
+                _greater(c.operating_cash_flow, zero),
+                _greater(
+                    ratio_or_none(c.net_income, c.total_assets),
+                    ratio_or_none(p.net_income, p.total_assets),
+                ),
+                _greater(c.operating_cash_flow, c.net_income),
+                _greater(
+                    ratio_or_none(p.long_term_debt, p.total_assets),
+                    ratio_or_none(c.long_term_debt, c.total_assets),
+                ),
+                _greater(
+                    ratio_or_none(c.current_assets, c.current_liabilities),
+                    ratio_or_none(p.current_assets, p.current_liabilities),
+                ),
+                shares,
+                _greater(
+                    ratio_or_none(c.gross_profit, c.revenue),
+                    ratio_or_none(p.gross_profit, p.revenue),
+                ),
+                _greater(
+                    ratio_or_none(c.revenue, c.total_assets),
+                    ratio_or_none(p.revenue, p.total_assets),
+                ),
+            ),
+            strict=True,
+        )
+    )
 
 
 def piotroski_f_score(
@@ -621,39 +748,38 @@ def piotroski_f_score(
     applicable: bool = True,
     sources: Sources = None,
 ) -> MetricResult:
-    """9-point Piotroski F-score (not for financials). Each test contributes 0 or 1."""
-    inputs = _inputs(
-        [
-            ("net_income", current.net_income),
-            ("operating_cash_flow", current.operating_cash_flow),
-            ("total_assets", current.total_assets),
-        ],
-        sources,
-    )
+    """9-point Piotroski F-score (not for financials). A total exists only when all nine tests
+    can be computed; otherwise MISSING_INPUT, and the caller reports "n of 9 computable"."""
+    inputs = year_pair_inputs(current, prior, sources)
     if not applicable:
         return _fail(NOT_APPLICABLE_SECTOR, SCORE, "piotroski_f_score", inputs)
-    roa_c = current.net_income / current.total_assets
-    roa_p = prior.net_income / prior.total_assets
-    cr_c = current.current_assets / current.current_liabilities
-    cr_p = prior.current_assets / prior.current_liabilities
-    lev_c = current.long_term_debt / current.total_assets
-    lev_p = prior.long_term_debt / prior.total_assets
-    gm_c = current.gross_profit / current.revenue
-    gm_p = prior.gross_profit / prior.revenue
-    at_c = current.revenue / current.total_assets
-    at_p = prior.revenue / prior.total_assets
-    tests = [
-        current.net_income > 0,  # 1 profitability
-        current.operating_cash_flow > 0,  # 2
-        roa_c > roa_p,  # 3 rising ROA
-        current.operating_cash_flow > current.net_income,  # 4 accruals (quality)
-        lev_c < lev_p,  # 5 lower leverage
-        cr_c > cr_p,  # 6 higher liquidity
-        current.shares_diluted <= prior.shares_diluted,  # 7 no dilution
-        gm_c > gm_p,  # 8 higher margin
-        at_c > at_p,  # 9 higher asset turnover
-    ]
-    return _ok(Decimal(sum(1 for t in tests if t)), SCORE, "piotroski_f_score", inputs)
+    criteria = piotroski_criteria(current, prior)
+    if any(passed is None for passed in criteria.values()):
+        return _fail(MISSING_INPUT, SCORE, "piotroski_f_score", inputs)
+    return _ok(
+        Decimal(sum(1 for passed in criteria.values() if passed)),
+        SCORE,
+        "piotroski_f_score",
+        inputs,
+    )
+
+
+# Altman (1968), J. Finance 23(4): original Z for public manufacturers. Z'' for non-manufacturers
+# (book equity, no sales term): Altman et al. (2017), JIFMA 28(2). Zones per variant: (distress
+# below, safe above); between is grey. Coefficients and cut-offs are quoted in ADR-0042.
+AltmanVariant = Literal["original", "z_double_prime"]
+ALTMAN_ZONES: dict[AltmanVariant, tuple[Decimal, Decimal]] = {
+    "original": (Decimal("1.81"), Decimal("2.99")),
+    "z_double_prime": (Decimal("1.10"), Decimal("2.60")),
+}
+
+
+def altman_zone(z: Decimal, variant: AltmanVariant) -> str:
+    """distress | grey | safe, by the variant's own cut-offs."""
+    distress, safe = ALTMAN_ZONES[variant]
+    if z < distress:
+        return "distress"
+    return "safe" if z > safe else "grey"
 
 
 def altman_z_score(
@@ -661,50 +787,52 @@ def altman_z_score(
     retained_earnings: Num,
     ebit: Num,
     total_assets: Num,
-    market_value_equity: Num,
+    equity_value: Num,
     total_liabilities: Num,
-    sales: Num,
+    sales: Num = None,
     *,
+    variant: AltmanVariant = "original",
     applicable: bool = True,
     sources: Sources = None,
 ) -> MetricResult:
-    """Altman Z (manufacturing public-company variant); N/A for financials. Labels limitations."""
-    inputs = _inputs(
-        [
-            ("working_capital", working_capital),
-            ("retained_earnings", retained_earnings),
-            ("ebit", ebit),
-            ("total_assets", total_assets),
-            ("market_value_equity", market_value_equity),
-            ("total_liabilities", total_liabilities),
-            ("sales", sales),
-        ],
-        sources,
-    )
-    if not applicable:
-        return _fail(NOT_APPLICABLE_SECTOR, SCORE, "altman_z_score", inputs)
-    values = [
-        working_capital,
-        retained_earnings,
-        ebit,
-        total_assets,
-        market_value_equity,
-        total_liabilities,
-        sales,
+    """Altman Z; N/A for financials. `variant` is chosen by the caller and never guessed here:
+    "original" takes market value of equity and sales, "z_double_prime" book equity, no sales."""
+    original = variant == "original"
+    formula_id = "altman_z_score" if original else "altman_z_double_prime"
+    named: list[tuple[str, Num]] = [
+        ("working_capital", working_capital),
+        ("retained_earnings", retained_earnings),
+        ("ebit", ebit),
+        ("total_assets", total_assets),
+        ("market_value_equity" if original else "book_value_equity", equity_value),
+        ("total_liabilities", total_liabilities),
     ]
-    if any(v is None for v in values):
-        return _fail(MISSING_INPUT, SCORE, "altman_z_score", inputs)
-    wc, re_, eb, ta, mve, tl, sa = (cast(Decimal, v) for v in values)
+    if original:
+        named.append(("sales", sales))
+    inputs = _inputs(named, sources)
+    if not applicable:
+        return _fail(NOT_APPLICABLE_SECTOR, SCORE, formula_id, inputs)
+    if any(value is None for _, value in named):
+        return _fail(MISSING_INPUT, SCORE, formula_id, inputs)
+    wc, re_, eb, ta, eq, tl = (cast(Decimal, value) for _, value in named[:6])
     if ta <= 0 or tl <= 0:
-        return _fail(NEGATIVE_BASE, SCORE, "altman_z_score", inputs)
-    z = (
-        Decimal("1.2") * (wc / ta)
-        + Decimal("1.4") * (re_ / ta)
-        + Decimal("3.3") * (eb / ta)
-        + Decimal("0.6") * (mve / tl)
-        + Decimal("1.0") * (sa / ta)
-    )
-    return _ok(z, SCORE, "altman_z_score", inputs)
+        return _fail(NEGATIVE_BASE, SCORE, formula_id, inputs)
+    if original:
+        z = (
+            Decimal("1.2") * (wc / ta)
+            + Decimal("1.4") * (re_ / ta)
+            + Decimal("3.3") * (eb / ta)
+            + Decimal("0.6") * (eq / tl)
+            + Decimal("1.0") * (cast(Decimal, sales) / ta)
+        )
+    else:
+        z = (
+            Decimal("6.56") * (wc / ta)
+            + Decimal("3.26") * (re_ / ta)
+            + Decimal("6.72") * (eb / ta)
+            + Decimal("1.05") * (eq / tl)
+        )
+    return _ok(z, SCORE, formula_id, inputs)
 
 
 def percentile_rank(value: Decimal, distribution: Sequence[Decimal]) -> MetricResult:
