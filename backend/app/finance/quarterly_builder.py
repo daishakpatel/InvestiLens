@@ -43,7 +43,7 @@ from app.finance.selection import FactView
 from app.models import Company
 from app.repositories import gaps as gaps_repo
 from app.repositories import metrics as metrics_repo
-from app.schemas.sources import MetricResult
+from app.schemas.sources import MetricInput, MetricResult
 
 INCOMPLETE_WINDOW = "incomplete_window"  # a TTM window missing at least one quarter
 _DERIVED_ACCESSION = "derived"  # non-null sentinel so the upsert key is idempotent (as ratios)
@@ -58,6 +58,12 @@ _TTM_FORMULAS = {
     "gross_margin": "TTM gross profit / TTM revenue",
     "operating_margin": "TTM operating income / TTM revenue",
     "fcf_margin": "TTM free cash flow / TTM revenue",
+    # Earnings quality on a trailing basis (Phase 7d, FR-EQ-008).
+    "fcf_conversion": "TTM free cash flow / TTM net income",
+    "accruals_ratio": (
+        "(TTM net income - TTM operating cash flow) / average total assets at the window's start "
+        "and end"
+    ),
     "roic": "TTM operating income x (1 - TTM tax rate) / (debt + equity - cash) at quarter end",
 }
 
@@ -73,7 +79,7 @@ def quarterly_metrics(cmap: ConceptMap) -> list[str]:
     """Every flow metric, and the balance-sheet stocks (the cover-page share count is dated
     after the quarter, not at its end, so it has no quarterly balance)."""
     stocks = [m for m in cmap.stock_metrics if cmap.unit_family(m) == "currency"]
-    return cmap.flow_metrics + stocks
+    return [m for m in cmap.flow_metrics if not cmap.is_annual_only(m)] + stocks
 
 
 def coverage_metrics(cmap: ConceptMap) -> list[str]:
@@ -83,7 +89,11 @@ def coverage_metrics(cmap: ConceptMap) -> list[str]:
 
 def ttm_summed(cmap: ConceptMap) -> list[str]:
     """Flows whose TTM is a four-quarter sum: amounts, not per-share figures or share counts."""
-    return [m for m in cmap.flow_metrics if cmap.unit_family(m) == "currency"]
+    return [
+        m
+        for m in cmap.flow_metrics
+        if cmap.unit_family(m) == "currency" and not cmap.is_annual_only(m)
+    ]
 
 
 class _Writer:
@@ -382,6 +392,8 @@ def _ttm_ratios(
     )
     store(metrics.operating_margin(v("operating_income"), v("revenue"), sources=sources))
     store(metrics.fcf_margin(v("free_cash_flow"), v("revenue"), sources=sources))
+    store(metrics.fcf_conversion(v("free_cash_flow"), v("net_income"), sources=sources))
+    store(_ttm_accruals(series, as_of, v, sources))
 
     # Balances are the latest quarter end's, i.e. their TTM is the balance (FR-QT-008).
     equity = ttm.ttm_for(_values(series, "shareholders_equity"), as_of, kind="stock")
@@ -404,3 +416,29 @@ def _ttm_ratios(
             sources={**sources, **{k: s for k, s in balance_sources.items() if s}},
         )
     )
+
+
+def _ttm_accruals(
+    series: dict[str, QuarterlySeries],
+    as_of: FiscalQuarter,
+    v: Callable[[str], metrics.Num],
+    sources: dict[str, str],
+) -> MetricResult:
+    """TTM accruals ratio over the average of total assets before and at the end of the window.
+    The opening balance is the quarter before the window; without it there is no ratio."""
+    assets = _values(series, "total_assets")
+    opening = ttm.ttm_for(assets, as_of.trailing(ttm.TTM_QUARTERS + 1)[0], kind="stock")
+    closing = ttm.ttm_for(assets, as_of, kind="stock")
+    average = (
+        None
+        if opening.value is None or closing.value is None
+        else (opening.value + closing.value) / 2
+    )
+    result = metrics.accruals_ratio(
+        v("net_income"), v("operating_cash_flow"), average, sources=sources
+    )
+    balances = [
+        MetricInput(name=f"{label}_total_assets", value=b.value, source_id=b.inputs[0].source_id)
+        for label, b in (("opening", opening), ("closing", closing))
+    ]
+    return result.model_copy(update={"inputs": [*result.inputs, *balances]})

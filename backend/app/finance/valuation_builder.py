@@ -200,6 +200,19 @@ def _persist(
     )
 
 
+def load_splits(session: Session, company_id: int) -> list[tuple[date, Decimal]]:
+    """A company's stock splits as (ex-date, ratio), for moving share counts across them."""
+    return [
+        (d, r)
+        for d, r in session.execute(
+            select(CorporateAction.ex_date, CorporateAction.ratio_or_amount).where(
+                CorporateAction.company_id == company_id, CorporateAction.action_type == "split"
+            )
+        ).all()
+        if d is not None and r
+    ]
+
+
 def build_company_valuation(session: Session, company: Company) -> int:
     """Rebuild a company's valuation rows (fiscal years + latest close). Returns rows written."""
     session.execute(
@@ -238,15 +251,7 @@ def build_company_valuation(session: Session, company: Company) -> int:
     ]
     if not prices or not year_end:
         return 0
-    splits = [
-        (d, r)
-        for d, r in session.execute(
-            select(CorporateAction.ex_date, CorporateAction.ratio_or_amount).where(
-                CorporateAction.company_id == company.id, CorporateAction.action_type == "split"
-            )
-        ).all()
-        if d is not None and r
-    ]
+    splits = load_splits(session, company.id)
     counts = _share_counts(session, company.id)
     cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
     ev_applies = cmap.applies("ev_ebitda")  # EV-based multiples are N/A for banks (Appendix C)

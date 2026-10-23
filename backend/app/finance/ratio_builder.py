@@ -10,6 +10,7 @@ are persisted with value NULL and a reason code, never zero (DR-042).
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,7 +24,7 @@ from app.schemas.sources import MetricResult
 _DERIVED_ACCESSION = "derived"  # non-null sentinel so the upsert key is idempotent
 
 
-class _Canonical:
+class Canonical:
     """Canonical annual base values for one company: (fiscal_year, metric) -> value/source."""
 
     def __init__(self, rows: list[FinancialMetric]) -> None:
@@ -49,10 +50,24 @@ class _Canonical:
         return sorted({fy for fy, _ in self._value})
 
 
-def _persist(
-    session: Session, company_id: int, ticker: str, fiscal_year: int, result: MetricResult
+def persist_derived(
+    session: Session,
+    company_id: int,
+    ticker: str,
+    fiscal_year: int,
+    result: MetricResult,
+    *,
+    name: str | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> None:
-    lineage = [{"name": i.name, "source_id": i.source_id} for i in result.inputs]
+    """Upsert one derived FY row. `name` overrides the stored metric name (default: the formula
+    id); `extra` adds keys to `quality_flags` beside the lineage (e.g. a score's band)."""
+    metric_name = name or result.formula_id
+    lineage = [
+        {"name": i.name, "source_id": i.source_id}
+        | ({"value": str(i.value)} if i.value is not None else {})
+        for i in result.inputs
+    ]
     metrics_repo.upsert_metric(
         session,
         company_id=company_id,
@@ -62,7 +77,7 @@ def _persist(
         period_start=None,
         period_end=None,
         period_type="FY",
-        metric_name=result.formula_id,
+        metric_name=metric_name,
         metric_value=result.value,  # None = N/A or uncomputable
         unit=result.unit,
         is_derived=True,
@@ -70,19 +85,20 @@ def _persist(
         # Company-scoped so a derived id is globally unique (two companies' gross_margin for the
         # same fiscal year must not collide — this breaks cross-company comparison evidence and
         # made GET /sources ambiguous; comparison, §37.1, surfaced it).
-        source_id=f"derived:{ticker}:{result.formula_id}:FY{fiscal_year}",
+        source_id=f"derived:{ticker}:{metric_name}:FY{fiscal_year}",
         as_reported_accession=_DERIVED_ACCESSION,
         is_latest=True,
         quality_flags={
             "inputs": lineage,
             "formula_version": result.formula_version,
             "warnings": result.warnings,
+            **(extra or {}),
         },
     )
 
 
 def _compute_year(
-    canonical: _Canonical, cmap: ConceptMap, fy: int, prior: int | None
+    canonical: Canonical, cmap: ConceptMap, fy: int, prior: int | None
 ) -> list[MetricResult]:
     def v(metric: str, year: int | None = None) -> Decimal | None:
         return canonical.value(year if year is not None else fy, metric)
@@ -163,12 +179,12 @@ def build_company_ratios(session: Session, company: Company) -> int:
             )
         )
     )
-    canonical = _Canonical(rows)
+    canonical = Canonical(rows)
     years = canonical.fiscal_years
     written = 0
     for index, fy in enumerate(years):
         prior = years[index - 1] if index > 0 else None
         for result in _compute_year(canonical, cmap, fy, prior):
-            _persist(session, company.id, company.ticker, fy, result)
+            persist_derived(session, company.id, company.ticker, fy, result)
             written += 1
     return written

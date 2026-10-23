@@ -77,3 +77,11 @@ def sic_to_sector(sic: str | None) -> str | None:
         if low <= major <= high:
             return division
     return None
+
+
+def is_manufacturer(sic: str | None) -> bool | None:
+    """SIC Division D, major groups 20-39, is manufacturing (Altman's original Z sample, ADR-0042).
+    None when the code is absent or unusable, so the caller states it rather than guessing."""
+    if not sic or not sic.strip().isdigit() or len(sic.strip()) < 2:
+        return None
+    return 20 <= int(sic.strip()[:2]) <= 39
