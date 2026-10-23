@@ -54,6 +54,11 @@ const METRICS: Record<string, MetricInfo> = {
   total_debt: { label: "Total debt", kind: "bar", better: "lower" },
   total_liabilities: { label: "Total liabilities", kind: "bar", better: "lower" },
   shareholders_equity: { label: "Shareholders’ equity", kind: "bar" },
+  retained_earnings: { label: "Retained earnings", kind: "bar" },
+  ppe_net: { label: "PP&E, net", kind: "bar" },
+  sga_expense: { label: "SG&A expense", kind: "bar", better: "neither" },
+  depreciation: { label: "Depreciation", kind: "bar", better: "neither" },
+  income_tax_expense: { label: "Income tax expense", kind: "bar", better: "neither" },
   current_ratio: { label: "Current ratio", kind: "line", multiple: true },
   debt_to_equity: { label: "Debt / equity", kind: "line", multiple: true, better: "lower" },
 

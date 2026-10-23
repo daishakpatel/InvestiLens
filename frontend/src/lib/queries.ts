@@ -24,6 +24,7 @@ import type {
   ManagementLanguageResponse,
   MetricResult,
   MetricsCoverageResponse,
+  EarningsQualityResponse,
   NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
@@ -102,6 +103,18 @@ export function useMetricsCoverage(
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/metrics/coverage`, { signal });
       return parse.metricsCoverage(data);
+    },
+  });
+}
+
+/** Earnings-quality measures for the last five fiscal years (FR-EQ-009). */
+export function useEarningsQuality(ticker: string): UseQueryResult<EarningsQualityResponse> {
+  return useQuery({
+    queryKey: ["earnings-quality", ticker],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/earnings-quality`, { signal });
+      return parse.earningsQuality(data);
     },
   });
 }

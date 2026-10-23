@@ -16,6 +16,7 @@ const CompanyDashboard = lazy(() => import("./pages/CompanyDashboard"));
 // Overview draws charts, so it is lazy too: Recharts must stay out of the entry bundle.
 const OverviewTab = lazy(() => import("./pages/tabs/OverviewTab"));
 const FinancialsTab = lazy(() => import("./pages/tabs/FinancialsTab"));
+const EarningsQualityTab = lazy(() => import("./pages/tabs/EarningsQualityTab"));
 const ResearchTab = lazy(() => import("./pages/tabs/ResearchTab"));
 const FilingsTab = lazy(() => import("./pages/tabs/FilingsTab"));
 const NewsTab = lazy(() => import("./pages/tabs/NewsTab"));
@@ -72,6 +73,7 @@ export function App() {
           <Route path="company/:ticker" element={<CompanyDashboard />}>
             <Route index element={<OverviewTab />} />
             <Route path="financials" element={<FinancialsTab />} />
+            <Route path="quality" element={<EarningsQualityTab />} />
             <Route path="research" element={<ResearchTab />} />
             <Route path="filings" element={<FilingsTab />} />
             <Route path="news" element={<NewsTab />} />

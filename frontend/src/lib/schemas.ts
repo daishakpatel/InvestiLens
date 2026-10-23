@@ -22,6 +22,7 @@ import type {
   ManagementLanguageResponse,
   MetricResult,
   MetricsCoverageResponse,
+  EarningsQualityResponse,
   NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
@@ -103,6 +104,43 @@ const metricsCoverage = z.object({
       missing: z.array(z.object({ period: z.string(), reason: z.string() })),
     }),
   ),
+  freshness,
+});
+
+// Phase 7d (FR-EQ-009): earnings-quality measures per fiscal year, each with status and inputs.
+const qualityPoint = z.object({
+  period: z.string(),
+  fiscal_year: z.number(),
+  value: z.string().nullable(),
+  status: z.enum(["ok", "insufficient_data", "not_applicable"]),
+  band: z.string().nullish(),
+  reason: z.string().nullish(),
+  reason_text: z.string().nullish(),
+  missing: z.array(z.string()),
+  source_id: z.string().nullish(),
+  formula_id: z.string().nullish(),
+  inputs: z.array(metricInput),
+  details: z.record(z.string(), z.unknown()),
+});
+
+const earningsQuality = z.object({
+  ticker: z.string(),
+  fiscal_years: z.array(z.number()),
+  measures: z.array(
+    z.object({
+      metric_name: z.string(),
+      label: z.string(),
+      unit: z.string(),
+      explanation: z.string(),
+      caveat: z.string().nullish(),
+      points: z.array(qualityPoint),
+      latest_ttm: qualityPoint.nullish(),
+      peer_percentile: z.string().nullish(),
+      peer_count: z.number(),
+    }),
+  ),
+  peers: z.array(z.string()),
+  notes: z.array(z.string()),
   freshness,
 });
 
@@ -557,6 +595,8 @@ export const parse = {
   metricsCoverage: (d: unknown): MetricsCoverageResponse =>
     metricsCoverage.parse(d) as MetricsCoverageResponse,
   valuation: (d: unknown): ValuationResponse => valuation.parse(d) as ValuationResponse,
+  earningsQuality: (d: unknown): EarningsQualityResponse =>
+    earningsQuality.parse(d) as EarningsQualityResponse,
   prices: (d: unknown): PricesResponse => prices.parse(d) as PricesResponse,
   filings: (d: unknown): FilingSummary[] => z.array(filing).parse(d) as FilingSummary[],
   news: (d: unknown): NewsResponse => news.parse(d) as NewsResponse,

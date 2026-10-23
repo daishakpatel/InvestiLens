@@ -403,6 +403,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/earnings-quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Earnings Quality
+         * @description Accruals, cash conversion, working-capital days, dilution and the screening scores, per
+         *     fiscal year, each with its inputs' source IDs (FR-EQ-009).
+         */
+        get: operations["get_earnings_quality_api_v1_companies__ticker__earnings_quality_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/filings": {
         parameters: {
             query?: never;
@@ -1398,6 +1419,23 @@ export interface components {
             /** Text */
             text?: string | null;
         };
+        /** EarningsQualityResponse */
+        EarningsQualityResponse: {
+            /** Fiscal Years */
+            fiscal_years: number[];
+            freshness: components["schemas"]["Freshness"];
+            /** Measures */
+            measures: components["schemas"]["QualityMeasure"][];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            /** Peers */
+            peers: string[];
+            /** Ticker */
+            ticker: string;
+        };
         /** EarningsReaction */
         EarningsReaction: {
             filing: components["schemas"]["FilingSummary"];
@@ -2213,6 +2251,73 @@ export interface components {
              * @default USD
              */
             unit: string;
+        };
+        /** QualityMeasure */
+        QualityMeasure: {
+            /** Caveat */
+            caveat?: string | null;
+            /** Explanation */
+            explanation: string;
+            /** Label */
+            label: string;
+            latest_ttm?: components["schemas"]["QualityPoint"] | null;
+            /** Metric Name */
+            metric_name: string;
+            /**
+             * Peer Count
+             * @default 0
+             */
+            peer_count: number;
+            /** Peer Percentile */
+            peer_percentile?: string | null;
+            /** Points */
+            points: components["schemas"]["QualityPoint"][];
+            /** Unit */
+            unit: string;
+        };
+        /**
+         * QualityPoint
+         * @description One measure for one period. `value` is None unless `status` is ok (never a zero).
+         */
+        QualityPoint: {
+            /** Band */
+            band?: string | null;
+            /**
+             * Details
+             * @default {}
+             */
+            details: {
+                [key: string]: unknown;
+            };
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Formula Id */
+            formula_id?: string | null;
+            /**
+             * Inputs
+             * @default []
+             */
+            inputs: components["schemas"]["MetricInput"][];
+            /**
+             * Missing
+             * @default []
+             */
+            missing: string[];
+            /** Period */
+            period: string;
+            /** Reason */
+            reason?: string | null;
+            /** Reason Text */
+            reason_text?: string | null;
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "insufficient_data" | "not_applicable";
+            /** Value */
+            value: string | null;
         };
         /** Readiness */
         Readiness: {
@@ -3502,6 +3607,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EarningsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_earnings_quality_api_v1_companies__ticker__earnings_quality_get: {
+        parameters: {
+            query?: {
+                /** @description Latest N fiscal years */
+                years?: number;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsQualityResponse"];
                 };
             };
             /** @description Validation Error */
