@@ -1502,6 +1502,8 @@ export interface components {
             accession_number: string;
             /** Company Ticker */
             company_ticker: string;
+            /** Document Type */
+            document_type?: string | null;
             /** Filing Date */
             filing_date?: string | null;
             /** Filing Id */
@@ -1608,6 +1610,8 @@ export interface components {
         FilingSummary: {
             /** Accession Number */
             accession_number: string;
+            /** Document Type */
+            document_type?: string | null;
             /** Filing Date */
             filing_date?: string | null;
             /** Filing Id */

@@ -1315,6 +1315,17 @@
             "title": "Company Ticker",
             "type": "string"
           },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
           "filing_date": {
             "anyOf": [
               {
@@ -1626,6 +1637,17 @@
           "accession_number": {
             "title": "Accession Number",
             "type": "string"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
           },
           "filing_date": {
             "anyOf": [

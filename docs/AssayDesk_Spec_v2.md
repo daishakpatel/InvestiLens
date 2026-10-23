@@ -3329,6 +3329,29 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | DR-QT-003 | A TTM ratio MUST be computed from the TTM numerator and TTM denominator, never by averaging quarterly ratios. |
 | DR-QT-004 | Q1 + Q2 + Q3 + Q4 MUST equal the stored FY value exactly (Decimal equality). |
 
+**SEC exhibits, extra forms and 8-K items (Phase 7c, ADR-0041)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-EX-001 | 8-K items MUST be stored and sectioned as full dotted codes (`5.02`, never `5`); 10-K item codes are unchanged. |
+| FR-EX-002 | 8-K heading parsing MUST accept a trailing period, upper case, non-breaking spaces, a dash or colon before the title, and a table-of-contents copy (the later occurrence wins). |
+| FR-EX-003 | The filing index's 8-K item list MUST classify the filing; parsed headings MUST bound its text; when they disagree both are stored, `items_mismatch` is set and a warning logged. |
+| FR-EX-004 | A parser change MUST bump `PARSER_VERSION`; `make reparse-8k` MUST re-chunk only stale 8-Ks and change nothing when re-run. |
+| FR-EX-005 | `SecSource` MUST offer `list_exhibits` and `fetch_exhibit` (live and mock), returning EX-99.x only, through the hardened HTTP client (timeout, retry, logging, SEC rate limit, declared User-Agent). |
+| FR-EX-006 | An exhibit MUST be stored as a `Document` with `document_type = earnings_release`, `source_tier = 2`, its URL, `published_at` = the 8-K's acceptance time and `{parent_accession, exhibit_type}` metadata, and chunked for retrieval. |
+| FR-EX-007 | Exhibits MUST be fetched only for 8-Ks with Item 2.02, 7.01 or 8.01, and a filing's index MUST NOT be read again once checked. |
+| FR-EX-008 | A press-release table MUST keep each figure in the same chunk as its row label. |
+| FR-EX-009 | DEF 14A, DEFA14A (flagged supplemental), NT 10-K and NT 10-Q (`late_filing_notice`) and 8-K/A MUST be ingested, and the filings API MUST report each filing's `document_type`. |
+| FR-EX-010 | Backfill windows MUST be configuration: 10-K 5 years, 10-Q 12 quarters, 8-K 2 years, DEF 14A 3 years, NT forms 3 years. |
+| FR-EX-011 | `list_filings` MUST read older `filings.files[]` pages when the backfill window reaches past the recent block, and only those pages. |
+| FR-EX-012 | 10-Q Part I Item 1 (financial statements and notes) MUST be chunked under section key `10q_part1_item1_notes`; 10-Q item codes are part-qualified. |
+| FR-EX-013 | Exhibit and proxy chunks MUST be embedded only while `EMBED_EXHIBITS` is on. |
+| FR-EX-014 | The parse step MUST skip documents already at the current parser version, and a late-filing notice MUST get metadata only (no chunks, no embeddings). |
+| FR-EX-015 | A new exhibit-bearing 8-K found by the poller MUST have its exhibits fetched, parsed and embedded in the same refresh chain. |
+| DR-EX-001 | A re-parse MUST replace all of a document's chunks; a citation to a superseded chunk MUST resolve to not-found, never to different text. |
+| DR-EX-002 | Re-parsing unchanged text MUST NOT discard its embedding (carried over by `content_hash`). |
+| DR-EX-003 | A fixture standing in for a form the company never filed MUST say it is synthetic, in its text and in the manifest. |
+
 ---
 
 *End of document — Assay Desk Specification v2.0*

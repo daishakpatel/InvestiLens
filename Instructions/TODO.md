@@ -32,13 +32,14 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] **JPM's 10-K is mis-sectioned**: 1,523 of its 2,463 passages are labelled "Item 15. Exhibits",
       because JPM binds its annual report (MD&A, financials) after that heading. Answers still work,
       but section-aware features (management commentary, language tracking) miss it. `[code]`
-- [ ] **Prolific filers get a one-year history**: EDGAR's "recent filings" list holds about 1,000
-      entries, and JPM files thousands of prospectus documents, so only one 10-K and three 10-Qs
-      were found. The loader should also read the older `filings.files` pages. `[code]`
+- [ ] **Older submission pages are re-read on every ingest**: since Phase 7c `list_filings`
+      pages through `filings.files[]` back to the longest backfill window (JPM: dozens of pages
+      per run). The pages are immutable history; caching them would save SEC requests. `[code]`
+- [ ] **JPM's 10-Q has no Part I item headings** (cross-reference layout): its financial
+      statements and MD&A are kept as one "Part I" section (`10q_part1_unitemized`) and flagged
+      low-confidence, not split into Item 1 / Item 2. `[code]`
 - [ ] **Table figures in millions fail the answer checker**: a claim quoting "$19,827 million" from
       a table whose cells read "19,827" (in millions) is rejected as a mismatch. `[code]`
-- [ ] 10-Q Part I (financial statements + MD&A) is dropped by section detection, so language
-      tracking and diffs miss 10-Q MD&A. Needs a `parser_version` bump. `[notes]`
 - [ ] **Browser tests assume AMD has no prices**: `e2e/tests/company.spec.ts`, `tools.spec.ts`
       and `screenshots.spec.ts` use AMD for the "no price history" case, which is no longer true
       in the dev DB. The visual suite replays recorded responses and is unaffected. `[code]`
@@ -170,8 +171,9 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] **Earnings-quality dashboard** (§37.7): accruals, Piotroski and Altman formulas exist but
       are not persisted; Beneish M is missing; DSO/DIO/DPO/CCC, ROIC, dilution, CAGR also
       unpersisted; no UI. `[code]`
-- [ ] **Guidance vs actual** (§37.3): needs 8-K EX-99.1 exhibit ingestion or a licensed
-      estimates source. Transcripts are deferred (ADR-0011). `[notes]`
+- [ ] **Guidance vs actual** (§37.3): EX-99.1 press releases are ingested since Phase 7c
+      (`earnings_release` documents); extracting the guidance numbers is Phase 7i. Transcripts
+      are deferred (ADR-0011). `[code]`
 - [ ] **Report analytics** (§10.3–10.7): revenue waterfall, seasonality, segment/geo mix
       (dimensional XBRL), margin bridge, valuation percentile bands. `[notes]`
 - [ ] **RAG / AI**: semantic cache (RAG-050); cheap-model intent classifier and query rewriter;
@@ -259,4 +261,11 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   companies. Caught on the way: TTM EPS mixed pre- and post-split figures (NVIDIA read -2.28),
   and `get_latest_metrics` would have let a quarter of the year in progress displace the annual
   figure in portfolio and research.
+- 2026-10-22 — **SEC exhibits, extra forms and the 8-K item fix** (Phase 7c, ADR-0041): 8-K items
+  are full dotted codes (5.02 and 5.07 were both "5"); 10-Q Part I (financial statements, notes,
+  MD&A) is chunked again (Part II's item numbers had overwritten it, so it was never chunked);
+  EX-99.1/99.2 of earnings 8-Ks are stored as tier-2 `earnings_release` documents; DEF 14A,
+  DEFA14A, NT 10-K/NT 10-Q (`late_filing_notice`) and 8-K/A are ingested with per-form backfill
+  windows; older submission pages are read, so JPM now has five years of 10-Ks and 10-Qs; the
+  parse step skips current documents and keeps embeddings of unchanged text; `make reparse-8k`.
 

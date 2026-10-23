@@ -106,6 +106,35 @@ or TTM window a metric is missing, with a reason code (`missing_ytd_1q|2q|3q`, `
 company never reports, or one not applicable to its sector (`sector_applicability.yaml`, DR-042),
 has no gaps: N/A is not missing data.
 
+### Documents: types, metadata and parsing (Phase 7c, ADR-0041)
+
+`documents.document_type` values: `filing` (10-K, 10-Q, 8-K, 8-K/A, DEF 14A, DEFA14A),
+`late_filing_notice` (NT 10-K, NT 10-Q: stored and given metadata, never chunked or embedded),
+`earnings_release` (an 8-K's EX-99.x press release, `source_tier` 2, `published_at` = the 8-K's
+EDGAR acceptance time), and `news`. A filing's `published_at` is also its acceptance time.
+
+`documents.metadata` keys:
+
+| Key | On | Meaning |
+|-----|----|---------|
+| `form`, `accession_number` | filings | as filed |
+| `items_metadata` | 8-K, 8-K/A | the filing index's own item list (NULL when the index gave none) |
+| `items_parsed` | 8-K, 8-K/A | the dotted item headings found in the text at parse time |
+| `items_mismatch` | 8-K, 8-K/A | true when the two lists differ (both kept; the index list is what `filings.items` holds) |
+| `exhibits_checked` | 8-K with Item 2.02 / 7.01 / 8.01 | its filing index was read once, so it is not re-read every run |
+| `supplemental` | DEFA14A | additional proxy soliciting material |
+| `notice_for`, `period_end` | late_filing_notice | the form it is late for (`10-K` / `10-Q`) and its period |
+| `parent_accession`, `exhibit_type`, `filename`, `size_bytes` | earnings_release | the 8-K it came with, `EX-99.1` etc. |
+
+`documents.parser_version` is NULL until the document is parsed, then the parser version that
+produced its chunks (`sec-ingest-v2`); the parse step skips documents already at it. A re-parse
+replaces every chunk of the document, whatever its version, keeping the embedding of any chunk
+whose `content_hash` is unchanged. `document_chunks.paragraph_id` is `{document}_{item}_{n}`,
+where 8-K items are dotted (`5.02`) and 10-Q items part-qualified (`P1-1`), so a chunk ID from an
+older parse no longer resolves. `chunk_metadata.section_key` names the section independently of
+its heading (`10q_part1_item1_notes`, `10k_item7`, `8k_item2.02`, `document`); exhibit chunks
+carry `filing_type` = the exhibit type (`EX-99.1`) and `tier` 2. No schema change.
+
 ### Company profile enrichment (Phase 6a)
 
 `companies.sic_code`, `sector`, `industry`, `exchange`, and `fiscal_year_end` were nullable and

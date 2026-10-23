@@ -124,6 +124,29 @@ Q4 = FY − (Q1 + Q2 + Q3); balances are read at each quarter end. `quarterly_bu
 TTM margins from TTM sums, never averaged quarterly ratios), each derived row citing its inputs,
 and writes a `metric_gaps` row, with a reason, for every quarter or window it cannot compute.
 
+**SEC ingestion** (Phase 1a; exhibits and extra forms in Phase 7c, ADR-0041). `SecSource`
+(`app/providers/sec/`, live EDGAR or frozen fixtures) offers `company_tickers`, `company_metadata`,
+`list_filings(cik, since=)` (EDGAR's recent block, plus older `filings.files[]` pages when
+`since` reaches past it), `companyfacts`, `fetch_document`, and `list_exhibits` /
+`fetch_exhibit` (EX-99.x only, found in the filing's `-index-headers.html`). Every live call goes
+through `HardenedHttpClient` (declared User-Agent, SEC fair-access rate limit, timeout, retry,
+host allowlist).
+
+```text
+list_filings(since = longest backfill window)
+   │  10-K 5y · 10-Q 12 quarters · 8-K / 8-K/A 2y · DEF 14A / DEFA14A 3y · NT 10-K / NT 10-Q 3y
+   ▼
+for each filing (SAVEPOINT) ── fetch_document ──► documents (filing | late_filing_notice) + filings
+   │
+   └─ 8-K with Item 2.02 / 7.01 / 8.01 (SAVEPOINT) ── list_exhibits ── fetch_exhibit
+                                         ──► documents (earnings_release, tier 2, parent_accession)
+   ▼
+parse_company_documents: documents not at PARSER_VERSION ──► sections (10-K items, 10-Q P1-/P2-
+   items, 8-K dotted items) ──► document_chunks;  late_filing_notice: metadata only
+   ▼
+embed_pending (EX-99 and DEF 14A only while EMBED_EXHIBITS is on)
+```
+
 ## Data stores (table names only; columns are designed in Phase 0b)
 
 - **Reference & filings:** `companies`, `company_identifiers`, `fiscal_calendars`,

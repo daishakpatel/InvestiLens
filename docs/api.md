@@ -80,8 +80,8 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 ### Filings
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/companies/{ticker}/filings?type=&limit=&cursor=` | Filing list |
-| GET | `/filings/{filing_id}` | Filing detail |
+| GET | `/companies/{ticker}/filings?type=&limit=&cursor=` | Filing list. Each item carries `document_type`: `filing`, or `late_filing_notice` for an NT 10-K / NT 10-Q (Phase 7c). Forms: 10-K, 10-Q, 8-K, 8-K/A, DEF 14A, DEFA14A, NT 10-K, NT 10-Q |
+| GET | `/filings/{filing_id}` | Filing detail (incl. `document_type`; 8-K `items` are full dotted codes, e.g. `5.02`) |
 | GET | `/filings/{filing_id}/sections` | Section outline |
 | GET | `/filings/{filing_id}/diff?against=&kind=` | Filing diff (Phase 6b, §37.4): what is `unchanged / reworded / new / removed` versus an older filing of the same type. `against` defaults to the prior filing of that type (last year's 10-K, last quarter's 10-Q). `kind=risk_factor\|section` filters. Every item carries `old`/`new` passages with backend-issued `source_ids` (resolve via `/sources/{id}`), `decided_by`, and a word-level `word_diff` when reworded. Public and deterministic: no LLM. 404 = no earlier parsed filing; 422 = different company/type or an unparsed filing. |
 | GET | `/companies/{ticker}/earnings` | Earnings-day price reaction (§37.3): adjusted-close move around each Item 2.02 8-K. `move` is a ratio; `null` + `reason` when prices are missing. No expectations data (ADR-0027). |
