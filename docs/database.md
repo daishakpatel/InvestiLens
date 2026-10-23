@@ -106,6 +106,31 @@ or TTM window a metric is missing, with a reason code (`missing_ytd_1q|2q|3q`, `
 company never reports, or one not applicable to its sector (`sector_applicability.yaml`, DR-042),
 has no gaps: N/A is not missing data.
 
+### Earnings-quality rows (Phase 7d, ADR-0042)
+
+`scripts/build_metrics.py` and the metrics task run `quality_builder` after valuation. It stores
+one derived FY row per fiscal year for each of `accruals_ratio`, `accruals_ratio_bs`,
+`fcf_conversion`, `dso`, `dio`, `dpo`, `cash_conversion_cycle`, `dilution`, `beneish_m`,
+`altman_z` and `piotroski_f`, with source ID `derived:<TICKER>:<metric>:FY<yr>`. These are
+ordinary derived rows: `formula_id` (`beneish_m_score`, `altman_z_score` or
+`altman_z_double_prime`, `piotroski_f_score`, …) and `quality_flags.inputs`. Since Phase 7d every
+derived row's `inputs` entry also carries the input's `value` as a string. Two-year inputs are
+named `prior_<metric>`. Score details sit beside the lineage in `quality_flags`:
+
+| Metric | Extra `quality_flags` keys |
+|--------|---------------------------|
+| `beneish_m` | `band` (`below_threshold`, `above_threshold`, `insufficient_data` or `not_applicable`), `threshold` (`-1.78`), `indices` (the eight, as strings), `missing` (absent inputs or `<index>: zero base`) |
+| `altman_z` | `band` (`distress`, `grey` or `safe`), `model_variant` (`original` or `z_double_prime`), `variant_basis` (the SIC reason) |
+| `piotroski_f` | `criteria` (nine booleans; null = not computable), `computable` (0–9) |
+| `dilution` | `prior_shares_basis` (`restated in the FY<yr> 10-K`, citing the raw fact `xbrl:<financial_facts.id>`; or the split-adjusted fallback with `split_factor`) |
+
+Uncomputable rows are NULL with `MISSING_INPUT` or `NEGATIVE_BASE` in `warnings`. Rows not
+applicable to the sector (banks: Beneish, Altman, Piotroski, balance-sheet accruals, DSO, DIO, DPO,
+CCC) are NULL with `NOT_APPLICABLE_SECTOR`. The TTM rows gain `fcf_conversion` and
+`accruals_ratio` (`derived:<TICKER>:<metric>:TTM-Q<n>-FY<yr>`). The TTM accruals ratio averages
+total assets at the end of the quarter before the window and at the window's end. There is no
+schema change and no migration.
+
 ### Documents: types, metadata and parsing (Phase 7c, ADR-0041)
 
 `documents.document_type` values: `filing` (10-K, 10-Q, 8-K, 8-K/A, DEF 14A, DEFA14A),

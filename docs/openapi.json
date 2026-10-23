@@ -979,6 +979,55 @@
         "title": "DiffPassage",
         "type": "object"
       },
+      "EarningsQualityResponse": {
+        "properties": {
+          "fiscal_years": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Fiscal Years",
+            "type": "array"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/QualityMeasure"
+            },
+            "title": "Measures",
+            "type": "array"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "peers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Peers",
+            "type": "array"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "fiscal_years",
+          "measures",
+          "peers",
+          "freshness"
+        ],
+        "title": "EarningsQualityResponse",
+        "type": "object"
+      },
       "EarningsReaction": {
         "properties": {
           "filing": {
@@ -3446,6 +3495,199 @@
           "freshness"
         ],
         "title": "PricesResponse",
+        "type": "object"
+      },
+      "QualityMeasure": {
+        "properties": {
+          "caveat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caveat"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "latest_ttm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric_name": {
+            "title": "Metric Name",
+            "type": "string"
+          },
+          "peer_count": {
+            "default": 0,
+            "title": "Peer Count",
+            "type": "integer"
+          },
+          "peer_percentile": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peer Percentile"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/QualityPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric_name",
+          "label",
+          "unit",
+          "explanation",
+          "points"
+        ],
+        "title": "QualityMeasure",
+        "type": "object"
+      },
+      "QualityPoint": {
+        "description": "One measure for one period. `value` is None unless `status` is ok (never a zero).",
+        "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
+          "details": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Details",
+            "type": "object"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "formula_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula Id"
+          },
+          "inputs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MetricInput"
+            },
+            "title": "Inputs",
+            "type": "array"
+          },
+          "missing": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reason_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Text"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "insufficient_data",
+              "not_applicable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "period",
+          "fiscal_year",
+          "value",
+          "status"
+        ],
+        "title": "QualityPoint",
         "type": "object"
       },
       "Readiness": {
@@ -6085,6 +6327,63 @@
         "tags": [
           "Company",
           "Filings"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/earnings-quality": {
+      "get": {
+        "description": "Accruals, cash conversion, working-capital days, dilution and the screening scores, per\nfiscal year, each with its inputs' source IDs (FR-EQ-009).",
+        "operationId": "get_earnings_quality_api_v1_companies__ticker__earnings_quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Latest N fiscal years",
+            "in": "query",
+            "name": "years",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "Latest N fiscal years",
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Years",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsQualityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Earnings Quality",
+        "tags": [
+          "Company"
         ]
       }
     },

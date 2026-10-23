@@ -66,6 +66,8 @@ const SHOTS: Shot[] = [
     },
   },
   { name: "company-financials", path: "/company/NVDA/financials" },
+  { name: "company-quality", path: "/company/NVDA/quality" },
+  { name: "company-quality-bank", path: "/company/JPM/quality" },
   {
     name: "company-financials-growth",
     path: "/company/NVDA/financials",

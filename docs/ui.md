@@ -96,6 +96,25 @@ a company page), `components/citations/` (chips, cited text, the source view),
   they are validated for. A seventh category folds into "Other".
 - Never two scales on one axis. `Sparkline` is plain SVG for list rows, with no chart library.
 
+## Earnings quality tab (Phase 7d)
+
+`/company/:ticker/quality` (`pages/tabs/EarningsQualityTab.tsx`):
+- Five `QualityCard`s (accruals, cash conversion, dilution, Beneish, Altman · Piotroski). Each has
+  a lead figure, an optional companion figure, the TTM and peer context, and a one-line
+  explanation.
+- `CashEarningsChart`: net income, operating cash flow and FCF as bars, with the accruals ratio on
+  a right axis, built from the measures' own inputs.
+- A five-year `DataTable`.
+- An inputs disclosure whose every value opens the citation drawer.
+
+Rules:
+- Every score carries the screening caveat (`role="note"`).
+- A figure that is missing or N/A is a sentence saying why, never a zero or a dash.
+- Colour follows the gain/loss rule: only "above the Beneish threshold" is toned, and it uses
+  `warning`. Altman zones and everything else stay neutral, and a text label always goes with the
+  colour.
+- The chart's series use categorical hues, because none of them is a gain or a loss.
+
 ## Adding a screen
 
 1. Add the route in `App.tsx` as a `lazy` import, so it is its own chunk.

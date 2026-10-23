@@ -124,6 +124,13 @@ Q4 = FY − (Q1 + Q2 + Q3); balances are read at each quarter end. `quarterly_bu
 TTM margins from TTM sums, never averaged quarterly ratios), each derived row citing its inputs,
 and writes a `metric_gaps` row, with a reason, for every quarter or window it cannot compute.
 
+**Earnings quality** (Phase 7d, ADR-0042): `app/finance/beneish.py` (8-variable M-score),
+variant-aware Altman Z and nine-criteria Piotroski in `metrics.py`, and `quality_builder.py`.
+The builder runs after valuation (Altman's original Z needs the year-end market cap) and stores
+every measure as a derived FY row with its inputs. `GET /companies/{ticker}/earnings-quality`
+reads them back with static explanations and peer percentiles. The claim verifier rejects fraud or
+manipulation wording attached to a screening-score source (`citation/advice.py`).
+
 **SEC ingestion** (Phase 1a; exhibits and extra forms in Phase 7c, ADR-0041). `SecSource`
 (`app/providers/sec/`, live EDGAR or frozen fixtures) offers `company_tickers`, `company_metadata`,
 `list_filings(cik, since=)` (EDGAR's recent block, plus older `filings.files[]` pages when

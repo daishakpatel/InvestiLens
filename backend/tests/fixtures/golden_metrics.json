@@ -26,6 +26,60 @@
           "value": "0.7107",
           "unit": "ratio",
           "note": "GrossProfit / Revenue"
+        },
+        "retained_earnings": {
+          "value": "146973000000",
+          "unit": "USD",
+          "concept": "RetainedEarningsAccumulatedDeficit",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "sga_expense": {
+          "value": "4579000000",
+          "unit": "USD",
+          "concept": "SellingGeneralAndAdministrativeExpense",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "ppe_net": {
+          "value": "10383000000",
+          "unit": "USD",
+          "concept": "PropertyPlantAndEquipmentNet",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "depreciation": {
+          "value": "2400000000",
+          "unit": "USD",
+          "concept": "Depreciation",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "current_assets": {
+          "value": "125605000000",
+          "unit": "USD",
+          "concept": "AssetsCurrent",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "current_liabilities": {
+          "value": "32163000000",
+          "unit": "USD",
+          "concept": "LiabilitiesCurrent",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "total_liabilities": {
+          "value": "49510000000",
+          "unit": "USD",
+          "concept": "Liabilities",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "receivables": {
+          "value": "38466000000",
+          "unit": "USD",
+          "concept": "AccountsReceivableNetCurrent",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "income_tax_expense": {
+          "value": "21383000000",
+          "unit": "USD",
+          "concept": "IncomeTaxExpenseBenefit",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
         }
       }
     },
@@ -54,6 +108,60 @@
           "value": "0.4691",
           "unit": "ratio",
           "note": "GrossProfit / Revenue"
+        },
+        "retained_earnings": {
+          "value": "-14264000000",
+          "unit": "USD",
+          "concept": "RetainedEarningsAccumulatedDeficit",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "sga_expense": {
+          "value": "27601000000",
+          "unit": "USD",
+          "concept": "SellingGeneralAndAdministrativeExpense",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "ppe_net": {
+          "value": "49834000000",
+          "unit": "USD",
+          "concept": "PropertyPlantAndEquipmentNet",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "depreciation": {
+          "value": "8000000000",
+          "unit": "USD",
+          "concept": "Depreciation",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "current_assets": {
+          "value": "147957000000",
+          "unit": "USD",
+          "concept": "AssetsCurrent",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "current_liabilities": {
+          "value": "165631000000",
+          "unit": "USD",
+          "concept": "LiabilitiesCurrent",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "total_liabilities": {
+          "value": "285508000000",
+          "unit": "USD",
+          "concept": "Liabilities",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "receivables": {
+          "value": "39777000000",
+          "unit": "USD",
+          "concept": "AccountsReceivableNetCurrent",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
+        },
+        "income_tax_expense": {
+          "value": "20719000000",
+          "unit": "USD",
+          "concept": "IncomeTaxExpenseBenefit",
+          "note": "Phase 7d: hand-checked against the 10-K balance sheet / income statement / PP&E note"
         }
       }
     },
