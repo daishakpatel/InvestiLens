@@ -6,6 +6,7 @@ values keep both rows with `is_latest` distinguishing them (DR-023).
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -133,6 +134,15 @@ def get_latest_metrics(
 def clear_company_metrics(session: Session, company_id: int) -> None:
     """Remove a company's metrics so a rebuild is idempotent."""
     session.execute(delete(FinancialMetric).where(FinancialMetric.company_id == company_id))
+
+
+def clear_company_metric_names(session: Session, company_id: int, names: Collection[str]) -> None:
+    """Remove only these metrics, so a later builder's rebuild is idempotent on its own."""
+    session.execute(
+        delete(FinancialMetric).where(
+            FinancialMetric.company_id == company_id, FinancialMetric.metric_name.in_(names)
+        )
+    )
 
 
 def upsert_metric(

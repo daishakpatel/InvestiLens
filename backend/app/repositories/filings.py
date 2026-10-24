@@ -70,6 +70,19 @@ def get_latest_filing(
     )
 
 
+def get_annual_report(session: Session, *, company_id: int, period_end: date) -> Filing | None:
+    """The 10-K for the fiscal year ending `period_end` (an original before an amendment)."""
+    return session.scalar(
+        select(Filing)
+        .where(
+            Filing.company_id == company_id,
+            Filing.filing_type.in_(("10-K", "10-K/A")),
+            Filing.period_end == period_end,
+        )
+        .order_by(Filing.filing_type, Filing.filing_date.desc())
+    )
+
+
 def get_filings_by_document_ids(session: Session, document_ids: list[int]) -> list[Filing]:
     if not document_ids:
         return []
