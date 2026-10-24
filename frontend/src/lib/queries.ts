@@ -25,6 +25,10 @@ import type {
   MetricResult,
   MetricsCoverageResponse,
   EarningsQualityResponse,
+  FootnoteFactsResponse,
+  GovernanceHistoryResponse,
+  GovernanceResponse,
+  NotesResponse,
   RedFlagsResponse,
   NewsResponse,
   PeerSuggestionsResponse,
@@ -131,6 +135,58 @@ export function useEarningsQuality(ticker: string): UseQueryResult<EarningsQuali
     queryFn: async ({ signal }) => {
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/earnings-quality`, { signal });
       return parse.earningsQuality(data);
+    },
+  });
+}
+
+/** The latest 10-K's notes, each with its category and cached AI summary (FR-FN-011). */
+export function useNotes(ticker: string): UseQueryResult<NotesResponse> {
+  return useQuery({
+    queryKey: ["notes", ticker],
+    staleTime: 10 * MINUTE,
+    retry: false, // 404 = no parsed 10-K yet: an empty state, not a transient failure
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/notes`, { signal });
+      return parse.notes(data);
+    },
+  });
+}
+
+/** The latest fiscal year's XBRL footnote facts and gaps, by note category (FR-FN-011). */
+export function useFootnoteFacts(ticker: string): UseQueryResult<FootnoteFactsResponse> {
+  return useQuery({
+    queryKey: ["footnote-facts", ticker],
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/footnote-facts`, { signal });
+      return parse.footnoteFacts(data);
+    },
+  });
+}
+
+/** One proxy's governance view (FR-GV-011); `fiscalYear` null = the latest proxy. */
+export function useGovernance(ticker: string, fiscalYear: number | null): UseQueryResult<GovernanceResponse> {
+  return useQuery({
+    queryKey: ["governance", ticker, fiscalYear],
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/governance`, {
+        query: { fiscal_year: fiscalYear === null ? undefined : String(fiscalYear) },
+        signal,
+      });
+      return parse.governance(data);
+    },
+  });
+}
+
+/** CEO total pay and board independence by fiscal year, for the trend (FR-GV-011). */
+export function useGovernanceHistory(ticker: string): UseQueryResult<GovernanceHistoryResponse> {
+  return useQuery({
+    queryKey: ["governance-history", ticker],
+    staleTime: 10 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/governance/history`, { signal });
+      return parse.governanceHistory(data);
     },
   });
 }
@@ -256,18 +312,21 @@ export function useFilingSections(filingId: string | null): UseQueryResult<Filin
   });
 }
 
-/** What changed in a filing vs. an older one; `against` null = the prior filing of that type. */
+/** What changed in a filing vs. an older one; `against` null = the prior filing of that type.
+ *  `noteCategory` narrows both filings to that note (FR-FN-010). */
 export function useFilingDiff(
   filingId: string,
   against: string | null,
   kind: "risk_factor" | null,
+  noteCategory: string | null = null,
 ): UseQueryResult<FilingDiffResponse> {
   return useQuery({
-    queryKey: ["filing-diff", filingId, against, kind],
+    queryKey: ["filing-diff", filingId, against, kind, noteCategory],
     staleTime: 10 * MINUTE,
     retry: false, // 404/422 here mean "nothing to compare", not a transient failure
     queryFn: async ({ signal }) => {
-      const { data } = await apiRequest<unknown>(`/filings/${filingId}/diff`, {
+      const path = noteCategory ? `/filings/${filingId}/notes/${noteCategory}/diff` : `/filings/${filingId}/diff`;
+      const { data } = await apiRequest<unknown>(path, {
         query: { against: against ?? undefined, kind: kind ?? undefined },
         signal,
       });

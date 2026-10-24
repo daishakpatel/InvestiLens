@@ -136,18 +136,21 @@ const rowKey = (item: FilingDiffItem, i: number) => item.new?.source_ids[0] ?? i
 
 /** What changed between a filing and an earlier one of the same type (§37.4): a one-sentence
  *  summary, then each new, removed, or reworded passage. The comparison is deterministic text
- *  matching, not an AI judgment, and every passage links to its place in both filings. */
+ *  matching, not an AI judgment, and every passage links to its place in both filings.
+ *  `note` narrows both filings to one note category, against the prior filing (FR-FN-010). */
 export function FilingDiffView({
   filing,
   candidates,
+  note,
 }: {
   filing: FilingSummary;
   candidates: FilingSummary[]; // earlier filings of the same type, to pick a baseline from
+  note?: { category: string; label: string };
 }) {
   const [against, setAgainst] = useState<string | null>(null);
-  const [risksOnly, setRisksOnly] = useState(true);
+  const [risksOnly, setRisksOnly] = useState(!note);
   const [shown, setShown] = useState<ReadonlySet<ChangeStatus>>(new Set(["new", "removed", "reworded"]));
-  const diff = useFilingDiff(filing.filing_id, against, risksOnly ? "risk_factor" : null);
+  const diff = useFilingDiff(filing.filing_id, against, risksOnly ? "risk_factor" : null, note?.category ?? null);
   const status = diff.error instanceof ApiError ? diff.error.status : null;
 
   const toggle = (value: ChangeStatus) =>
@@ -159,12 +162,13 @@ export function FilingDiffView({
 
   const visible = diff.data?.items.filter((item) => shown.has(item.status)) ?? [];
   const sorted = [...visible].sort((a, b) => CHANGE_ORDER.indexOf(a.status) - CHANGE_ORDER.indexOf(b.status));
-  const estimated = diff.data?.caption_detection === "heuristic";
+  // Captions only matter for risk factors; a note's passages are matched by their sub-headings.
+  const estimated = !note && diff.data?.caption_detection === "heuristic";
   const lowConfidence = diff.data?.items.some((item) => item.decided_by === "threshold") ?? false;
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className={note ? "hidden" : "flex flex-wrap items-center gap-x-6 gap-y-3"}>
         <Select aria-label="Compare against" value={against ?? ""} onChange={(e) => setAgainst(e.target.value || null)}>
           <option value="">Compared with the prior {filing.filing_type}</option>
           {candidates.map((c) => (
@@ -178,7 +182,7 @@ export function FilingDiffView({
         </Switch>
       </div>
 
-      <div className="mt-6">
+      <div className={note ? "" : "mt-6"}>
         {diff.isPending ? (
           <LoadingState label="Comparing filings" />
         ) : status === 404 ? (
@@ -190,7 +194,9 @@ export function FilingDiffView({
           // the wider comparison offered rather than silently substituted.
           <div role="status" className="space-y-3 py-6 text-sm text-muted">
             <p>
-              {risksOnly
+              {note
+                ? `The ${note.label.toLowerCase()} note was not found in both filings, so there is nothing to compare.`
+                : risksOnly
                 ? "The risk factors could not be read from one of these filings, so there is nothing to compare."
                 : "One of these filings has not been broken into sections, so the two cannot be compared."}
             </p>

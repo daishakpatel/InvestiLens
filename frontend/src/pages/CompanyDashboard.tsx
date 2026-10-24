@@ -28,6 +28,8 @@ const TABS: TabDef[] = [
   { to: "", label: "Overview" },
   { to: "financials", label: "Financials" },
   { to: "quality", label: "Earnings quality" },
+  { to: "footnotes", label: "Footnotes" },
+  { to: "governance", label: "Governance" },
   { to: "research", label: "Research" },
   { to: "filings", label: "Filings" },
   { to: "news", label: "News" },

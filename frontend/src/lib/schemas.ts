@@ -23,6 +23,10 @@ import type {
   MetricResult,
   MetricsCoverageResponse,
   EarningsQualityResponse,
+  FootnoteFactsResponse,
+  GovernanceHistoryResponse,
+  GovernanceResponse,
+  NotesResponse,
   RedFlagsResponse,
   NewsResponse,
   PeerSuggestionsResponse,
@@ -203,6 +207,146 @@ const filing = z.object({
   period_end: z.string().nullish(),
   accession_number: z.string(),
   primary_document_url: z.string().nullish(),
+});
+
+// Phase 7f (FR-FN-011): a filing's notes with their cached AI summaries, and the XBRL facts.
+const noteBullet = z.object({ text: z.string(), quote: z.string(), paragraph_id: z.string() });
+const notes = z.object({
+  company_ticker: z.string(),
+  filing,
+  taxonomy: z.string(),
+  low_confidence: z.boolean(),
+  summarised_categories: z.array(z.string()),
+  notes: z.array(
+    z.object({
+      note_id: z.string(),
+      number: z.number(),
+      title: z.string(),
+      category: z.string(),
+      also_matches: z.array(z.string()).default([]),
+      paragraph_ids: z.array(z.string()),
+      summary: z
+        .object({
+          status: z.enum(["summarised", "abstained", "pending"]),
+          bullets: z.array(noteBullet).default([]),
+          model: z.string().nullish(),
+        })
+        .nullish(),
+    }),
+  ),
+});
+
+const footnoteFacts = z.object({
+  company_ticker: z.string(),
+  fiscal_year: z.number().nullable(),
+  categories: z.array(
+    z.object({
+      category: z.string(),
+      facts: z.array(
+        z.object({
+          metric: z.string(),
+          label: z.string(),
+          value: z.string().nullable(),
+          unit: z.string(),
+          period: z.string(),
+          source_id: z.string(),
+          is_derived: z.boolean(),
+          formula: z.string().nullish(),
+          from_inline_xbrl: z.boolean().default(false),
+        }),
+      ),
+      gaps: z.array(
+        z.object({ metric: z.string(), label: z.string(), period: z.string(), reason: z.string() }),
+      ),
+    }),
+  ),
+});
+
+// Phase 7g (FR-GV-011): proxy governance. Missing parts are nulls with a reason.
+const decimal = z.string();
+const governance = z.object({
+  company_ticker: z.string(),
+  fiscal_year: z.number().nullable(),
+  fiscal_year_source: z.string().nullable(),
+  filing: filing.nullable(),
+  available_years: z.array(z.number()),
+  proxies_ingested: z.number(),
+  reason: z.string().nullish(),
+  coverage: z.record(z.string(), z.boolean()).default({}),
+  facts: z
+    .object({
+      status: z.enum(["extracted", "pending", "no_sections"]),
+      model: z.string().nullish(),
+      fields: z
+        .array(
+          z.object({
+            name: z.string(),
+            label: z.string(),
+            value: z.union([decimal, z.boolean(), z.array(z.string())]).nullish(),
+            quote: z.string().nullish(),
+            paragraph_id: z.string().nullish(),
+          }),
+        )
+        .default([]),
+      independence_ratio: decimal.nullish(),
+      reason: z.string().nullish(),
+    })
+    .nullish(),
+  compensation: z
+    .object({
+      rows: z
+        .array(
+          z.object({
+            person: z.string(),
+            role: z.enum(["peo", "pfo", "neo"]),
+            fiscal_year: z.number(),
+            components: z.record(z.string(), decimal),
+            total: decimal,
+            source_id: z.string(),
+          }),
+        )
+        .default([]),
+      rejected_rows: z.number().default(0),
+      reason: z.string().nullish(),
+    })
+    .nullish(),
+  pay_vs_performance: z
+    .object({
+      points: z
+        .array(
+          z.object({
+            fiscal_year: z.number(),
+            values: z.record(z.string(), decimal),
+            source_ids: z.record(z.string(), z.string()),
+          }),
+        )
+        .default([]),
+      company_selected_measure: z.string().nullish(),
+      reason: z.string().nullish(),
+    })
+    .nullish(),
+  pay_ratio: z
+    .object({
+      ratio: decimal.nullish(),
+      median_pay: decimal.nullish(),
+      ceo_total: decimal.nullish(),
+      source_id: z.string().nullish(),
+      reason: z.string().nullish(),
+    })
+    .nullish(),
+});
+
+const governanceHistory = z.object({
+  company_ticker: z.string(),
+  points: z.array(
+    z.object({
+      fiscal_year: z.number(),
+      ceo_total_pay: decimal.nullish(),
+      ceo_total_pay_source: z.string().nullish(),
+      ceo_total_pay_source_id: z.string().nullish(),
+      independence_ratio: decimal.nullish(),
+    }),
+  ),
 });
 
 const newsItem = z.object({
@@ -624,6 +768,12 @@ export const parse = {
     metricsCoverage.parse(d) as MetricsCoverageResponse,
   valuation: (d: unknown): ValuationResponse => valuation.parse(d) as ValuationResponse,
   redFlags: (d: unknown): RedFlagsResponse => redFlags.parse(d) as RedFlagsResponse,
+  notes: (d: unknown): NotesResponse => notes.parse(d) as NotesResponse,
+  governance: (d: unknown): GovernanceResponse => governance.parse(d) as GovernanceResponse,
+  governanceHistory: (d: unknown): GovernanceHistoryResponse =>
+    governanceHistory.parse(d) as GovernanceHistoryResponse,
+  footnoteFacts: (d: unknown): FootnoteFactsResponse =>
+    footnoteFacts.parse(d) as FootnoteFactsResponse,
   earningsQuality: (d: unknown): EarningsQualityResponse =>
     earningsQuality.parse(d) as EarningsQualityResponse,
   prices: (d: unknown): PricesResponse => prices.parse(d) as PricesResponse,
