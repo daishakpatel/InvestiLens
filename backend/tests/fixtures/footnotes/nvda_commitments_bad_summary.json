@@ -1,0 +1,35 @@
+{
+  "prompt_version": "note_summary_v1",
+  "note": "NVDA FY2026 10-K, Note 12 Commitments and Contingencies, chunked as document 1 (paragraph IDs 1_15_*)",
+  "recorded_as": "A deliberately bad model reply: two bullets verify, three must be dropped (wrong number, fabricated quote, invented paragraph ID).",
+  "response": {
+    "bullets": [
+      {
+        "text": "Manufacturing, supply and capacity commitments were $95.2 billion as of January 25, 2026.",
+        "quote": "As of January 25, 2026, these commitments were $95.2 billion",
+        "paragraph_id": "1_15_335"
+      },
+      {
+        "text": "Product warranty liabilities were estimated at $2.8 billion.",
+        "quote": "The estimated amount of product warranty liabilities was $2.8 billion",
+        "paragraph_id": "1_15_336"
+      },
+      {
+        "text": "Manufacturing, supply and capacity commitments were $120 billion.",
+        "quote": "As of January 25, 2026, these commitments were $95.2 billion",
+        "paragraph_id": "1_15_335"
+      },
+      {
+        "text": "NVIDIA does not expect material losses from its litigation.",
+        "quote": "We do not expect any material losses from pending litigation",
+        "paragraph_id": "1_15_338"
+      },
+      {
+        "text": "NVIDIA provides indemnities for tax, product and employee matters.",
+        "quote": "We have provided indemnities for matters such as tax, product, and employee liabilities",
+        "paragraph_id": "9_99_999"
+      }
+    ],
+    "abstain": false
+  }
+}

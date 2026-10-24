@@ -88,6 +88,19 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 | GET | `/companies/{ticker}/earnings` | Earnings-day price reaction (§37.3): adjusted-close move around each Item 2.02 8-K. `move` is a ratio; `null` + `reason` when prices are missing. No expectations data (ADR-0027). |
 | GET | `/companies/{ticker}/management-language?filing_type=10-K&limit=8` | Management language tracking (§37.5): per-filing topic mentions per 1,000 MD&A words (`topic_taxonomy_v1`), a lexicon hedging index, first-appearance/disappearance flags, and the counted statements with `source_id`s. Lexicon counts, not AI. |
 
+### Footnotes (Phase 7f, FR-FN-010/011, ADR-0044)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/companies/{ticker}/notes?filing_id=` | The notes to the financial statements of a 10-K or 10-Q (default: the latest parsed 10-K). Each note: `note_id` (`note-7`), `number`, `title`, `category` (`note_taxonomy_v1`), `also_matches` (other categories the title matched), `paragraph_ids` (its chunks; resolve via `/sources/{id}`), and for revenue recognition, commitments and contingencies, and segments a `summary`: `status` `summarised` (verified `bullets`: `text`, `quote`, `paragraph_id`), `abstained` (show "Not summarised") or `pending` (not generated yet; this endpoint never calls a model). `low_confidence` is true when a 10-K yielded fewer than five notes or was not segmented. 404 = no parsed 10-K, or a filing of another company; 422 = not a 10-K/10-Q. |
+| GET | `/companies/{ticker}/footnote-facts` | The latest fiscal year's XBRL footnote facts by category (`debt`, `leases`, `income_taxes`, `commitments_contingencies`, `stock_comp`). Each fact: `metric`, `label` (lease-adjusted figures are always named so), `value` (decimal string; `unit` `USD`, `ratio` or `years`), `period`, `source_id` (`xbrl:` or `derived:`), `is_derived`, `formula`, `from_inline_xbrl`. `gaps` lists what the filing did not tag (`not_tagged`, `filing_unavailable`, `MISSING_INPUT`). `fiscal_year: null`, `categories: []` before the first build. |
+| GET | `/filings/{filing_id}/notes/{category}/diff?against=` | The filing diff scoped to one note category in both filings (same response as `/filings/{id}/diff`, same baseline rules). 404 = unknown category or no earlier filing; 422 = the note is missing from one filing. |
+
+### Governance (Phase 7g, FR-GV-011, ADR-0045)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/companies/{ticker}/governance?fiscal_year=` | One proxy statement (default the latest; `fiscal_year` is the year it covers, from its content, not its filing date). `filing`, `fiscal_year_source`, `available_years`, `proxies_ingested`, `coverage` (proxy section → found). `facts` (Tier C, AI): `status` `extracted`, `pending` or `no_sections`; `fields[]` each `{name, label, value, quote, paragraph_id}` with `value: null` = not stated; `independence_ratio` computed in code. `compensation` (Tier B): Summary Compensation Table `rows[]` that add up (`person`, `role` peo/pfo/neo, `fiscal_year`, `components`, `total`, `source_id`), `rejected_rows`. `pay_vs_performance` (Tier A): `points[]` `{fiscal_year, values, source_ids}`, `company_selected_measure`. `pay_ratio`: `ratio`, `median_pay`, `ceo_total`, `source_id`. A missing part has null values and a `reason`. With no processed proxy: `filing: null` and a `reason`. 404 = no proxy for that fiscal year. Never calls a model. |
+| GET | `/companies/{ticker}/governance/history` | `points[]` by fiscal year: `ceo_total_pay` (the Summary Compensation Table total, else PvP `PeoTotalCompAmt`, from the newest proxy reporting the year) with its source, and that proxy's `independence_ratio`. |
+
 ### News
 | Method | Path | Notes |
 |--------|------|-------|

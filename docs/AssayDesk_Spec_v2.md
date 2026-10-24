@@ -1359,7 +1359,7 @@ Rules:
 - Report generation is recorded with `data_version` (hash of metric snapshot + document set IDs) for reproducibility.
 
 ## 17.3 Prompt inventory (owned by Research agent; see Appendix D)
-`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_{section}_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `claim_verifier_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`.
+`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_{section}_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `claim_verifier_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `note_summary_v1`, `governance_v1`.
 
 ---
 
@@ -3232,6 +3232,15 @@ ppe_net:
   - us-gaap:PropertyPlantAndEquipmentNet
   - us-gaap:PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization
 ```
+Footnote facts (Phase 7f, ADR-0044) are a separate `footnote_metrics` block grouped by note
+category (debt maturities `LongTermDebtMaturitiesRepaymentsOfPrincipal…` incl. the "Rolling"
+variants, lease liabilities and payments, tax, purchase obligations, unrecognized compensation
+cost), persisted only by `footnote_builder`. Executive pay comes from the SEC `ecd` taxonomy
+(`PeoTotalCompAmt`, `PeoActuallyPaidCompAmt`, `NonPeoNeoAvgTotalCompAmt`,
+`NonPeoNeoAvgCompActuallyPaidAmt`, `TotalShareholderRtnAmt`, `PeerGroupTotalShareholderRtnAmt`,
+`CoSelectedMeasureAmt`) via `app/governance/builder.py` into `exec_comp_facts` (Phase 7g,
+ADR-0045), not the concept map: these are proxy-year facts, not company periods.
+
 > Starter list only; the Financial Data agent must validate against seed companies and extend with company-level overrides. Bank/insurer taxonomies (interest income, net interest margin, provision for credit losses, CET1) are a separate sector map.
 
 ## Appendix C — Sector applicability (excerpt, `sector_applicability.yaml`)
@@ -3248,7 +3257,7 @@ ppe_net:
 | Net interest margin | N/A | ✓ [P2] | N/A |
 
 ## Appendix D — Prompt inventory
-`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_executive_summary_v1`, `section_generator_company_overview_v1`, `section_generator_revenue_v1`, `section_generator_profitability_v1`, `section_generator_balance_sheet_v1`, `section_generator_cash_flow_v1`, `section_generator_valuation_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `bull_bear_generator_v1`, `claim_verifier_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `judge_faithfulness_v1`.
+`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_executive_summary_v1`, `section_generator_company_overview_v1`, `section_generator_revenue_v1`, `section_generator_profitability_v1`, `section_generator_balance_sheet_v1`, `section_generator_cash_flow_v1`, `section_generator_valuation_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `bull_bear_generator_v1`, `claim_verifier_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `judge_faithfulness_v1`, `governance_v1` (Phase 7g: one proxy → `GovernanceFacts`, each field a verbatim quote with a backend `paragraph_id` or null; no computing; `app/governance/facts.py`), `note_summary_v1` (Phase 7f: one note → ≤5 bullets, each with a verbatim quote and the backend-issued `paragraph_id`; untrusted-data, no-advice, no-forecast and no-prior-year-change rules; `app/footnotes/summary.py`).
 Each prompt file contains: purpose, inputs, output schema, safety rules (untrusted-content wrapper), examples, version, changelog, eval results link.
 
 ## Appendix E — Endpoint index (v1)
@@ -3410,6 +3419,47 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | DR-RF-001 | Re-running detection MUST NOT create duplicate flags. |
 | DR-RF-002 | A new taxonomy version MUST add rows, keep older rows for audit, keep each event's first detection time, and the API MUST serve only the newest version. |
 | DR-RF-003 | A flag on a filing dated more than 7 days before its detection MUST NOT alert: backfilled history is not news. |
+
+**Footnote extraction (Phase 7f, ADR-0044)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-FN-001 | Notes in a 10-K (Items 8/15) and 10-Q (Part I Item 1) MUST be segmented from the parsed chunks into `Note(number, title, paragraph_ids)` by heading ("Note N – Title", "N. Title"), with increasing numbers; every note heading MUST start a chunk. Fewer than five notes in a 10-K MUST be flagged `low_confidence` and logged, never raised. |
+| FR-FN-002 | Notes MUST be classified by title keywords alone into `note_taxonomy_v1` (debt, leases, revenue_recognition, income_taxes, commitments_contingencies, segments, stock_comp, goodwill_intangibles, derivatives, fair_value, other) in a documented priority order, recording the other matches. |
+| FR-FN-003 | Notes MUST be stored in `documents.metadata['notes']`; a re-parse MUST rewrite them and drop cached summaries. |
+| FR-FN-004 | Footnote figures MUST come from XBRL (`footnote_metrics` in the concept map) as FY rows `xbrl:{TICKER}:{metric}:FY{yr}`, never from note text. |
+| FR-FN-005 | Debt maturities MUST be read as the per-year concepts; when none exist, the latest 10-K's inline XBRL (undimensioned facts, then per-instrument principal and remaining term) MAY fill them as derived rows listing every instrument. Anything still missing MUST be a `metric_gaps` row with a reason, never zero. |
+| FR-FN-006 | `debt_due_within_2y_share` = (y1 + y2) / all six windows and `lease_adjusted_debt` = total debt + operating lease liabilities MUST be stored with formula and resolvable inputs, only when every input exists. The label MUST say "lease-adjusted" wherever shown. |
+| FR-FN-007 | Revenue recognition, commitments and contingencies, and segments notes MUST be summarised as `NoteSummary {note_id, bullets: [{text, quote, paragraph_id}], abstain}`. A bullet MUST be dropped unless its quote is verbatim in its paragraph and every number in its text matches the quote within 1%; with none left the summary abstains and the UI shows "Not summarised". |
+| FR-FN-008 | The `note_summary_v1` prompt MUST treat note text as untrusted data and forbid advice, forward-looking predictions and prior-year change claims; prompt-contract tests check it. |
+| FR-FN-009 | Summaries MUST be cached by (document, note, prompt version, model) and generated after parsing or by `make footnote-summaries`, never on page load. |
+| FR-FN-010 | `GET /filings/{id}/notes/{category}/diff?against=` MUST reuse `filings/diff.py` via a paragraph-ID scope on `diff_filings`; without a scope the whole-filing diff is unchanged. |
+| FR-FN-011 | `GET /companies/{ticker}/notes?filing_id=` MUST list notes with category and summary status; `GET /companies/{ticker}/footnote-facts` MUST return the latest year's facts and gaps grouped by category. |
+| FR-FN-012 | The Footnotes tab MUST show a category sidebar, XBRL facts as a table (debt ladder as a chart), AI bullets under `Section kind="ai"`, a "Compare with prior year" entry to the scoped diff, and say when a summary abstained or segmentation was low-confidence; every number and bullet opens the citation drawer. |
+| AGT-FN-001 | The model MUST NOT be the source of any footnote figure; a number in a bullet must already be in its quoted filing text. |
+| AGT-FN-002 | A bullet MAY cite only a backend-issued `paragraph_id` of the note that was shown to the model. |
+| AGT-FN-003 | Note text reaches the model only inside untrusted-source markers, in a separate message from the rules; instructions inside it MUST NOT change the output structure. |
+
+**Governance and executive compensation (Phase 7g, ADR-0045)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-GV-001 | DEF 14A and DEFA14A MUST be split into sections by heading keyword (board, director independence, committees, CD&A, Summary Compensation Table, pay ratio, Pay Versus Performance, say-on-pay, security ownership), with section keys on chunks and the sections found recorded on the document. |
+| FR-GV-002 | Each proxy MUST be tied to the fiscal year it covers, from its content (its PvP XBRL periods, else its Summary Compensation Table), never from the filing date. |
+| FR-GV-003 | DEFA14A material MUST be stored but extracted only if it contains a Summary Compensation Table. |
+| FR-GV-004 | Pay Versus Performance `ecd` facts MUST be persisted per fiscal year in `exec_comp_facts` with `xbrl:` provenance (or the PvP table chunk when only the proxy's Inline XBRL has them). |
+| FR-GV-005 | Summary Compensation Table rows MUST be parsed by header position and stored only if the components sum to the total within $1; a failing row MUST be discarded and logged, never fixed. Money stays Decimal raw USD; names are text. |
+| FR-GV-006 | The CEO pay ratio and median pay MUST be stored only if median × ratio is within 2% of the CEO's validated total. |
+| FR-GV-007 | `GovernanceFacts` fields (board size, independent directors, CEO/chair combined, lead independent director, classified board, dual class, say-on-pay support, committees) MUST each be a verbatim-quoted `{value, quote, paragraph_id}` or null ("not stated"); numbers MUST match the quote; counts of different groups (current board vs nominees) MUST NOT be paired. |
+| FR-GV-008 | `independence_ratio` MUST be computed in code from the verified counts; any model-supplied ratio MUST be ignored. |
+| FR-GV-009 | Proxy text MUST reach the model only as untrusted data; an injected instruction MUST NOT set a field. |
+| FR-GV-010 | Tier C results MUST be cached by (document, prompt version `governance_v1`, model) and produced after parsing or by `make governance-backfill`, never on page load. |
+| FR-GV-011 | `GET /companies/{ticker}/governance?fiscal_year=` MUST return facts, compensation, pay versus performance, pay ratio and section coverage, each missing part an explicit null with a reason; `GET /companies/{ticker}/governance/history` MUST return CEO total pay and independence ratio by year. |
+| FR-GV-012 | The Governance tab MUST show the board snapshot ("not stated" when missing) under the AI marker, the CEO pay table marked "Extracted from filing tables", the PvP chart when present, the proxy's fiscal year and filing date, quotes on hover opening the citation drawer, and an empty state with the ingest status. |
+| DR-GV-001 | A rejected table row MUST leave no partial figures behind; a rebuild MUST be idempotent. |
+| DR-GV-002 | A proxy whose fiscal year cannot be read from its content MUST store no figures. |
+| DR-GV-003 | A figure not found or not verified MUST be absent with a reason, never zero. |
+| AGT-GV-001 | The model MUST NOT compute any value, and a quote that reads as an instruction MUST NOT support a field. |
 
 ---
 
