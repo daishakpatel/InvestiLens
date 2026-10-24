@@ -129,6 +129,42 @@ The Overview's "Red flags" section (`components/company/RedFlags.tsx`) heads the
 - A "How to read this" disclosure says flags are reported events, not conclusions.
 - The Overview tab carries the count of flags filed in the last year (`TabDef.count`, hidden at 0).
 
+## Footnotes tab (Phase 7f)
+
+`/company/:ticker/footnotes` (`pages/tabs/FootnotesTab.tsx`), between Earnings quality and
+Research.
+- A category sidebar (`note_taxonomy_v1` order; horizontal scroll on narrow screens) selects one
+  category. Its notes are listed as links that open the note's first paragraph in the citation
+  drawer.
+- "Reported figures": schedules (debt maturities, undiscounted lease payments) as a `LadderChart`
+  only when every window is reported; other XBRL facts in a compact table, derived ones marked
+  "Derived" with the formula as a tooltip; then what the filing did not tag, in words. Every
+  value opens its source.
+- "Summary · Note N" sections use `Section kind="ai"`. Each bullet carries a citation chip and the
+  quote it rests on. Abstained summaries read "Not summarised …"; pending ones "Not summarised
+  yet".
+- "Compare with prior year" opens `FilingDiffView` with `note={category, label}` (no baseline
+  picker, no risk-factor switch).
+- Low-confidence segmentation and a missing 10-K are stated in a warning note above the layout.
+
+## Governance tab (Phase 7g)
+
+`/company/:ticker/governance` (`pages/tabs/GovernanceTab.tsx`), after Footnotes.
+- The header states the proxy's fiscal year and filing date, with a proxy-year selector, and a
+  warning listing sections not found in the proxy.
+- Left: "Board" under `Section kind="ai"`. Each field shows its value or "Not stated"; hovering
+  shows the quote, selecting it opens the paragraph. The independence ratio is shown as computed
+  in code.
+- Right, "CEO pay" (badge "Extracted from filing tables"): the CEO's Summary Compensation Table
+  rows by fiscal year (name once above; short component headers so Total stays on screen), a
+  note when rows were rejected, the pay ratio with the CEO total it was checked against, and
+  other named officers in a disclosure.
+- "Pay versus performance" (badge "From the proxy's XBRL"): `PayVsTsrChart` (CEO pay actually
+  paid as bars, TSR and peer TSR on $100 as lines), or the reason it is missing.
+- "CEO total pay over time": `LadderChart` over `/governance/history` (`columnHeader`/`source`
+  props).
+- With no processed proxy, an empty state gives the reason and how many proxies were ingested.
+
 ## Adding a screen
 
 1. Add the route in `App.tsx` as a `lazy` import, so it is its own chunk.

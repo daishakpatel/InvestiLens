@@ -17,6 +17,8 @@ const CompanyDashboard = lazy(() => import("./pages/CompanyDashboard"));
 const OverviewTab = lazy(() => import("./pages/tabs/OverviewTab"));
 const FinancialsTab = lazy(() => import("./pages/tabs/FinancialsTab"));
 const EarningsQualityTab = lazy(() => import("./pages/tabs/EarningsQualityTab"));
+const FootnotesTab = lazy(() => import("./pages/tabs/FootnotesTab"));
+const GovernanceTab = lazy(() => import("./pages/tabs/GovernanceTab"));
 const ResearchTab = lazy(() => import("./pages/tabs/ResearchTab"));
 const FilingsTab = lazy(() => import("./pages/tabs/FilingsTab"));
 const NewsTab = lazy(() => import("./pages/tabs/NewsTab"));
@@ -74,6 +76,8 @@ export function App() {
             <Route index element={<OverviewTab />} />
             <Route path="financials" element={<FinancialsTab />} />
             <Route path="quality" element={<EarningsQualityTab />} />
+            <Route path="footnotes" element={<FootnotesTab />} />
+            <Route path="governance" element={<GovernanceTab />} />
             <Route path="research" element={<ResearchTab />} />
             <Route path="filings" element={<FilingsTab />} />
             <Route path="news" element={<NewsTab />} />

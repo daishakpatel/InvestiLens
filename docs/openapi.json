@@ -214,6 +214,67 @@
         "title": "AuthMessage",
         "type": "object"
       },
+      "BoardFacts": {
+        "description": "AI-extracted (marked as such in the UI). `independence_ratio` is computed in code from the\ntwo verified counts, as a decimal (0.9167 = 91.67%).",
+        "properties": {
+          "fields": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GovernanceField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "independence_ratio": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Independence Ratio"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "extracted",
+              "pending",
+              "no_sections"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "BoardFacts",
+        "type": "object"
+      },
       "ChatMessage": {
         "properties": {
           "citations": {
@@ -755,6 +816,85 @@
           }
         },
         "title": "ComparisonResponse",
+        "type": "object"
+      },
+      "Compensation": {
+        "description": "Tier B: rows that add up to their total; the rest were rejected, never repaired.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "rejected_rows": {
+            "default": 0,
+            "title": "Rejected Rows",
+            "type": "integer"
+          },
+          "rows": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CompensationRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "title": "Compensation",
+        "type": "object"
+      },
+      "CompensationRow": {
+        "properties": {
+          "components": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Components",
+            "type": "object"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "peo",
+              "pfo",
+              "neo"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "role",
+          "fiscal_year",
+          "components",
+          "total",
+          "source_id"
+        ],
+        "title": "CompensationRow",
         "type": "object"
       },
       "Concentration": {
@@ -1778,6 +1918,163 @@
         "title": "FinancialsResponse",
         "type": "object"
       },
+      "FootnoteCategory": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/FootnoteFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/FootnoteGap"
+            },
+            "title": "Gaps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "facts",
+          "gaps"
+        ],
+        "title": "FootnoteCategory",
+        "type": "object"
+      },
+      "FootnoteFact": {
+        "properties": {
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula"
+          },
+          "from_inline_xbrl": {
+            "default": false,
+            "title": "From Inline Xbrl",
+            "type": "boolean"
+          },
+          "is_derived": {
+            "title": "Is Derived",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "metric",
+          "label",
+          "value",
+          "unit",
+          "period",
+          "source_id",
+          "is_derived"
+        ],
+        "title": "FootnoteFact",
+        "type": "object"
+      },
+      "FootnoteFactsResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/FootnoteCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          }
+        },
+        "required": [
+          "company_ticker",
+          "fiscal_year",
+          "categories"
+        ],
+        "title": "FootnoteFactsResponse",
+        "type": "object"
+      },
+      "FootnoteGap": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "label",
+          "period",
+          "reason"
+        ],
+        "title": "FootnoteGap",
+        "type": "object"
+      },
       "Freshness": {
         "description": "Data-freshness metadata attached to data endpoints (API-008, FR-006).",
         "properties": {
@@ -1807,6 +2104,268 @@
           "freshness_status"
         ],
         "title": "Freshness",
+        "type": "object"
+      },
+      "GovernanceField": {
+        "description": "One Tier C field. `value` null = \"not stated\" (absent, or failed verification).",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paragraph_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph Id"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "name",
+          "label"
+        ],
+        "title": "GovernanceField",
+        "type": "object"
+      },
+      "GovernanceHistoryPoint": {
+        "properties": {
+          "ceo_total_pay": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceo Total Pay"
+          },
+          "ceo_total_pay_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceo Total Pay Source"
+          },
+          "ceo_total_pay_source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceo Total Pay Source Id"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "independence_ratio": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Independence Ratio"
+          }
+        },
+        "required": [
+          "fiscal_year"
+        ],
+        "title": "GovernanceHistoryPoint",
+        "type": "object"
+      },
+      "GovernanceHistoryResponse": {
+        "properties": {
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceHistoryPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "company_ticker",
+          "points"
+        ],
+        "title": "GovernanceHistoryResponse",
+        "type": "object"
+      },
+      "GovernanceResponse": {
+        "properties": {
+          "available_years": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Available Years",
+            "type": "array"
+          },
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "compensation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Compensation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "default": {},
+            "title": "Coverage",
+            "type": "object"
+          },
+          "facts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardFacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FilingSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "fiscal_year_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year Source"
+          },
+          "pay_ratio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayRatio"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pay_vs_performance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayVersusPerformance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proxies_ingested": {
+            "title": "Proxies Ingested",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "company_ticker",
+          "fiscal_year",
+          "fiscal_year_source",
+          "filing",
+          "available_years",
+          "proxies_ingested"
+        ],
+        "title": "GovernanceResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2975,6 +3534,165 @@
         "title": "NormalizedHolding",
         "type": "object"
       },
+      "NoteBullet": {
+        "description": "One AI bullet. `quote` is verbatim from the paragraph `paragraph_id` (a source ID).",
+        "properties": {
+          "paragraph_id": {
+            "title": "Paragraph Id",
+            "type": "string"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "quote",
+          "paragraph_id"
+        ],
+        "title": "NoteBullet",
+        "type": "object"
+      },
+      "NoteItem": {
+        "properties": {
+          "also_matches": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Also Matches",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "note_id": {
+            "title": "Note Id",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "paragraph_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Paragraph Ids",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoteSummaryView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id",
+          "number",
+          "title",
+          "category",
+          "paragraph_ids"
+        ],
+        "title": "NoteItem",
+        "type": "object"
+      },
+      "NoteSummaryView": {
+        "description": "`pending` = not generated yet (summaries are made after parsing, never on page load).",
+        "properties": {
+          "bullets": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NoteBullet"
+            },
+            "title": "Bullets",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "status": {
+            "enum": [
+              "summarised",
+              "abstained",
+              "pending"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "NoteSummaryView",
+        "type": "object"
+      },
+      "NotesResponse": {
+        "properties": {
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "filing": {
+            "$ref": "#/components/schemas/FilingSummary"
+          },
+          "low_confidence": {
+            "title": "Low Confidence",
+            "type": "boolean"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/NoteItem"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "summarised_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Summarised Categories",
+            "type": "array"
+          },
+          "taxonomy": {
+            "title": "Taxonomy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_ticker",
+          "filing",
+          "taxonomy",
+          "low_confidence",
+          "summarised_categories",
+          "notes"
+        ],
+        "title": "NotesResponse",
+        "type": "object"
+      },
       "Notification": {
         "properties": {
           "body": {
@@ -3170,6 +3888,137 @@
           "email"
         ],
         "title": "PasswordResetRequest",
+        "type": "object"
+      },
+      "PayRatio": {
+        "properties": {
+          "ceo_total": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceo Total"
+          },
+          "median_pay": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Pay"
+          },
+          "ratio": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ratio"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          }
+        },
+        "title": "PayRatio",
+        "type": "object"
+      },
+      "PayVersusPerformance": {
+        "description": "Tier A, from the proxy's Inline XBRL. TSR values are the worth of $100 invested.",
+        "properties": {
+          "company_selected_measure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Selected Measure"
+          },
+          "points": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PayVersusPerformancePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "PayVersusPerformance",
+        "type": "object"
+      },
+      "PayVersusPerformancePoint": {
+        "properties": {
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "source_ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "object"
+          },
+          "values": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "fiscal_year",
+          "values",
+          "source_ids"
+        ],
+        "title": "PayVersusPerformancePoint",
         "type": "object"
       },
       "PeerSuggestion": {
@@ -6753,6 +7602,152 @@
         ]
       }
     },
+    "/api/v1/companies/{ticker}/footnote-facts": {
+      "get": {
+        "operationId": "footnote_facts_api_v1_companies__ticker__footnote_facts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FootnoteFactsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Footnote Facts",
+        "tags": [
+          "Footnotes"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/governance": {
+      "get": {
+        "operationId": "governance_api_v1_companies__ticker__governance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Proxy fiscal year; default the latest",
+            "in": "query",
+            "name": "fiscal_year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 1990,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Proxy fiscal year; default the latest",
+              "title": "Fiscal Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Governance",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/governance/history": {
+      "get": {
+        "operationId": "governance_history_api_v1_companies__ticker__governance_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Governance History",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
     "/api/v1/companies/{ticker}/insiders": {
       "get": {
         "description": "Form 4 insider transactions. Not yet ingested (Appendix F #10, P2) \u2192 empty.",
@@ -7125,6 +8120,66 @@
         "tags": [
           "Company",
           "News"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/notes": {
+      "get": {
+        "operationId": "list_notes_api_v1_companies__ticker__notes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A 10-K or 10-Q of this company; default the latest 10-K",
+            "in": "query",
+            "name": "filing_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A 10-K or 10-Q of this company; default the latest 10-K",
+              "title": "Filing Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Notes",
+        "tags": [
+          "Footnotes"
         ]
       }
     },
@@ -7790,6 +8845,74 @@
           }
         },
         "summary": "Diff Filings",
+        "tags": [
+          "Filings"
+        ]
+      }
+    },
+    "/api/v1/filings/{filing_id}/notes/{category}/diff": {
+      "get": {
+        "description": "The same diff, scoped to one note category in both filings (Phase 7f, FR-FN-010).\n\nEvery note of the category is included on each side (a filer may split one), matched by the\nsame heading-then-similarity alignment as the whole-filing diff.",
+        "operationId": "diff_note_api_v1_filings__filing_id__notes__category__diff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filing_id",
+            "required": true,
+            "schema": {
+              "title": "Filing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "category",
+            "required": true,
+            "schema": {
+              "title": "Category",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "against",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Against"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingDiffResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Diff Note",
         "tags": [
           "Filings"
         ]

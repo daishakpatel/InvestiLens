@@ -16,7 +16,7 @@ file in the same PR (DB-001).
 - **Constraint/index names** follow a fixed naming convention (see `app/models/base.py`) so
   migrations stay deterministic and reviewable.
 
-## Tables by domain (36 tables)
+## Tables by domain (37 tables)
 
 ```text
 Reference        companies ──< company_identifiers
@@ -26,6 +26,7 @@ Documents        companies ──< documents ──< filings (filings.amends_fil
                  documents ──< document_chunks                                   │
                  documents ──< news (news.document_id, nullable)                 │
                  filings ──< red_flags >── companies, documents                    │
+                 documents ──< exec_comp_facts >── companies (proxy pay figures)    │
 
 Financials       companies ──< financial_facts        (raw XBRL, point-in-time)
                  companies ──< financial_metrics       (computed, versioned)
@@ -132,6 +133,22 @@ CCC) are NULL with `NOT_APPLICABLE_SECTOR`. The TTM rows gain `fcf_conversion` a
 total assets at the end of the quarter before the window and at the window's end. There is no
 schema change and no migration.
 
+### Footnote facts (Phase 7f, ADR-0044)
+
+`footnote_builder` runs after the ratio builder (metrics task, EDGAR poller,
+`scripts/build_metrics.py`) and stores FY rows for the `footnote_metrics` of
+`concept_map_v1.yaml`: debt maturities `debt_maturity_y1` … `y5` and `debt_maturity_after`,
+`debt_weighted_avg_rate`, `revolver_capacity`, operating/finance lease liabilities, lease term and
+discount rate, lease payments `lease_payments_y1` … `after` and `_total`, the reported effective
+tax rate, unrecognized tax benefits, valuation allowance, purchase obligations, legal accrual and
+unrecognized stock-compensation cost. Source ID `xbrl:<TICKER>:<metric>:FY<yr>`;
+`quality_flags.note_category`, plus `source: "inline_xbrl"` when read from the 10-K's inline XBRL
+(latest year only). A ladder bucketed from per-instrument inline facts (NVIDIA) is derived
+(`derived:<TICKER>:debt_maturity_<w>:FY<yr>`, lineage = the notes). Derived
+`debt_due_within_2y_share` and `lease_adjusted_debt` carry `quality_flags.derived` (the formula)
+and `inputs`. The builder deletes and rewrites its own rows and its own `metric_gaps` (latest year:
+`not_tagged`, `filing_unavailable`, `MISSING_INPUT`) on every run. No schema change, no migration.
+
 ### Documents: types, metadata and parsing (Phase 7c, ADR-0041)
 
 `documents.document_type` values: `filing` (10-K, 10-Q, 8-K, 8-K/A, DEF 14A, DEFA14A),
@@ -151,9 +168,15 @@ EDGAR acceptance time), and `news`. A filing's `published_at` is also its accept
 | `supplemental` | DEFA14A | additional proxy soliciting material |
 | `notice_for`, `period_end` | late_filing_notice | the form it is late for (`10-K` / `10-Q`) and its period |
 | `parent_accession`, `exhibit_type`, `filename`, `size_bytes` | earnings_release | the 8-K it came with, `EX-99.1` etc. |
+| `notes` | 10-K, 10-Q (Phase 7f) | `{taxonomy: "note_taxonomy_v1", low_confidence, items: [{note_id, number, title, category, also_matches, paragraph_ids}]}`, written at parse time (ADR-0044) |
+| `proxy_sections` | DEF 14A, DEFA14A (Phase 7g) | governance sections found at parse time (`board`, `summary_compensation_table`, …) |
+| `proxy` | DEF 14A (Phase 7g) | `fiscal_year` and `fiscal_year_source` (from content), `peo_names`, `company_selected_measure`, `sct_rejected[]`, `sct_source_id`, `pay_ratio_status` |
+| `governance_facts` | DEF 14A (Phase 7g) | cached `governance_v1` fields keyed `{prompt_version}|{model}`: `{value, quote, paragraph_id}` or null each, `rejected[]` |
+| `note_summaries` | 10-K (Phase 7f) | cached `note_summary_v1` output keyed `{note_id}|{prompt_version}|{model}`; dropped on re-parse because it cites chunk IDs |
 
 `documents.parser_version` is NULL until the document is parsed, then the parser version that
-produced its chunks (`sec-ingest-v2`); the parse step skips documents already at it. A re-parse
+produced its chunks (`sec-ingest-v4` since Phase 7g: v3 starts a chunk at every note heading in
+the financial-statement sections, v4 splits proxy statements into keyword sections); the parse step skips documents already at it. A re-parse
 replaces every chunk of the document, whatever its version, keeping the embedding of any chunk
 whose `content_hash` is unchanged. `document_chunks.paragraph_id` is `{document}_{item}_{n}`,
 where 8-K items are dotted (`5.02`) and 10-Q items part-qualified (`P1-1`), so a chunk ID from an
@@ -220,6 +243,28 @@ detected_at, event_date, severity, snippet, payload JSONB)`. Each row is one rul
 - Each detection pass records an `ingestion_runs` row (source `red_flags`), whose `ended_at` is
   the "scanned through" date. Source ID: `redflag:<TICKER>:<rule_key>:<accession>`.
 
+### Executive compensation facts (Phase 7g, ADR-0045)
+
+`exec_comp_facts (id, company_id, document_id, fiscal_year, tier, fact_key, person NULL, role NULL,
+value NUMERIC(28,8), unit, source_id, created_at)`. Each row is one validated figure from one proxy
+statement (`document_id` is the DEF 14A):
+- `tier` `pvp`: a Pay Versus Performance fact (`fact_key` `peo_total_comp`,
+  `peo_actually_paid_comp`, `non_peo_neo_avg_total_comp`, `non_peo_neo_avg_actually_paid_comp`,
+  `tsr`, `peer_group_tsr`, `company_selected_measure`, `net_income`), five years per proxy.
+  `source_id` is `xbrl:<financial_facts.id>`, or the PvP table chunk when only the proxy's
+  Inline XBRL has it. TSR rows have unit `index` (the worth of $100 invested).
+- `tier` `sct`: a Summary Compensation Table cell (`salary`, `bonus`, `stock_awards`,
+  `option_awards`, `non_equity_incentive`, `pension_nqdc`, `all_other`, `total`) with `person`
+  (name and position as printed) and `role` (`peo`, `pfo` or `neo`), cited to the table chunk.
+  Only rows whose components sum to the total within $1 are stored.
+- `tier` `pay_ratio`: `ratio` (unit `ratio_to_1`) and `median_pay`, stored only if median ×
+  ratio is within 2% of the CEO's total, cited to the paragraph.
+- `fiscal_year` is the year the figure covers, never the filing year. Missing figures are absent
+  rows, never zeros.
+- Unique `uq_exec_comp_facts_fact (document_id, fiscal_year, fact_key, person)` NULLS NOT
+  DISTINCT. The builder deletes and reinserts a proxy's rows, so rebuilds are idempotent. FKs
+  `ON DELETE CASCADE`; index `(company_id, fiscal_year)`.
+
 ### Alerts and notifications (Phase 7a, ADR-0039)
 
 `alerts`: `event_type` (a key in `app/alerts/registry.py`), `params` JSONB (validated against that
@@ -270,3 +315,5 @@ Migrations are tested up and down, on empty and populated databases, in
 | `e4a7c2d91b30` | Alert framework v2: `alerts.alert_type/config/is_active/channel` → `event_type/params/enabled/channels[]`, `company_id` nullable, drop `last_triggered_at`, add `created_at` + `watermark_at` (existing rows backfilled with `now()` at migration time so deploying replays nothing); `new_10k/new_10q/new_8k` become `new_filing` with a `form_types` param. `notifications` gains `event_key`, `payload` and unique `(alert_id, event_key)`. Downgrade drops watchlist-wide alerts and keeps only the first form/channel. Phase 7a, ADR-0039. |
 | `b7d3e9f1a2c4` | Add the `metric_gaps` table (`company_id` FK `ON DELETE CASCADE`, `metric`, `period_label`, `reason`, `detected_at` default `now()`, unique `(company_id, metric, period_label)`): quarters and TTM windows a metric could not be computed for, and why. Phase 7b, FR-QT-010, ADR-0040. |
 | `c3f8a1d2e9b7` | Add `red_flags` (FKs to companies, filings, documents `ON DELETE CASCADE`; unique `uq_red_flags_event (company_id, rule_key, taxonomy_version, filing_id, paragraph_id)` NULLS NOT DISTINCT, named explicitly because the generated name passes Postgres's 63 characters; index `(company_id, event_date)`). Phase 7e, FR-RF-006, ADR-0043. |
+| — | Phase 7f adds no migration: notes and summaries live in `documents.metadata`, footnote facts in `financial_metrics`/`metric_gaps` (ADR-0044). |
+| `f2a9c4e7b1d3` | Add `exec_comp_facts` (FKs to companies and documents `ON DELETE CASCADE`; unique `uq_exec_comp_facts_fact (document_id, fiscal_year, fact_key, person)` NULLS NOT DISTINCT; index `(company_id, fiscal_year)`). Phase 7g, FR-GV-004, ADR-0045. |
