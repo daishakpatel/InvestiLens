@@ -32,6 +32,9 @@ sectors:
     cash_conversion_cycle: false
     accruals_ratio_bs: false  # deposits and loans are the operations: NOA has no meaning
     sga_expense: false
+    # Banks are valued on tangible book, which needs goodwill and intangibles mapped (Phase 7h):
+    # until then price-to-book is N/A rather than a misleading multiple.
+    pb_ratio: false
     pe: true
     ps: true
     net_interest_margin: true   # [P2]

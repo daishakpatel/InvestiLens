@@ -1,0 +1,17 @@
+# Company-level concept overrides for Intel (CIK 0000050863), Phase 7h (ADR-0046).
+# Intel has not tagged a total depreciation & amortization since 2019: its cash-flow statement
+# lists "Depreciation" and "Amortization of intangibles" separately, and their sum is the total
+# (FY2025: 10,757 + 949 = 11,706M, the statement's own two lines).
+cik: "0000050863"
+ticker: INTC
+
+composite_tags:
+  composite:depreciation_amortization:
+    - us-gaap:Depreciation
+    - us-gaap:AmortizationOfIntangibleAssets
+
+flow_metrics:
+  depreciation_amortization:
+    - us-gaap:DepreciationDepletionAndAmortization
+    - us-gaap:DepreciationAndAmortization
+    - composite:depreciation_amortization

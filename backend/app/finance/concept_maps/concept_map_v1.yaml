@@ -96,6 +96,12 @@ stock_metrics:
   ppe_net:
     - us-gaap:PropertyPlantAndEquipmentNet
     - us-gaap:PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization
+  # Enterprise value inputs (Phase 7h, ADR-0046): EV = market cap + debt + minority interest +
+  # preferred - cash - short-term investments. Unreported = not part of EV, never a gap.
+  minority_interest:
+    - us-gaap:MinorityInterest
+  preferred_stock:
+    - us-gaap:PreferredStockValue
 
 # Expected unit family per metric for the unit-consistency check (DR-024).
 units:

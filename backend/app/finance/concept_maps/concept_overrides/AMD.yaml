@@ -1,0 +1,22 @@
+# Company-level concept overrides for AMD (CIK 0000002488), Phase 7h (ADR-0046).
+# AMD tagged a total depreciation & amortization (DepreciationDepletionAndAmortization) only until
+# Q3 2023. Its cash-flow statement now shows "Depreciation and amortization" (tagged
+# OtherDepreciationAndAmortization) and "Amortization of acquisition-related intangibles" in
+# AMD's own taxonomy, which companyfacts does not carry. The nearest us-gaap pair adds
+# AmortizationOfIntangibleAssets (all intangibles, from the note): FY2025 750 + 2,300 = 3,050M
+# against the statement's 750 + 2,254 = 3,004M, i.e. $46M (1.5%) of non-acquisition intangible
+# amortization counted twice. Accepted: Depreciation + AmortizationOfIntangibleAssets would miss
+# $183M instead.
+cik: "0000002488"
+ticker: AMD
+
+composite_tags:
+  composite:depreciation_amortization:
+    - us-gaap:OtherDepreciationAndAmortization
+    - us-gaap:AmortizationOfIntangibleAssets
+
+flow_metrics:
+  depreciation_amortization:
+    - us-gaap:DepreciationDepletionAndAmortization
+    - us-gaap:DepreciationAndAmortization
+    - composite:depreciation_amortization
