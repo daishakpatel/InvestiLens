@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.finance import metrics
 from app.finance.concept_map import ConceptMap, load_concept_map
-from app.finance.facts import fact_view_from_orm
+from app.finance.facts import fact_view_from_orm, with_composites
 from app.finance.ratio_builder import persist_derived
 from app.finance.selection import FactView, select_metric
 from app.ingestion.documents.ixbrl import IxValue, tagged_values
@@ -272,9 +272,10 @@ def build_company_footnotes(
 ) -> FootnoteCounts:
     """Persist footnote facts, the two derived footnote metrics, and the latest year's gaps."""
     cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
-    facts: list[FactView] = [
-        fact_view_from_orm(f) for f in facts_repo.facts_for_company(session, company.id)
-    ]
+    facts: list[FactView] = with_composites(
+        [fact_view_from_orm(f) for f in facts_repo.facts_for_company(session, company.id)],
+        cmap.composites,
+    )
     reader = read_raw or get_object_storage().get
     own = [*cmap.footnote_metrics, *FOOTNOTE_DERIVED]
     metrics_repo.clear_company_metric_names(

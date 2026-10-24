@@ -883,3 +883,49 @@ def debt_due_within_2y_share(
     y1, y2, *_ = (cast(Decimal, value) for value in values)
     total = sum((cast(Decimal, value) for value in values), Decimal(0))
     return _divide(y1 + y2, total, unit=RATIO, formula_id="debt_due_within_2y_share", inputs=inputs)
+
+
+# --- Point-in-time valuation (Phase 7h, FR-PS-005, ADR-0046) ---------------------------
+def pe_from_earnings(
+    market_cap_value: Num, net_income_ttm: Num, *, sources: Sources = None
+) -> MetricResult:
+    """P/E as market cap / TTM net income: the same ratio as price / EPS without mixing share
+    bases across a split. Loss-making (net income <= 0) is NEGATIVE_BASE, not a negative P/E."""
+    inputs = _inputs(
+        [("market_cap", market_cap_value), ("net_income_ttm", net_income_ttm)], sources
+    )
+    return _divide(
+        market_cap_value, net_income_ttm, unit=MULTIPLE, formula_id="pe_ratio", inputs=inputs
+    )
+
+
+def ev_to_fcf(
+    enterprise_value_v: Num, fcf_ttm: Num, *, applicable: bool = True, sources: Sources = None
+) -> MetricResult:
+    inputs = _inputs([("enterprise_value", enterprise_value_v), ("fcf_ttm", fcf_ttm)], sources)
+    if not applicable:
+        return _fail(NOT_APPLICABLE_SECTOR, MULTIPLE, "ev_fcf", inputs)
+    return _divide(enterprise_value_v, fcf_ttm, unit=MULTIPLE, formula_id="ev_fcf", inputs=inputs)
+
+
+def pb_ratio(
+    market_cap_value: Num, book_equity: Num, *, applicable: bool = True, sources: Sources = None
+) -> MetricResult:
+    inputs = _inputs([("market_cap", market_cap_value), ("book_equity", book_equity)], sources)
+    if not applicable:  # banks: price to tangible book, which needs a mapping we do not have
+        return _fail(NOT_APPLICABLE_SECTOR, MULTIPLE, "pb_ratio", inputs)
+    return _divide(
+        market_cap_value, book_equity, unit=MULTIPLE, formula_id="pb_ratio", inputs=inputs
+    )
+
+
+def earnings_yield(
+    net_income_ttm: Num, market_cap_value: Num, *, sources: Sources = None
+) -> MetricResult:
+    """TTM net income / market cap; a loss gives a negative yield, which is meaningful."""
+    inputs = _inputs(
+        [("net_income_ttm", net_income_ttm), ("market_cap", market_cap_value)], sources
+    )
+    return _divide(
+        net_income_ttm, market_cap_value, unit=RATIO, formula_id="earnings_yield", inputs=inputs
+    )

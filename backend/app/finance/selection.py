@@ -28,6 +28,7 @@ class FactView:
     filed_date: date | None
     is_amended: bool = False
     fact_id: int | None = None  # financial_facts.id, cited as `xbrl:<fact_id>` (CIT-003)
+    component_ids: tuple[int, ...] = ()  # a composite fact's summed facts (Phase 7h, ADR-0046)
 
 
 @dataclass(frozen=True)
