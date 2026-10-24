@@ -103,3 +103,87 @@ units:
   shares_diluted_weighted: shares
   shares_outstanding: shares
   # everything else defaults to `currency` (USD)
+
+# Footnote facts (Phase 7f, ADR-0044): exact figures the notes to the financial statements tag in
+# XBRL, read first so text is summarised only where no number exists. Persisted per fiscal year by
+# `footnote_builder` as `xbrl:{TICKER}:{metric}:FY{yr}`; not by the annual or quarterly builders.
+# Grouped by note category (`note_taxonomy_v1`); instants at the fiscal year end unless listed in
+# `footnote_flow_metrics`. A metric companyfacts lacks for the latest year is looked up in that
+# 10-K's inline XBRL (companyfacts drops numeric durations such as a lease term), then recorded in
+# `metric_gaps`; never stored as zero.
+footnote_metrics:
+  debt:
+    # Maturities are separate concepts per year, not a dimension. JPM moved to the "Rolling"
+    # concepts from FY2023; NVIDIA tags none (its ladder comes from per-note inline XBRL).
+    debt_maturity_y1:
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInNextRollingTwelveMonths
+    debt_maturity_y2:
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInYearTwo
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInRollingYearTwo
+    debt_maturity_y3:
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInYearThree
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInRollingYearThree
+    debt_maturity_y4:
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInYearFour
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInRollingYearFour
+    debt_maturity_y5:
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInYearFive
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInRollingYearFive
+    debt_maturity_after:
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalAfterYearFive
+      - us-gaap:LongTermDebtMaturitiesRepaymentsOfPrincipalInRollingAfterYearFive
+    debt_weighted_avg_rate:
+      - us-gaap:LongtermDebtWeightedAverageInterestRate
+      - us-gaap:DebtWeightedAverageInterestRate
+    revolver_capacity:
+      - us-gaap:LineOfCreditFacilityMaximumBorrowingCapacity
+  leases:
+    operating_lease_liability:
+      - us-gaap:OperatingLeaseLiability
+    finance_lease_liability:
+      - us-gaap:FinanceLeaseLiability
+    operating_lease_wa_term_years:
+      - us-gaap:OperatingLeaseWeightedAverageRemainingLeaseTerm1  # inline XBRL only
+    operating_lease_wa_discount_rate:
+      - us-gaap:OperatingLeaseWeightedAverageDiscountRatePercent
+    lease_payments_y1:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDueNextTwelveMonths
+    lease_payments_y2:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDueYearTwo
+    lease_payments_y3:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDueYearThree
+    lease_payments_y4:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDueYearFour
+    lease_payments_y5:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDueYearFive
+    lease_payments_after:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDueAfterYearFive
+    lease_payments_total:
+      - us-gaap:LesseeOperatingLeaseLiabilityPaymentsDue
+  income_taxes:
+    effective_tax_rate_reported:
+      - us-gaap:EffectiveIncomeTaxRateContinuingOperations
+    unrecognized_tax_benefits:
+      - us-gaap:UnrecognizedTaxBenefits
+    valuation_allowance:
+      - us-gaap:DeferredTaxAssetsValuationAllowance
+  commitments_contingencies:
+    purchase_obligations:
+      - us-gaap:PurchaseObligation
+      - us-gaap:UnrecordedUnconditionalPurchaseObligationBalanceSheetAmount
+    legal_accrual:
+      - us-gaap:LossContingencyAccrualAtCarryingValue
+  stock_comp:
+    unrecognized_sbc_cost:
+      - us-gaap:EmployeeServiceShareBasedCompensationNonvestedAwardsTotalCompensationCostNotYetRecognized
+
+footnote_flow_metrics:
+  - effective_tax_rate_reported
+
+# Footnote units that are not USD (stored as the decimal XBRL value: 0.0438 = 4.38%).
+footnote_units:
+  debt_weighted_avg_rate: ratio
+  operating_lease_wa_discount_rate: ratio
+  effective_tax_rate_reported: ratio
+  operating_lease_wa_term_years: years

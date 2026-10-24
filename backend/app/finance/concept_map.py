@@ -7,7 +7,7 @@ selection turns inconsistent raw XBRL into canonical values Phase 1c can run for
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -32,15 +32,20 @@ class ConceptMap:
     _sector_applicability: dict[str, bool]
     _cash_flow: frozenset[str] = frozenset()
     _annual_only: frozenset[str] = frozenset()
+    # Footnote facts (Phase 7f): metric -> tags, metric -> note category, flows, non-USD units.
+    _footnote: dict[str, list[str]] = field(default_factory=dict)
+    _footnote_category: dict[str, str] = field(default_factory=dict)
+    _footnote_flow: frozenset[str] = frozenset()
+    _footnote_units: dict[str, str] = field(default_factory=dict)
 
     def tags(self, metric: str) -> list[str]:
         """Ordered XBRL tags to try for a canonical metric (first available wins)."""
-        return self._flow.get(metric) or self._stock.get(metric) or []
+        return self._flow.get(metric) or self._stock.get(metric) or self._footnote.get(metric) or []
 
     def kind(self, metric: str) -> MetricKind | None:
-        if metric in self._flow:
+        if metric in self._flow or metric in self._footnote_flow:
             return "flow"
-        if metric in self._stock:
+        if metric in self._stock or metric in self._footnote:
             return "stock"
         return None
 
@@ -58,6 +63,14 @@ class ConceptMap:
     def applies(self, metric: str) -> bool:
         """Whether a metric is applicable for this company's sector (DR-001/DR-042)."""
         return self._sector_applicability.get(metric, True)
+
+    @property
+    def footnote_metrics(self) -> dict[str, str]:
+        """Footnote metric -> its note category, in concept-map order (Phase 7f)."""
+        return dict(self._footnote_category)
+
+    def footnote_unit(self, metric: str) -> str:
+        return self._footnote_units.get(metric, "USD")
 
     @property
     def flow_metrics(self) -> list[str]:
@@ -106,6 +119,7 @@ def load_concept_map(*, ticker: str = "", cik: str = "", sector: str | None = No
     applicability = _load_yaml("sector_applicability.yaml").get("sectors", {})
     sector_map = applicability.get(resolved_sector, applicability.get("standard", {}))
 
+    footnote = base.get("footnote_metrics", {})
     return ConceptMap(
         version=str(base.get("version", "v1")),
         sector=resolved_sector,
@@ -115,4 +129,8 @@ def load_concept_map(*, ticker: str = "", cik: str = "", sector: str | None = No
         _sector_applicability=sector_map,
         _cash_flow=frozenset(base.get("cash_flow_metrics", [])),
         _annual_only=frozenset(base.get("annual_only_metrics", [])),
+        _footnote={m: list(t) for group in footnote.values() for m, t in group.items()},
+        _footnote_category={m: cat for cat, group in footnote.items() for m in group},
+        _footnote_flow=frozenset(base.get("footnote_flow_metrics", [])),
+        _footnote_units=dict(base.get("footnote_units", {})),
     )

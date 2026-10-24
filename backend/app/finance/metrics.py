@@ -842,3 +842,44 @@ def percentile_rank(value: Decimal, distribution: Sequence[Decimal]) -> MetricRe
         return _fail(MISSING_INPUT, RATIO, "percentile_rank", inputs)
     at_or_below = sum(1 for d in distribution if d <= value)
     return _ok(Decimal(at_or_below) / Decimal(len(distribution)), RATIO, "percentile_rank", inputs)
+
+
+# --- Footnotes (Phase 7f, FR-FN-006) --------------------------------------------------
+DEBT_MATURITY_BUCKETS = (
+    "debt_maturity_y1",
+    "debt_maturity_y2",
+    "debt_maturity_y3",
+    "debt_maturity_y4",
+    "debt_maturity_y5",
+    "debt_maturity_after",
+)
+
+
+def lease_adjusted_debt(
+    total_debt_value: Num, operating_lease_liability: Num, *, sources: Sources = None
+) -> MetricResult:
+    """Total debt + operating lease liabilities. Both are required: without the lease figure the
+    result would just be total debt under a "lease-adjusted" label."""
+    inputs = _inputs(
+        [
+            ("total_debt", total_debt_value),
+            ("operating_lease_liability", operating_lease_liability),
+        ],
+        sources,
+    )
+    if total_debt_value is None or operating_lease_liability is None:
+        return _fail(MISSING_INPUT, USD, "lease_adjusted_debt", inputs)
+    return _ok(total_debt_value + operating_lease_liability, USD, "lease_adjusted_debt", inputs)
+
+
+def debt_due_within_2y_share(
+    maturities: Mapping[str, Num], *, sources: Sources = None
+) -> MetricResult:
+    """(year 1 + year 2 maturities) / all scheduled maturities; needs the whole ladder."""
+    inputs = _inputs([(name, maturities.get(name)) for name in DEBT_MATURITY_BUCKETS], sources)
+    values = [maturities.get(name) for name in DEBT_MATURITY_BUCKETS]
+    if any(value is None for value in values):
+        return _fail(MISSING_INPUT, RATIO, "debt_due_within_2y_share", inputs)
+    y1, y2, *_ = (cast(Decimal, value) for value in values)
+    total = sum((cast(Decimal, value) for value in values), Decimal(0))
+    return _divide(y1 + y2, total, unit=RATIO, formula_id="debt_due_within_2y_share", inputs=inputs)

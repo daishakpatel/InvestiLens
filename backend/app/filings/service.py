@@ -9,7 +9,7 @@ import asyncio
 import logging
 import math
 import time
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal
@@ -149,9 +149,14 @@ def _emphasized(raw_document_location: str) -> str | None:
     return emphasized_text(raw.decode("utf-8", errors="ignore"))
 
 
-def _units(session: Session, filing: Filing, *, styled: bool) -> list[Unit] | None:
-    """Units for a filing; None if `styled` was asked for but the filing's styling is unusable."""
+def _units(
+    session: Session, filing: Filing, *, styled: bool, scope: Collection[str] | None = None
+) -> list[Unit] | None:
+    """Units for a filing; None if `styled` was asked for but the filing's styling is unusable.
+    `scope` keeps only the chunks with those paragraph IDs (one note, Phase 7f)."""
     chunks = filing_repo.get_filing_sections(session, document_id=filing.document_id)
+    if scope is not None:
+        chunks = [chunk for chunk in chunks if chunk.paragraph_id in scope]
     if not styled:
         return build_units(chunks)
     location = filing.raw_document_location
@@ -181,8 +186,13 @@ def diff_filings(
     *,
     adjudicate: Adjudicator | None = None,
     settings: Settings | None = None,
+    scope: Collection[str] | None = None,
 ) -> FilingDiff:
-    """What changed in `filing` relative to `against` (the older baseline)."""
+    """What changed in `filing` relative to `against` (the older baseline).
+
+    `scope` (paragraph IDs from both filings) narrows the diff to one part of each, such as the
+    same note in two 10-Ks (FR-FN-010); None compares the whole filings, as before.
+    """
     settings = settings or get_settings()
     similarity = (
         embedding_similarity(get_embedding_client())
@@ -190,11 +200,13 @@ def diff_filings(
         else lexical_similarity
     )
     # Both sides must be unitized the same way, or the method itself would show up as a change.
-    old, new = _units(session, against, styled=True), _units(session, filing, styled=True)
+    old = _units(session, against, styled=True, scope=scope)
+    new = _units(session, filing, styled=True, scope=scope)
     detection: CaptionDetection = "emphasis"
     if old is None or new is None:
         detection = "heuristic"
-        old, new = _units(session, against, styled=False), _units(session, filing, styled=False)
+        old = _units(session, against, styled=False, scope=scope)
+        new = _units(session, filing, styled=False, scope=scope)
     return FilingDiff(
         items=diff_units(
             old or [],

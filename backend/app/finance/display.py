@@ -39,6 +39,21 @@ _LABELS = {
     "ev_ebitda": "Enterprise value to EBITDA",
     "p_fcf": "Price-to-free-cash-flow ratio",
     "cagr": "Compound annual growth",
+    # Footnote facts (Phase 7f). The adjustment is part of the name wherever it is shown.
+    "lease_adjusted_debt": "Lease-adjusted debt",
+    "debt_due_within_2y_share": "Share of debt maturing within 2 years",
+    "debt_maturity_after": "Debt maturing after year 5",
+    "debt_weighted_avg_rate": "Weighted-average interest rate on debt",
+    "revolver_capacity": "Revolving credit capacity",
+    "operating_lease_wa_term_years": "Weighted-average remaining lease term",
+    "operating_lease_wa_discount_rate": "Weighted-average lease discount rate",
+    "lease_payments_after": "Lease payments due after year 5",
+    "lease_payments_total": "Total undiscounted lease payments",
+    "effective_tax_rate_reported": "Effective tax rate (as reported)",
+    "unrecognized_sbc_cost": "Unrecognized stock-based compensation cost",
+    "stock_based_compensation": "Stock-based compensation expense",
+    **{f"debt_maturity_y{n}": f"Debt maturing in year {n}" for n in range(1, 6)},
+    **{f"lease_payments_y{n}": f"Lease payments due in year {n}" for n in range(1, 6)},
 }
 
 
