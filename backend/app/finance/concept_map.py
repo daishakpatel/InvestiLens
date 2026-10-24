@@ -37,6 +37,8 @@ class ConceptMap:
     _footnote_category: dict[str, str] = field(default_factory=dict)
     _footnote_flow: frozenset[str] = frozenset()
     _footnote_units: dict[str, str] = field(default_factory=dict)
+    # Composite tag -> component tags summed into it (company overrides, Phase 7h).
+    _composites: dict[str, list[str]] = field(default_factory=dict)
 
     def tags(self, metric: str) -> list[str]:
         """Ordered XBRL tags to try for a canonical metric (first available wins)."""
@@ -63,6 +65,11 @@ class ConceptMap:
     def applies(self, metric: str) -> bool:
         """Whether a metric is applicable for this company's sector (DR-001/DR-042)."""
         return self._sector_applicability.get(metric, True)
+
+    @property
+    def composites(self) -> dict[str, list[str]]:
+        """Composite tags ("composite:depreciation_amortization") and their summed parts."""
+        return dict(self._composites)
 
     @property
     def footnote_metrics(self) -> dict[str, str]:
@@ -133,4 +140,5 @@ def load_concept_map(*, ticker: str = "", cik: str = "", sector: str | None = No
         _footnote_category={m: cat for cat, group in footnote.items() for m in group},
         _footnote_flow=frozenset(base.get("footnote_flow_metrics", [])),
         _footnote_units=dict(base.get("footnote_units", {})),
+        _composites={k: list(v) for k, v in override.get("composite_tags", {}).items()},
     )

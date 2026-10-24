@@ -16,7 +16,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.finance.concept_map import ConceptMap, load_concept_map
-from app.finance.facts import fact_view_from_orm
+from app.finance.facts import fact_view_from_orm, with_composites
 from app.finance.periods import (
     derive_fiscal_calendar,
     fiscal_year_of,
@@ -195,7 +195,10 @@ def _persist_annual_metric(
 def build_company_metrics(session: Session, company: Company) -> BuildCounts:
     """Build canonical metrics, fiscal calendar, and quality issues for one company."""
     cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
-    facts = [fact_view_from_orm(f) for f in facts_repo.facts_for_company(session, company.id)]
+    facts = with_composites(
+        [fact_view_from_orm(f) for f in facts_repo.facts_for_company(session, company.id)],
+        cmap.composites,
+    )
     counts = BuildCounts()
 
     revenue_tags = cmap.tags("revenue")
