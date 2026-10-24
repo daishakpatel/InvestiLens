@@ -458,6 +458,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/footnote-facts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Footnote Facts */
+        get: operations["footnote_facts_api_v1_companies__ticker__footnote_facts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance */
+        get: operations["governance_api_v1_companies__ticker__governance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/governance/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Governance History */
+        get: operations["governance_history_api_v1_companies__ticker__governance_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/insiders": {
         parameters: {
             query?: never;
@@ -547,6 +598,23 @@ export interface paths {
         };
         /** List Company News */
         get: operations["list_company_news_api_v1_companies__ticker__news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notes */
+        get: operations["list_notes_api_v1_companies__ticker__notes_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -759,6 +827,29 @@ export interface paths {
          *     quarter's 10-Q ("what changed vs last quarter", §37.3). Deterministic: no LLM on this path.
          */
         get: operations["diff_filings_api_v1_filings__filing_id__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/filings/{filing_id}/notes/{category}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diff Note
+         * @description The same diff, scoped to one note category in both filings (Phase 7f, FR-FN-010).
+         *
+         *     Every note of the category is included on each side (a filer may split one), matched by the
+         *     same heading-then-similarity alignment as the whole-filing diff.
+         */
+        get: operations["diff_note_api_v1_filings__filing_id__notes__category__diff_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1182,6 +1273,29 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /**
+         * BoardFacts
+         * @description AI-extracted (marked as such in the UI). `independence_ratio` is computed in code from the
+         *     two verified counts, as a decimal (0.9167 = 91.67%).
+         */
+        BoardFacts: {
+            /**
+             * Fields
+             * @default []
+             */
+            fields: components["schemas"]["GovernanceField"][];
+            /** Independence Ratio */
+            independence_ratio?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "extracted" | "pending" | "no_sections";
+        };
         /** ChatMessage */
         ChatMessage: {
             /**
@@ -1376,6 +1490,44 @@ export interface components {
              * @default []
              */
             notes: string[];
+        };
+        /**
+         * Compensation
+         * @description Tier B: rows that add up to their total; the rest were rejected, never repaired.
+         */
+        Compensation: {
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Rejected Rows
+             * @default 0
+             */
+            rejected_rows: number;
+            /**
+             * Rows
+             * @default []
+             */
+            rows: components["schemas"]["CompensationRow"][];
+        };
+        /** CompensationRow */
+        CompensationRow: {
+            /** Components */
+            components: {
+                [key: string]: string;
+            };
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Person */
+            person: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "peo" | "pfo" | "neo";
+            /** Source Id */
+            source_id: string;
+            /** Total */
+            total: string;
         };
         /**
          * Concentration
@@ -1711,6 +1863,59 @@ export interface components {
             /** Ticker */
             ticker: string;
         };
+        /** FootnoteCategory */
+        FootnoteCategory: {
+            /** Category */
+            category: string;
+            /** Facts */
+            facts: components["schemas"]["FootnoteFact"][];
+            /** Gaps */
+            gaps: components["schemas"]["FootnoteGap"][];
+        };
+        /** FootnoteFact */
+        FootnoteFact: {
+            /** Formula */
+            formula?: string | null;
+            /**
+             * From Inline Xbrl
+             * @default false
+             */
+            from_inline_xbrl: boolean;
+            /** Is Derived */
+            is_derived: boolean;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** Period */
+            period: string;
+            /** Source Id */
+            source_id: string;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string | null;
+        };
+        /** FootnoteFactsResponse */
+        FootnoteFactsResponse: {
+            /** Categories */
+            categories: components["schemas"]["FootnoteCategory"][];
+            /** Company Ticker */
+            company_ticker: string;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+        };
+        /** FootnoteGap */
+        FootnoteGap: {
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** Period */
+            period: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * Freshness
          * @description Data-freshness metadata attached to data endpoints (API-008, FR-006).
@@ -1731,6 +1936,69 @@ export interface components {
              * @description Provider or system that produced the data
              */
             source: string;
+        };
+        /**
+         * GovernanceField
+         * @description One Tier C field. `value` null = "not stated" (absent, or failed verification).
+         */
+        GovernanceField: {
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Paragraph Id */
+            paragraph_id?: string | null;
+            /** Quote */
+            quote?: string | null;
+            /** Value */
+            value?: string | boolean | string[] | null;
+        };
+        /** GovernanceHistoryPoint */
+        GovernanceHistoryPoint: {
+            /** Ceo Total Pay */
+            ceo_total_pay?: string | null;
+            /** Ceo Total Pay Source */
+            ceo_total_pay_source?: string | null;
+            /** Ceo Total Pay Source Id */
+            ceo_total_pay_source_id?: string | null;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Independence Ratio */
+            independence_ratio?: string | null;
+        };
+        /** GovernanceHistoryResponse */
+        GovernanceHistoryResponse: {
+            /** Company Ticker */
+            company_ticker: string;
+            /** Points */
+            points: components["schemas"]["GovernanceHistoryPoint"][];
+        };
+        /** GovernanceResponse */
+        GovernanceResponse: {
+            /** Available Years */
+            available_years: number[];
+            /** Company Ticker */
+            company_ticker: string;
+            compensation?: components["schemas"]["Compensation"] | null;
+            /**
+             * Coverage
+             * @default {}
+             */
+            coverage: {
+                [key: string]: boolean;
+            };
+            facts?: components["schemas"]["BoardFacts"] | null;
+            filing: components["schemas"]["FilingSummary"] | null;
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /** Fiscal Year Source */
+            fiscal_year_source: string | null;
+            pay_ratio?: components["schemas"]["PayRatio"] | null;
+            pay_vs_performance?: components["schemas"]["PayVersusPerformance"] | null;
+            /** Proxies Ingested */
+            proxies_ingested: number;
+            /** Reason */
+            reason?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2111,6 +2379,69 @@ export interface components {
             /** Weight */
             weight: string;
         };
+        /**
+         * NoteBullet
+         * @description One AI bullet. `quote` is verbatim from the paragraph `paragraph_id` (a source ID).
+         */
+        NoteBullet: {
+            /** Paragraph Id */
+            paragraph_id: string;
+            /** Quote */
+            quote: string;
+            /** Text */
+            text: string;
+        };
+        /** NoteItem */
+        NoteItem: {
+            /**
+             * Also Matches
+             * @default []
+             */
+            also_matches: string[];
+            /** Category */
+            category: string;
+            /** Note Id */
+            note_id: string;
+            /** Number */
+            number: number;
+            /** Paragraph Ids */
+            paragraph_ids: string[];
+            summary?: components["schemas"]["NoteSummaryView"] | null;
+            /** Title */
+            title: string;
+        };
+        /**
+         * NoteSummaryView
+         * @description `pending` = not generated yet (summaries are made after parsing, never on page load).
+         */
+        NoteSummaryView: {
+            /**
+             * Bullets
+             * @default []
+             */
+            bullets: components["schemas"]["NoteBullet"][];
+            /** Model */
+            model?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "summarised" | "abstained" | "pending";
+        };
+        /** NotesResponse */
+        NotesResponse: {
+            /** Company Ticker */
+            company_ticker: string;
+            filing: components["schemas"]["FilingSummary"];
+            /** Low Confidence */
+            low_confidence: boolean;
+            /** Notes */
+            notes: components["schemas"]["NoteItem"][];
+            /** Summarised Categories */
+            summarised_categories: string[];
+            /** Taxonomy */
+            taxonomy: string;
+        };
         /** Notification */
         Notification: {
             /** Body */
@@ -2175,6 +2506,47 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /** PayRatio */
+        PayRatio: {
+            /** Ceo Total */
+            ceo_total?: string | null;
+            /** Median Pay */
+            median_pay?: string | null;
+            /** Ratio */
+            ratio?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Source Id */
+            source_id?: string | null;
+        };
+        /**
+         * PayVersusPerformance
+         * @description Tier A, from the proxy's Inline XBRL. TSR values are the worth of $100 invested.
+         */
+        PayVersusPerformance: {
+            /** Company Selected Measure */
+            company_selected_measure?: string | null;
+            /**
+             * Points
+             * @default []
+             */
+            points: components["schemas"]["PayVersusPerformancePoint"][];
+            /** Reason */
+            reason?: string | null;
+        };
+        /** PayVersusPerformancePoint */
+        PayVersusPerformancePoint: {
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Source Ids */
+            source_ids: {
+                [key: string]: string;
+            };
+            /** Values */
+            values: {
+                [key: string]: string;
+            };
         };
         /**
          * PeerSuggestion
@@ -3828,6 +4200,102 @@ export interface operations {
             };
         };
     };
+    footnote_facts_api_v1_companies__ticker__footnote_facts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FootnoteFactsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_api_v1_companies__ticker__governance_get: {
+        parameters: {
+            query?: {
+                /** @description Proxy fiscal year; default the latest */
+                fiscal_year?: number | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    governance_history_api_v1_companies__ticker__governance_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_insiders_api_v1_companies__ticker__insiders_get: {
         parameters: {
             query?: never;
@@ -3984,6 +4452,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NewsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notes_api_v1_companies__ticker__notes_get: {
+        parameters: {
+            query?: {
+                /** @description A 10-K or 10-Q of this company; default the latest 10-K */
+                filing_id?: number | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4337,6 +4839,40 @@ export interface operations {
             header?: never;
             path: {
                 filing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilingDiffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diff_note_api_v1_filings__filing_id__notes__category__diff_get: {
+        parameters: {
+            query?: {
+                against?: string | null;
+            };
+            header?: never;
+            path: {
+                filing_id: string;
+                category: string;
             };
             cookie?: never;
         };

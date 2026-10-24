@@ -105,18 +105,18 @@ storage choice).
 
 ## Definition of Done
 
-- [ ] Note segmentation finds the expected notes in NVDA, AAPL and JPM 10-K fixtures (assert
+- [x] Note segmentation finds the expected notes in NVDA, AAPL and JPM 10-K fixtures (assert
       count and titles), and logs low confidence rather than raising
-- [ ] Title-keyword classification passes the 15+ title test set including the ambiguous cases
-- [ ] Debt maturity ladder for NVDA and AAPL persisted from XBRL and matches the filing by hand
+- [x] Title-keyword classification passes the 15+ title test set including the ambiguous cases
+- [x] Debt maturity ladder for NVDA and AAPL persisted from XBRL and matches the filing by hand
       check (recorded in a test comment with the page/line reference)
-- [ ] Missing concepts produce `metric_gaps`, never zero
-- [ ] `lease_adjusted_debt` rows carry formula and inputs that resolve to source IDs
-- [ ] Every AI bullet's quote is a verbatim substring of its cited paragraph; a bullet with a
+- [x] Missing concepts produce `metric_gaps`, never zero
+- [x] `lease_adjusted_debt` rows carry formula and inputs that resolve to source IDs
+- [x] Every AI bullet's quote is a verbatim substring of its cited paragraph; a bullet with a
       fabricated quote or a mismatching number is dropped (test with a recorded bad LLM response)
-- [ ] Abstention path displays "Not summarised" and is tested
-- [ ] Prompt-injection test: a note containing "ignore previous instructions" does not change
+- [x] Abstention path displays "Not summarised" and is tested
+- [x] Prompt-injection test: a note containing "ignore previous instructions" does not change
       output structure
-- [ ] Note-scoped diff reuses `filings/diff.py` with no duplicated alignment code
-- [ ] Footnotes tab renders facts, AI bullets (marked as AI) and the diff entry point
-- [ ] Docs and ADR-0044 written; `make check` and `make openapi` clean
+- [x] Note-scoped diff reuses `filings/diff.py` with no duplicated alignment code
+- [x] Footnotes tab renders facts, AI bullets (marked as AI) and the diff entry point
+- [x] Docs and ADR-0044 written; `make check` and `make openapi` clean

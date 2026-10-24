@@ -114,20 +114,20 @@ governance score).
 
 ## Definition of Done
 
-- [ ] Proxy sections are detected in at least two fixture proxies (e.g. NVDA and JPM)
-- [ ] Summary Compensation Table rows pass the sum-to-total validation; a deliberately
+- [x] Proxy sections are detected in at least two fixture proxies (e.g. NVDA and JPM)
+- [x] Summary Compensation Table rows pass the sum-to-total validation; a deliberately
       corrupted fixture row is rejected and logged (test)
-- [ ] CEO pay ratio extraction validates against median × ratio ≈ CEO total within 2%; failure
+- [x] CEO pay ratio extraction validates against median × ratio ≈ CEO total within 2%; failure
       stores nothing
-- [ ] PvP XBRL facts persist where the fixture has them; absence yields `reason` not zeros
-- [ ] Every Tier C field has a verbatim quote or is null; a fabricated quote is rejected (test
+- [x] PvP XBRL facts persist where the fixture has them; absence yields `reason` not zeros
+- [x] Every Tier C field has a verbatim quote or is null; a fabricated quote is rejected (test
       with a recorded bad response)
-- [ ] `independence_ratio` is computed in code only; a test proves the LLM output is not used
-- [ ] Prompt-injection fixture does not alter fields
-- [ ] Proxy fiscal year comes from document content, verified by a test where the filing month
+- [x] `independence_ratio` is computed in code only; a test proves the LLM output is not used
+- [x] Prompt-injection fixture does not alter fields
+- [x] Proxy fiscal year comes from document content, verified by a test where the filing month
       would suggest the wrong year
-- [ ] Governance endpoint returns coverage and explicit nulls; history endpoint returns a
+- [x] Governance endpoint returns coverage and explicit nulls; history endpoint returns a
       series
-- [ ] UI shows populated, partially populated and empty states; AI vs table-extracted facts are
+- [x] UI shows populated, partially populated and empty states; AI vs table-extracted facts are
       visually distinguished
-- [ ] Docs and ADR-0045 written; `make check` and `make openapi` clean
+- [x] Docs and ADR-0045 written; `make check` and `make openapi` clean

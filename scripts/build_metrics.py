@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.db import session_scope
 from app.finance.builder import build_company_metrics
+from app.finance.footnote_builder import build_company_footnotes
 from app.finance.quality_builder import build_company_earnings_quality
 from app.finance.ratio_builder import build_company_ratios
 from app.finance.valuation_builder import build_company_valuation
@@ -28,9 +29,10 @@ def main() -> None:
             ratios = build_company_ratios(session, company)
             valuation = build_company_valuation(session, company)
             quality = build_company_earnings_quality(session, company)
+            footnotes = build_company_footnotes(session, company)
             print(
                 f"{company.ticker}: {counts}, derived_ratios={ratios}, valuation={valuation}, "
-                f"earnings_quality={quality}"
+                f"earnings_quality={quality}, footnotes={footnotes}"
             )
 
 

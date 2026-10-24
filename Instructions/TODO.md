@@ -203,6 +203,26 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       departures shows one flag (with all roles from the departure sentences); the second
       person's sentence is not quoted separately. `[code]`
 
+- [ ] **Footnotes leftovers** (Phase 7f, ADR-0044): notes under unnumbered bold headings
+      (Intel) are not segmented, so INTC has no notes (flagged low-confidence); JPM's FY
+      `total_debt` holds short-term borrowings only, so its lease-adjusted debt understates; the
+      last note runs to the end of its section (it absorbs NVIDIA's Schedule II / exhibit text);
+      JPM note titles that wrap ("Off–balance sheet lending-related") keep the first line only and
+      fall to `other`; diff headings stop at "$" and page headers ("Notes to the Consolidated
+      Financial Statements") count as passages, because the parser splits inline-tagged figures
+      onto their own lines; quotes keep that layout ("$ 95.2 billion"). Summaries only for the
+      latest 10-K, not 10-Qs. `[code]`
+
+- [ ] **Governance leftovers** (Phase 7g, ADR-0045): board counts are often not stated in
+      prose (Apple, JPMorgan give them only in nominee tables/graphics), so the independence
+      ratio is mostly "not stated"; a deterministic count from the nominee table would fix it.
+      AMD's pay ratio is not found (median pay sits outside the ratio sentence). Intel's FY2024/
+      FY2025 PvP is tagged per CEO (dimensioned) and not read. Proxy section headings are
+      keyword-matched, so some sections carry neighbouring text (NVIDIA's board size sits under a
+      say-on-pay heading). The Gemini client rejects JSON followed by extra text, so an occasional
+      `governance_v1` call fails and is retried on the next run. `ecd:PeoName` is matched to the
+      table by name words; a CEO change within one year shows one PEO. `[code]`
+
 ## 4. Never verified live
 
 - [ ] Finnhub (news) and Voyage (embeddings) paths: no API keys; parsing is unit-tested only. `[notes]`
@@ -307,3 +327,28 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   A `red_flag` alert type was added, and the Overview has a Red flags section with a count on the
   tab. Caught on real 8-Ks: "Mr." split sentences, "Vice President" counted as President, award
   terms and director bios read as departures, and a neighbouring sentence's role misattributed.
+- 2026-10-23 — **Footnote extraction** (Phase 7f, ADR-0044): notes segmented at parse time
+  (`sec-ingest-v3` starts a chunk at each note heading; `documents.metadata['notes']`),
+  classified by title (`note_taxonomy_v1`); XBRL-first footnote facts (`footnote_metrics`,
+  `footnote_builder`) with inline-XBRL fallback for the latest 10-K (NVIDIA's ladder from per-note
+  dimensioned facts), `debt_due_within_2y_share` and `lease_adjusted_debt`, gaps never zero;
+  `note_summary_v1` bullets kept only with a verbatim quote and matching numbers, cached per
+  (note, prompt, model), generated after parsing or by `make footnote-summaries`;
+  `GET /companies/{t}/notes`, `/footnote-facts`, `GET /filings/{id}/notes/{category}/diff`
+  (scope on the existing diff); Footnotes tab. Caught: a re-run of the builder left stale ladder
+  rows beside new gaps; AMD's "NOTE 1 –" capitals and JPM's bare "Note 12" cross-reference line
+  broke segmentation (now handled). Dev DB re-parsed (216 re-split chunks lost embeddings),
+  metrics rebuilt, summaries generated with gemini-3.8-flash (10 notes, 0 bullets dropped).
+- 2026-10-24 — **Governance from proxy statements** (Phase 7g, ADR-0045): DEF 14A split into
+  keyword sections at parse time (`sec-ingest-v4`); proxy fiscal year from its own PvP XBRL (else
+  its table), not the filing date; Tier A `ecd` Pay Versus Performance facts and Tier B validated
+  Summary Compensation Table rows (sum to total within $1) and CEO pay ratio (median × ratio within
+  2%) in the new `exec_comp_facts` table (migration `f2a9c4e7b1d3`); Tier C `governance_v1` board
+  facts, each a verbatim quote or null, with the independence ratio computed in code;
+  `GET /companies/{t}/governance` and `/governance/history`; Governance tab; `make
+  governance-backfill`. Caught on real proxies: JPMorgan's first matching table is a "pay
+  decisions" table (now skipped when no row validates), rowspanned name cells, AMD's name-only
+  rows, Apple tagging every officer as `ecd:PeoName`, a footnote pattern that ate 3-digit
+  values, and the model pairing a current-board count with a nominee count (now dropped in code).
+  Dev DB migrated, re-parsed, all 15 proxies built (0 rejected rows), Tier C extracted with
+  gemini-3.8-flash.
