@@ -57,6 +57,7 @@ class ShareCount:
     record_date: date
     shares: Decimal
     source_id: str
+    filed: date | None = None  # when the filing reporting it was filed (point in time, 7h)
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,7 @@ def price_on_or_before(prices: Sequence[PricePoint], day: date) -> PricePoint | 
     return prices[index - 1] if index else None
 
 
-def _share_counts(session: Session, company_id: int) -> list[ShareCount]:
+def share_counts(session: Session, company_id: int) -> list[ShareCount]:
     facts = session.scalars(
         select(FinancialFact).where(
             FinancialFact.company_id == company_id, FinancialFact.concept_tag == SHARES_CONCEPT
@@ -112,7 +113,8 @@ def _share_counts(session: Session, company_id: int) -> list[ShareCount]:
         total = total_shares_outstanding([f.value for f in group])
         if total:
             first = min(group, key=lambda f: f.id)
-            counts.append(ShareCount(record_date, total, f"xbrl:{first.id}"))
+            filed = max((f.filed_date for f in group if f.filed_date), default=None)
+            counts.append(ShareCount(record_date, total, f"xbrl:{first.id}", filed))
     return counts
 
 
@@ -252,7 +254,7 @@ def build_company_valuation(session: Session, company: Company) -> int:
     if not prices or not year_end:
         return 0
     splits = load_splits(session, company.id)
-    counts = _share_counts(session, company.id)
+    counts = share_counts(session, company.id)
     cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
     ev_applies = cmap.applies("ev_ebitda")  # EV-based multiples are N/A for banks (Appendix C)
 
