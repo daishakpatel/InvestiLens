@@ -27,6 +27,7 @@ from app.models.ops import (
     LlmCall,
     RetrievalLog,
 )
+from app.models.peers import PeerSet, PeerSetMember, ValuationHistory
 from app.models.redflag import RedFlag
 from app.models.research import ClaimVerification, ResearchReport, ResearchSource
 from app.models.user import (
@@ -72,6 +73,8 @@ __all__ = [
     "MetricGap",
     "News",
     "Notification",
+    "PeerSet",
+    "PeerSetMember",
     "PriceHistory",
     "RedFlag",
     "RefreshToken",
@@ -80,6 +83,7 @@ __all__ = [
     "ResearchSource",
     "RetrievalLog",
     "User",
+    "ValuationHistory",
     "Watchlist",
     "WatchlistItem",
 ]
