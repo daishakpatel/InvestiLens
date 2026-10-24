@@ -27,26 +27,14 @@ from app.config import Settings, get_settings
 from app.schemas.citations import EntailmentLabel, VerifiedClaim
 
 
-def _number_supported(token: NumberToken, cited: Sequence[EvidenceItem], *, rel_tol: float) -> bool:
-    """A claim number matches if it is within tolerance of a source number, or (for percents)
-    of a source ratio times 100 — covering derived_metric/xbrl values (CIT-005 L2).
-    """
-    if token.kind == "date":
-        return any(token.raw in item.searchable_text() for item in cited)
+def number_matches(token: NumberToken, candidates: Sequence[Decimal], *, rel_tol: float) -> bool:
+    """A number matches a candidate within relative tolerance, or (for a percent) a candidate
+    ratio times 100. An unparseable token never blocks."""
     if token.value is None:
-        return True  # unparseable → don't block on it
-
-    candidates: list[Decimal] = []
-    for item in cited:
-        candidates.extend(item.structured_values())
-        candidates.extend(
-            t.value for t in extract_numbers(item.searchable_text()) if t.value is not None
-        )
-
+        return True
     targets = [token.value]
     if token.kind == "percent":  # "grew 114%" may be stored as the ratio 1.14
         targets.append(token.value / Decimal(100))
-
     for target in targets:
         for cand in candidates:
             if cand == target:
@@ -55,6 +43,21 @@ def _number_supported(token: NumberToken, cited: Sequence[EvidenceItem], *, rel_
             if abs(cand - target) <= scale * Decimal(str(rel_tol)):
                 return True
     return False
+
+
+def _number_supported(token: NumberToken, cited: Sequence[EvidenceItem], *, rel_tol: float) -> bool:
+    """A claim number matches if it is within tolerance of a source number, or (for percents)
+    of a source ratio times 100 — covering derived_metric/xbrl values (CIT-005 L2).
+    """
+    if token.kind == "date":
+        return any(token.raw in item.searchable_text() for item in cited)
+    candidates: list[Decimal] = []
+    for item in cited:
+        candidates.extend(item.structured_values())
+        candidates.extend(
+            t.value for t in extract_numbers(item.searchable_text()) if t.value is not None
+        )
+    return number_matches(token, candidates, rel_tol=rel_tol)
 
 
 def _accept(

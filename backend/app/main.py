@@ -25,6 +25,8 @@ from app.api import (
     comparison,
     earnings_quality,
     filings,
+    footnotes,
+    governance,
     health,
     portfolio,
     red_flags,
@@ -123,6 +125,8 @@ def create_app() -> FastAPI:
         portfolio,
         earnings_quality,
         red_flags,
+        footnotes,
+        governance,
     ):
         app.include_router(module.router, prefix=API_V1_PREFIX)
     app.include_router(metrics_module.router)  # root-level /metrics (Prometheus scrape convention)

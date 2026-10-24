@@ -13,7 +13,9 @@ from app.db import get_db
 from app.filings import service as diff_service
 from app.filings.diff import DiffItem, word_diff
 from app.filings.units import Unit
-from app.models import Company, Filing
+from app.footnotes.service import category_scope
+from app.ingestion.documents.notes import CATEGORIES
+from app.models import Company, Document, Filing
 from app.repositories import filings as filing_repo
 from app.schemas.filings import (
     DiffOp,
@@ -126,19 +128,7 @@ def _to_item(item: DiffItem) -> FilingDiffItem:
     )
 
 
-@router.get("/{filing_id}/diff", response_model=FilingDiffResponse)
-def diff_filings(
-    filing_id: str,
-    against: str | None = None,
-    kind: Literal["risk_factor", "section"] | None = None,
-    db: Session = _DB,
-) -> FilingDiffResponse:
-    """What changed in this filing versus an older one of the same type (§37.4).
-
-    `against` defaults to the previous filing of the same type — last year's 10-K, or last
-    quarter's 10-Q ("what changed vs last quarter", §37.3). Deterministic: no LLM on this path.
-    """
-    filing = _resolve(db, filing_id)
+def _baseline(db: Session, filing: Filing, against: str | None) -> Filing:
     base = (
         _resolve(db, against) if against is not None else diff_service.previous_filing(db, filing)
     )
@@ -149,7 +139,18 @@ def diff_filings(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "filings must be the same type from the same company",
         )
-    diff = diff_service.diff_filings(db, filing, base)
+    return base
+
+
+def _diff_response(
+    db: Session,
+    filing: Filing,
+    base: Filing,
+    *,
+    kind: str | None = None,
+    scope: list[str] | None = None,
+) -> FilingDiffResponse:
+    diff = diff_service.diff_filings(db, filing, base, scope=scope)
     items = [
         item
         for item in diff.items
@@ -171,3 +172,40 @@ def diff_filings(
         counts=FilingDiffCounts.model_validate(dict(counts)),
         items=[_to_item(item) for item in items],
     )
+
+
+@router.get("/{filing_id}/diff", response_model=FilingDiffResponse)
+def diff_filings(
+    filing_id: str,
+    against: str | None = None,
+    kind: Literal["risk_factor", "section"] | None = None,
+    db: Session = _DB,
+) -> FilingDiffResponse:
+    """What changed in this filing versus an older one of the same type (§37.4).
+
+    `against` defaults to the previous filing of the same type — last year's 10-K, or last
+    quarter's 10-Q ("what changed vs last quarter", §37.3). Deterministic: no LLM on this path.
+    """
+    filing = _resolve(db, filing_id)
+    return _diff_response(db, filing, _baseline(db, filing, against), kind=kind)
+
+
+@router.get("/{filing_id}/notes/{category}/diff", response_model=FilingDiffResponse)
+def diff_note(
+    filing_id: str, category: str, against: str | None = None, db: Session = _DB
+) -> FilingDiffResponse:
+    """The same diff, scoped to one note category in both filings (Phase 7f, FR-FN-010).
+
+    Every note of the category is included on each side (a filer may split one), matched by the
+    same heading-then-similarity alignment as the whole-filing diff.
+    """
+    if category not in CATEGORIES:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown note category {category}")
+    filing = _resolve(db, filing_id)
+    base = _baseline(db, filing, against)
+    scopes = [category_scope(db.get(Document, f.document_id), category) for f in (filing, base)]
+    if not all(scopes):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"no {category} note in one of the filings"
+        )
+    return _diff_response(db, filing, base, scope=[pid for ids in scopes for pid in ids])
