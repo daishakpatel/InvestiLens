@@ -9,7 +9,8 @@ low-confidence parses can be flagged rather than trusted silently. Per form:
   the financial statements and notes; "P2-1A" = Part II risk factors). Keyed on the bare number,
   Part II's "Item 1" overwrote Part I's and all of Part I was dropped.
 - 8-K: full dotted codes ("5.02"), via `eightk_items`.
-- anything else (a proxy statement, an exhibit): the whole document is one section.
+- DEF 14A / DEFA14A: keyword headings (board, compensation tables, …), via `proxy_sections`.
+- anything else (an exhibit): the whole document is one section.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ _MAX_HEADING_CHARS = 200
 _CORE_10K = {"1", "1A", "2", "3", "5", "7", "7A", "8", "9A"}
 _CORE_10Q = {"P1-1", "P1-2"}  # financial statements + notes, and MD&A
 WHOLE_DOCUMENT = "0"
+PROXY_FORMS = ("DEF 14A", "DEFA14A")
 
 
 @dataclass
@@ -121,6 +123,11 @@ def section_key(filing_type: str, code: str) -> str:
 
 def detect_sections(blocks: list[Block], filing_type: str) -> SectionResult:
     """Return the detected sections (TOC-deduplicated) with a confidence score."""
+    if filing_type in PROXY_FORMS:
+        # Imported here: proxy_sections builds on this module's Section types.
+        from app.ingestion.documents.proxy_sections import detect_proxy_sections
+
+        return detect_proxy_sections(blocks)
     structured = filing_type.startswith(("10-K", "10-Q", "8-K"))
     # Keep the LAST occurrence of each code: an earlier one is its table-of-contents entry.
     last_by_code: dict[str, tuple[int, str, str]] = {}

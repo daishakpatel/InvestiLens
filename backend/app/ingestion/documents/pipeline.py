@@ -8,7 +8,8 @@ stays NULL (Phase 2b) except where unchanged text keeps its vector. Idempotent (
 A parsed document is stamped with `PARSER_VERSION`, so `parse_company_documents` skips documents
 that are already current (FR-EX-014). A late-filing notice gets metadata only: no chunks and no
 embedding spend on a two-page form. An 8-K's parsed item headings are reconciled with the
-filing index's item list (FR-EX-003).
+filing index's item list (FR-EX-003). A 10-K's or 10-Q's notes to the financial statements are
+segmented and stored on the document (Phase 7f, FR-FN-001).
 """
 
 from __future__ import annotations
@@ -24,7 +25,14 @@ from sqlalchemy.orm import Session
 from app.ingestion.documents.blocks import linearize
 from app.ingestion.documents.chunker import PARSER_VERSION, FilingMeta, chunk_filing
 from app.ingestion.documents.clean import clean_tree
-from app.ingestion.documents.sections import WHOLE_DOCUMENT, Section, detect_sections
+from app.ingestion.documents.notes import segment_notes
+from app.ingestion.documents.proxy_sections import sections_found
+from app.ingestion.documents.sections import (
+    PROXY_FORMS,
+    WHOLE_DOCUMENT,
+    Section,
+    detect_sections,
+)
 from app.models import Company, Document, Filing
 from app.repositories import chunks as chunk_repo
 from app.repositories import filings as filing_repo
@@ -88,6 +96,28 @@ def _reconcile_items(document: Document | None, sections: list[Section], filing_
         )
 
 
+def _record_notes(document: Document | None, rows: list[dict[str, Any]], filing_type: str) -> None:
+    """Store a 10-K's or 10-Q's notes on the document (FR-FN-001/003, ADR-0044).
+
+    Re-parsing renumbers chunks, so cached note summaries (which cite them) are dropped with the
+    old notes. Low-confidence segmentation is flagged and logged, never raised.
+    """
+    if document is None or not filing_type.startswith(("10-K", "10-Q")):
+        return
+    segmentation = segment_notes(rows, filing_type=filing_type)
+    metadata = {k: v for k, v in (document.doc_metadata or {}).items() if k != "note_summaries"}
+    metadata["notes"] = segmentation.to_json()
+    document.doc_metadata = metadata
+    if segmentation.low_confidence:
+        log_event(
+            logger,
+            logging.WARNING,
+            "parse.notes_segmentation_low_confidence",
+            document_id=document.id,
+            notes=len(segmentation.notes),
+        )
+
+
 def _chunk_document(
     session: Session,
     *,
@@ -110,7 +140,12 @@ def _chunk_document(
             details={"accession": accession, "confidence": section_result.confidence},
         )
     _reconcile_items(document, section_result.sections, meta.filing_type)
+    if document is not None and meta.filing_type in PROXY_FORMS:
+        # Which governance sections this proxy has (FR-GV-001); extraction reads it.
+        found = sections_found(section_result.sections, blocks)
+        document.doc_metadata = {**(document.doc_metadata or {}), "proxy_sections": found}
     rows = chunk_filing(blocks, meta)
+    _record_notes(document, rows, meta.filing_type)
     counts.total = chunk_repo.replace_document_chunks(
         session, document_id=meta.document_id, rows=rows
     )

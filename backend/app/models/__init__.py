@@ -14,6 +14,7 @@ from app.models.financial import (
     MetricGap,
     PriceHistory,
 )
+from app.models.governance import ExecCompFact
 from app.models.news import InsiderTransaction, InstitutionalHolding, News
 from app.models.ops import (
     DataFreshness,
@@ -57,6 +58,7 @@ __all__ = [
     "DocumentChunk",
     "EvalResult",
     "EvalRun",
+    "ExecCompFact",
     "Filing",
     "FinancialFact",
     "FinancialMetric",

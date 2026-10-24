@@ -15,20 +15,22 @@ from typing import Any
 
 from app.ingestion.documents.blocks import Block
 from app.ingestion.documents.drivers import is_driver_language
+from app.ingestion.documents.notes import NOTES_SECTIONS, note_heading
 from app.ingestion.documents.sections import Section, detect_sections
 from app.ingestion.documents.tokens import estimate_tokens
 
 # One version for the whole parse (ADR-0041): stamped on every chunk and, once a document is
 # parsed, on `documents.parser_version`, so up-to-date documents are skipped. v2: 8-K items are
-# full dotted codes and 10-Q items are part-qualified, which changes their chunk IDs.
-PARSER_VERSION = "sec-ingest-v2"
+# full dotted codes and 10-Q items are part-qualified, which changes their chunk IDs. v3: every
+# financial-statement note starts its own chunk (Phase 7f, ADR-0044). v4: proxy statements are
+# split into keyword sections (Phase 7g, ADR-0045).
+PARSER_VERSION = "sec-ingest-v4"
 _TARGET_TOKENS = 400
 _MAX_TOKENS = 800
 _OVERLAP_MAX_TOKENS = 60  # ~15% of target: carry one small paragraph into the next chunk
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 _DIGITS = re.compile(r"\d")
 _SUBHEADING_MAX_CHARS = 140
-_NOTE_RE = re.compile(r"^note\s+\d+", re.I)
 # Risk factors and financial-statement notes start a new unit at each sub-heading (CH-002/008).
 _RISK_OR_NOTES = {"1A", "8", "P1-1", "P2-1A"}
 
@@ -85,6 +87,11 @@ def _split_oversized(paragraph: str) -> list[str]:
     if current:
         out.append(" ".join(current))
     return out or [paragraph]
+
+
+def _is_bare_note(text: str) -> bool:
+    heading = note_heading(text)
+    return heading is not None and not heading.title
 
 
 def _is_subheading(text: str) -> bool:
@@ -202,11 +209,15 @@ def chunk_filing(html_blocks: list[Block], meta: FilingMeta) -> list[dict[str, A
                 acc = _Acc(paragraphs=list(overlap))
                 builder.add_table_chunk(section, block)
                 continue
-            # Risk-factor / note sub-heading starts a new logical unit (CH-002/CH-008).
+            # Risk-factor / note sub-heading starts a new logical unit (CH-002/CH-008), and every
+            # note heading starts a chunk wherever the notes are printed (FR-FN-001). A bare
+            # "Note 7 -" keeps its title line ("Debt") in the same chunk.
+            starts_note = section.item_code in NOTES_SECTIONS and note_heading(block.text)
+            bare_note = len(acc.paragraphs) == 1 and _is_bare_note(acc.paragraphs[0])
             if (
-                is_risk_or_notes
-                and acc.paragraphs
-                and (_is_subheading(block.text) or _NOTE_RE.match(block.text))
+                acc.paragraphs
+                and not bare_note
+                and (starts_note or (is_risk_or_notes and _is_subheading(block.text)))
             ):
                 _, offset = _flush(builder, section, acc, offset)
                 acc = _Acc()

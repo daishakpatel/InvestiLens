@@ -3,15 +3,21 @@
 Parses `ix:nonfraction` facts embedded in the filing HTML and cross-checks them against the
 separately-ingested `companyfacts` values (Phase 1a/1b). Discrepancies are FLAGGED, never
 silently resolved — the caller records them in `data_quality_issues`.
+
+`tagged_values` also reads each fact's context (period and dimension members) and numeric
+`ix:nonnumeric` durations ("8.8" years), which companyfacts leaves out: footnote facts such as a
+per-note debt schedule or a lease term exist only here (Phase 7f, ADR-0044).
 """
 
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from selectolax.parser import HTMLParser
+from selectolax.parser import HTMLParser, Node
 
 
 @dataclass(frozen=True)
@@ -87,3 +93,84 @@ def cross_check(
         if diff > tolerance:
             discrepancies.append(Discrepancy(fact.concept, fact.value, expected, diff))
     return discrepancies
+
+
+@dataclass(frozen=True)
+class IxContext:
+    period_end: date | None  # the instant, or a duration's end date
+    members: Mapping[str, str] = field(default_factory=dict)  # dimension -> member
+
+
+@dataclass(frozen=True)
+class IxValue:
+    concept: str
+    value: Decimal
+    context: IxContext
+
+
+def _date(text: str) -> date | None:
+    try:
+        return date.fromisoformat(text.strip())
+    except ValueError:
+        return None
+
+
+def _descendants(node: Node) -> list[Node]:
+    out: list[Node] = []
+    for child in node.iter(include_text=False):  # direct children; `traverse` runs past the node
+        out.append(child)
+        out.extend(_descendants(child))
+    return out
+
+
+def _contexts(root: Node) -> dict[str, IxContext]:
+    contexts: dict[str, IxContext] = {}
+    for node in root.traverse(include_text=False):
+        if node.tag != "xbrli:context" or not node.attributes.get("id"):
+            continue
+        end: date | None = None
+        members: dict[str, str] = {}
+        for child in _descendants(node):
+            if child.tag in ("xbrli:instant", "xbrli:enddate"):
+                end = _date(child.text())
+            elif child.tag == "xbrldi:explicitmember" and child.attributes.get("dimension"):
+                members[str(child.attributes["dimension"])] = child.text().strip()
+        contexts[str(node.attributes["id"])] = IxContext(end, members)
+    return contexts
+
+
+def tagged_values(html: str) -> list[IxValue]:
+    """Every numeric fact with its context: `ix:nonfraction` values and `ix:nonnumeric` values
+    that read as a number (a duration in years). Text facts ("five-year") are skipped."""
+    root = HTMLParser(html).root
+    if root is None:
+        return []
+    contexts = _contexts(root)
+    values: list[IxValue] = []
+    for node in root.traverse(include_text=False):
+        if node.tag not in ("ix:nonfraction", "ix:nonnumeric"):
+            continue
+        name, ref = node.attributes.get("name"), node.attributes.get("contextref")
+        context = contexts.get(str(ref))
+        if not name or context is None:
+            continue
+        text = node.text(deep=True) or ""
+        if node.tag == "ix:nonfraction":
+            value = _parse_value(text, node.attributes.get("scale"), node.attributes.get("sign"))
+        else:
+            value = _parse_value(text, None, None)
+        if value is not None:
+            values.append(IxValue(name, value, context))
+    return values
+
+
+def text_values(html: str, concept: str) -> list[str]:
+    """The text of every `ix:nonnumeric` fact named `concept` ("ecd:PeoName"), in order."""
+    root = HTMLParser(html).root
+    if root is None:
+        return []
+    return [
+        " ".join((node.text(deep=True) or "").split())
+        for node in root.traverse(include_text=False)
+        if node.tag == "ix:nonnumeric" and node.attributes.get("name") == concept
+    ]
