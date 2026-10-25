@@ -509,6 +509,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/guidance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Company Guidance
+         * @description Verified guidance with outcome and revisions, newest period first (FR-GD-014).
+         */
+        get: operations["company_guidance_api_v1_companies__ticker__guidance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/guidance/track-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Company Guidance Track Record
+         * @description Revenue against the initial guided range over the last 8 guided quarters (FR-GD-011).
+         */
+        get: operations["company_guidance_track_record_api_v1_companies__ticker__guidance_track_record_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/insiders": {
         parameters: {
             query?: never;
@@ -643,6 +683,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{ticker}/peer-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Peer Sets */
+        get: operations["list_peer_sets_api_v1_companies__ticker__peer_sets_get"];
+        put?: never;
+        /** Create Peer Set */
+        post: operations["create_peer_set_api_v1_companies__ticker__peer_sets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/peer-sets/{peer_set_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Peer Set */
+        delete: operations["delete_peer_set_api_v1_companies__ticker__peer_sets__peer_set_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Peer Set */
+        patch: operations["update_peer_set_api_v1_companies__ticker__peer_sets__peer_set_id__patch"];
+        trace?: never;
+    };
     "/api/v1/companies/{ticker}/prices": {
         parameters: {
             query?: never;
@@ -706,6 +782,23 @@ export interface paths {
         };
         /** Get Valuation */
         get: operations["get_valuation_api_v1_companies__ticker__valuation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/valuation-bands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Valuation Bands */
+        get: operations["get_valuation_bands_api_v1_companies__ticker__valuation_bands_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1699,6 +1792,13 @@ export interface components {
             /** Status */
             status?: string | null;
         };
+        /** ExcludedPeer */
+        ExcludedPeer: {
+            /** Reason */
+            reason: string;
+            /** Ticker */
+            ticker: string;
+        };
         /**
          * Factor
          * @description A bull or bear factor.
@@ -2000,6 +2100,160 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** GuidanceOutcomeView */
+        GuidanceOutcomeView: {
+            /** Actual Source Ids */
+            actual_source_ids: string[];
+            /** Actual Value */
+            actual_value: string | null;
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Delta Vs High */
+            delta_vs_high: string | null;
+            /** Delta Vs Low */
+            delta_vs_low: string | null;
+            /** Delta Vs Mid */
+            delta_vs_mid: string | null;
+            /** Delta Vs Mid Pct */
+            delta_vs_mid_pct: string | null;
+            /** Explanation */
+            explanation: string | null;
+            /** Reason Code */
+            reason_code: string | null;
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "above_range" | "within_range" | "below_range" | "not_comparable" | "actual_unavailable";
+        };
+        /** GuidanceRelease */
+        GuidanceRelease: {
+            /** Document Id */
+            document_id: number;
+            /** Title */
+            title: string | null;
+            /** Url */
+            url: string | null;
+        };
+        /** GuidanceResponse */
+        GuidanceResponse: {
+            /** Fiscal Year */
+            fiscal_year: number | null;
+            /** Fiscal Years */
+            fiscal_years: number[];
+            /** Items */
+            items: components["schemas"]["GuidanceRow"][];
+            /** Scope */
+            scope: string;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * GuidanceRow
+         * @description The initial guidance for a period, metric and basis (the headline), with later revisions.
+         */
+        GuidanceRow: {
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "gaap" | "non_gaap" | "unspecified";
+            /** Derived Range */
+            derived_range: boolean;
+            /** Fiscal Period */
+            fiscal_period: string;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** High */
+            high: string | null;
+            /** Id */
+            id: number;
+            /** Issued At */
+            issued_at: string | null;
+            /** Low */
+            low: string | null;
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label: string;
+            /** Midpoint */
+            midpoint: string;
+            outcome: components["schemas"]["GuidanceOutcomeView"] | null;
+            /** Period Label */
+            period_label: string;
+            /** Point */
+            point: string | null;
+            /** Quote */
+            quote: string;
+            release: components["schemas"]["GuidanceRelease"];
+            /** Revisions */
+            revisions: components["schemas"]["GuidanceValue"][];
+            /** Source Id */
+            source_id: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "usd" | "ratio" | "percent_of_revenue";
+        };
+        /** GuidanceTrackRecord */
+        GuidanceTrackRecord: {
+            /** Avg Delta Vs Mid */
+            avg_delta_vs_mid: string | null;
+            /** Avg Delta Vs Mid Pct */
+            avg_delta_vs_mid_pct: string | null;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label: string;
+            /** N Above */
+            n_above: number;
+            /** N Below */
+            n_below: number;
+            /** N Comparable */
+            n_comparable: number;
+            /** N Quarters */
+            n_quarters: number;
+            /** N Within */
+            n_within: number;
+            /** Quarters */
+            quarters: components["schemas"]["TrackRecordQuarter"][];
+            /** Sufficient */
+            sufficient: boolean;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * GuidanceValue
+         * @description One guided figure as one release stated it.
+         */
+        GuidanceValue: {
+            /** Derived Range */
+            derived_range: boolean;
+            /** High */
+            high: string | null;
+            /** Id */
+            id: number;
+            /** Issued At */
+            issued_at: string | null;
+            /** Low */
+            low: string | null;
+            /** Midpoint */
+            midpoint: string;
+            outcome: components["schemas"]["GuidanceOutcomeView"] | null;
+            /** Point */
+            point: string | null;
+            /** Quote */
+            quote: string;
+            release: components["schemas"]["GuidanceRelease"];
+            /** Source Id */
+            source_id: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2013,6 +2267,25 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** HistoryPoint */
+        HistoryPoint: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Fiscal Year */
+            fiscal_year?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fiscal_year_end" | "current";
+            /** Status */
+            status: string;
+            /** Value */
+            value: string | null;
         };
         /** Holding */
         Holding: {
@@ -2476,6 +2749,26 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * OwnBand
+         * @description Today's value within the company's own fiscal-year-end values (and today's).
+         */
+        OwnBand: {
+            /** Label */
+            label?: string | null;
+            /** Max */
+            max?: string | null;
+            /** Median */
+            median?: string | null;
+            /** Min */
+            min?: string | null;
+            /** N */
+            n: number;
+            /** Percentile */
+            percentile?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
         /** OwnershipHolding */
         OwnershipHolding: {
             /** Change Shares */
@@ -2547,6 +2840,74 @@ export interface components {
             values: {
                 [key: string]: string;
             };
+        };
+        /** PeerBand */
+        PeerBand: {
+            /**
+             * Excluded
+             * @default []
+             */
+            excluded: components["schemas"]["ExcludedPeer"][];
+            /** Label */
+            label?: string | null;
+            /** Median */
+            median?: string | null;
+            /** N */
+            n: number;
+            /** Percentile */
+            percentile?: string | null;
+            /** Premium To Peer Median */
+            premium_to_peer_median?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** PeerMember */
+        PeerMember: {
+            /** Name */
+            name: string;
+            /** Rationale */
+            rationale: string;
+            /** Ticker */
+            ticker: string;
+        };
+        /** PeerSetCreate */
+        PeerSetCreate: {
+            /** Name */
+            name: string;
+            /** Tickers */
+            tickers: string[];
+        };
+        /** PeerSetOut */
+        PeerSetOut: {
+            /** Id */
+            id: number;
+            /** Insufficient */
+            insufficient: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "system_default" | "user";
+            /** Members */
+            members: components["schemas"]["PeerMember"][];
+            /** Name */
+            name: string;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** PeerSetUpdate */
+        PeerSetUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Tickers */
+            tickers?: string[] | null;
+        };
+        /** PeerSetsResponse */
+        PeerSetsResponse: {
+            /** Company Ticker */
+            company_ticker: string;
+            /** Peer Sets */
+            peer_sets: components["schemas"]["PeerSetOut"][];
         };
         /**
          * PeerSuggestion
@@ -3101,6 +3462,26 @@ export interface components {
             /** Tool */
             tool: string;
         };
+        /** TrackRecordQuarter */
+        TrackRecordQuarter: {
+            /** Actual Value */
+            actual_value: string | null;
+            /** Delta Vs Mid Pct */
+            delta_vs_mid_pct: string | null;
+            /** High */
+            high: string;
+            /** Low */
+            low: string;
+            /** Period Label */
+            period_label: string;
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "above_range" | "within_range" | "below_range" | "not_comparable" | "actual_unavailable";
+            /** Source Id */
+            source_id: string;
+        };
         /** UserProfile */
         UserProfile: {
             /**
@@ -3130,6 +3511,41 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** ValuationBand */
+        ValuationBand: {
+            /** History */
+            history: components["schemas"]["HistoryPoint"][];
+            /** Multiple */
+            multiple: string;
+            own: components["schemas"]["OwnBand"];
+            peers: components["schemas"]["PeerBand"];
+            /** Reason */
+            reason?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "x" | "ratio";
+            /** Value */
+            value?: string | null;
+        };
+        /** ValuationBandsResponse */
+        ValuationBandsResponse: {
+            /** As Of */
+            as_of: string | null;
+            /** Bands */
+            bands: components["schemas"]["ValuationBand"][];
+            /** Company Ticker */
+            company_ticker: string;
+            /**
+             * Disclaimer
+             * @default Positions within ranges, not judgements of value. Not investment advice.
+             */
+            disclaimer: string;
+            peer_set: components["schemas"]["PeerSetOut"] | null;
         };
         /** ValuationResponse */
         ValuationResponse: {
@@ -4296,6 +4712,70 @@ export interface operations {
             };
         };
     };
+    company_guidance_api_v1_companies__ticker__guidance_get: {
+        parameters: {
+            query?: {
+                fiscal_year?: number | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    company_guidance_track_record_api_v1_companies__ticker__guidance_track_record_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidanceTrackRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_insiders_api_v1_companies__ticker__insiders_get: {
         parameters: {
             query?: never;
@@ -4530,6 +5010,146 @@ export interface operations {
             };
         };
     };
+    list_peer_sets_api_v1_companies__ticker__peer_sets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeerSetsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_peer_set_api_v1_companies__ticker__peer_sets_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeerSetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeerSetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_peer_set_api_v1_companies__ticker__peer_sets__peer_set_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticker: string;
+                peer_set_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_peer_set_api_v1_companies__ticker__peer_sets__peer_set_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticker: string;
+                peer_set_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeerSetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeerSetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_prices_api_v1_companies__ticker__prices_get: {
         parameters: {
             query?: {
@@ -4664,17 +5284,57 @@ export interface operations {
             };
         };
     };
+    get_valuation_bands_api_v1_companies__ticker__valuation_bands_get: {
+        parameters: {
+            query?: {
+                /** @description Default: the system default set */
+                peer_set_id?: number | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValuationBandsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     compare_api_v1_compare_get: {
         parameters: {
-            query: {
+            query?: {
                 /** @description Comma-separated tickers, e.g. NVDA,AMD,INTC */
-                tickers: string;
+                tickers?: string | null;
                 /** @description Optional comma-separated metric names */
                 metrics?: string | null;
                 /** @description Calendar year or fiscal period; default latest */
                 period?: string | null;
+                /** @description Compare a company with a peer set instead of listing tickers (7h) */
+                peer_set_id?: number | null;
             };
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

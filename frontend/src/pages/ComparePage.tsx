@@ -16,6 +16,7 @@ import { Section } from "../components/ui/Section";
 import { Skeleton } from "../components/ui/Skeleton";
 import { AsyncContent, EmptyState } from "../components/ui/States";
 import { Tooltip } from "../components/ui/Tooltip";
+import { PeerSetPanel } from "../components/valuation/PeerSetPanel";
 import { useAuth } from "../lib/auth";
 import { MAX_COMPANIES, MIN_COMPANIES, leader, parseTickers } from "../lib/compare";
 import { formatDate, toNumber } from "../lib/format";
@@ -289,6 +290,12 @@ export default function ComparePage() {
         </header>
 
         <Picker tickers={tickers} onChange={(next) => update("tickers", next.join(","))} />
+        {tickers[0] && (
+          <PeerSetPanel
+            ticker={tickers[0]}
+            onCompare={(next) => update("tickers", next.slice(0, MAX_COMPANIES).join(","))}
+          />
+        )}
 
         {tickers.length < MIN_COMPANIES ? (
           <EmptyState message="Add at least two companies to compare them." />

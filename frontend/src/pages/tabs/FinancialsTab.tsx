@@ -6,6 +6,7 @@ import { formatValue } from "../../charts/series";
 import { StatementTable } from "../../components/company/StatementTable";
 import { FreshnessBadge } from "../../components/ui/Badge";
 import { Section } from "../../components/ui/Section";
+import { ValuationBands } from "../../components/valuation/ValuationBands";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Stat } from "../../components/ui/Stat";
 import { ErrorState } from "../../components/ui/States";
@@ -214,6 +215,7 @@ function Valuation({ ticker }: { ticker: string }) {
               : "Price-based ratios such as market cap, P/E and EV/EBITDA are not computed yet, so there is nothing to show here. Everything above comes straight from the filings."}
           </p>
         )}
+        <ValuationBands ticker={ticker} />
       </Section>
     </div>
   );

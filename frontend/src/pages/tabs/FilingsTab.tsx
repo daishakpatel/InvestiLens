@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { FilingDiffView } from "../../components/filings/FilingDiffView";
+import { GuidanceSection } from "../../components/guidance/GuidanceSection";
 import { DataTable } from "../../components/ui/DataTable";
 import type { Column } from "../../components/ui/DataTable";
 import { Delta } from "../../components/ui/Delta";
@@ -351,7 +352,12 @@ export default function FilingsTab() {
               </div>
             )}
           </div>
-          {(twoColumn || !selected) && <EarningsReactions ticker={ticker} />}
+          {(twoColumn || !selected) && (
+            <>
+              <GuidanceSection ticker={ticker} />
+              <EarningsReactions ticker={ticker} />
+            </>
+          )}
         </div>
       )}
     </AsyncContent>
