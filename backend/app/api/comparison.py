@@ -11,13 +11,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user_id
 from app.billing.budget import check_budget
 from app.comparison.commentary import generate_commentary
 from app.comparison.engine import compare_companies, gather
 from app.comparison.peers import suggest_peers
 from app.db import get_db
-from app.models import User
+from app.models import Company, User
+from app.repositories import peers as peer_repo
 from app.schemas.citations import VerifiedOutput
 from app.schemas.comparison import (
     ComparisonCommentaryRequest,
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/compare", tags=["Comparison"])
 
 _DB = Depends(get_db, scope="function")
 _USER = Depends(get_current_user)
+_MAYBE_USER = Depends(get_optional_user_id)
 _MIN_TICKERS = 2
 _MAX_TICKERS = 6
 
@@ -51,18 +53,38 @@ def _parse_tickers(raw: str) -> list[str]:
 
 @router.get("", response_model=ComparisonResponse)
 def compare(
-    tickers: str = Query(..., description="Comma-separated tickers, e.g. NVDA,AMD,INTC"),
+    tickers: str | None = Query(None, description="Comma-separated tickers, e.g. NVDA,AMD,INTC"),
     metrics: str | None = Query(None, description="Optional comma-separated metric names"),
     period: str | None = Query(None, description="Calendar year or fiscal period; default latest"),
+    peer_set_id: int | None = Query(
+        None, description="Compare a company with a peer set instead of listing tickers (7h)"
+    ),
     db: Session = _DB,
+    user_id: int | None = _MAYBE_USER,
 ) -> ComparisonResponse:
     """Deterministic, calendarized, percentile-ranked comparison (no AI)."""
+    if peer_set_id is not None:
+        names = _peer_set_tickers(db, peer_set_id, user_id)
+    elif tickers is not None:
+        names = _parse_tickers(tickers)
+    else:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "give tickers or peer_set_id")
     try:
-        return compare_companies(
-            db, _parse_tickers(tickers), metrics=_parse_csv(metrics), period=period
-        )
+        return compare_companies(db, names, metrics=_parse_csv(metrics), period=period)
     except ValueError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+def _peer_set_tickers(db: Session, peer_set_id: int, user_id: int | None) -> list[str]:
+    """The set's company first, then its members; a set the caller cannot see is 404."""
+    peer_set = peer_repo.get_visible(db, peer_set_id, user_id)
+    if peer_set is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "peer set not found")
+    company = db.get(Company, peer_set.company_id)
+    members = [c.ticker for _, c in peer_repo.members(db, [peer_set.id])]
+    if company is None or not members:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "the peer set has no members")
+    return [company.ticker, *members]
 
 
 @router.get("/peers/{ticker}", response_model=PeerSuggestionsResponse)

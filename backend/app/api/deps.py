@@ -55,3 +55,13 @@ def require_admin(user: User = _CURRENT_USER) -> int:
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin role required")
     return user.id
+
+
+def get_optional_user_id(
+    authorization: str | None = Header(default=None), db: Session = _DB
+) -> int | None:
+    """The signed-in user's id on a public read, or None without a token. A token that is
+    present but invalid is still a 401: it is never silently treated as anonymous."""
+    if authorization is None:
+        return None
+    return get_current_user(authorization, db).id
