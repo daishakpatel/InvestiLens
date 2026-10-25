@@ -248,6 +248,11 @@ class Settings(BaseSettings):
     diff_match_threshold: float = Field(default=0.45)  # >= this: same passage, reworded
     diff_borderline_threshold: float = Field(default=0.20)  # below this: unrelated passages
     diff_max_llm_adjudications: int = Field(default=8)  # LLM calls per diff, borderline pairs only
+    # System default peer sets (Phase 7h, FR-PS-002): same SIC, market cap within this band of the
+    # target's, at most this many members.
+    peer_market_cap_band_low: float = Field(default=0.25)
+    peer_market_cap_band_high: float = Field(default=4.0)
+    peer_set_max_default: int = Field(default=8)
 
     # --- Object storage (Phase 5d, ADR-0012) ---
     # "filesystem" (MVP default, storage_dir) or "s3" (MinIO locally / S3 in prod, via the

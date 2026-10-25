@@ -12,6 +12,7 @@ from typing import Any
 
 from celery import Task
 
+from app.comparison.peers import refresh_default_peer_set
 from app.db import _session_factory, session_scope
 from app.embeddings.pipeline import embed_pending
 from app.finance.builder import build_company_metrics
@@ -19,9 +20,12 @@ from app.finance.footnote_builder import build_company_footnotes
 from app.finance.quality_builder import build_company_earnings_quality
 from app.finance.ratio_builder import build_company_ratios
 from app.finance.valuation_builder import build_company_valuation
+from app.finance.valuation_history import build_valuation_history
 from app.footnotes.summary import summarize_company_notes
 from app.governance.builder import build_company_governance
 from app.governance.facts import extract_company_facts
+from app.guidance.builder import build_company_guidance
+from app.guidance.extract import extract_company_guidance
 from app.ingestion.documents.pipeline import parse_company_documents
 from app.ingestion.news import ingest_news_for_tickers
 from app.ingestion.prices import ingest_prices_for_tickers
@@ -89,6 +93,8 @@ def parse_documents(self: Task, ticker: str) -> int:
         summarize_company_notes(session, company)  # cached once per 10-K (FR-FN-009)
         build_company_governance(session, company)  # proxy pay figures (FR-GV-004)
         extract_company_facts(session, company)  # cached once per proxy (FR-GV-010)
+        extract_company_guidance(session, company)  # cached once per release (FR-GD-006)
+        build_company_guidance(session, company)
         progress.update(progress=100, stage=f"parsed:{summary.parsed}")
     return summary.parsed
 
@@ -112,8 +118,11 @@ def update_financial_metrics(self: Task, ticker: str) -> dict[str, int]:
         base = build_company_metrics(session, company)
         ratios = build_company_ratios(session, company)
         build_company_valuation(session, company)
+        build_valuation_history(session, company)  # Phase 7h bands
+        refresh_default_peer_set(session, company)
         build_company_earnings_quality(session, company)
         build_company_footnotes(session, company)
+        build_company_guidance(session, company)  # a new quarter's actuals (FR-GD-007)
     return {"metrics": base.annual_metrics, "ratios": ratios}
 
 
@@ -157,12 +166,16 @@ def _refresh_one(ticker: str) -> None:
         build_company_metrics(session, company)
         build_company_ratios(session, company)
         build_company_valuation(session, company)
+        build_valuation_history(session, company)  # Phase 7h bands
+        refresh_default_peer_set(session, company)
         build_company_earnings_quality(session, company)
         build_company_footnotes(session, company)
         scan_company(session, company)  # after metrics: the Beneish flag reads them (FR-RF-007)
         summarize_company_notes(session, company)  # a new 10-K's notes (FR-FN-009)
         build_company_governance(session, company)  # a new proxy (FR-GV-004)
         extract_company_facts(session, company)
+        extract_company_guidance(session, company)  # a new release's outlook (FR-GD-003)
+        build_company_guidance(session, company)
 
 
 @celery_app.task(bind=True, queue="interactive", name="refresh_company_data", **RETRY_KWARGS)

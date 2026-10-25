@@ -27,7 +27,9 @@ from app.api import (
     filings,
     footnotes,
     governance,
+    guidance,
     health,
+    peers,
     portfolio,
     red_flags,
     research,
@@ -127,6 +129,8 @@ def create_app() -> FastAPI:
         red_flags,
         footnotes,
         governance,
+        peers,
+        guidance,
     ):
         app.include_router(module.router, prefix=API_V1_PREFIX)
     app.include_router(metrics_module.router)  # root-level /metrics (Prometheus scrape convention)

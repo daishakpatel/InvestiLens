@@ -1,4 +1,4 @@
-"""Peer sets and valuation history (Phase 7h, FR-PS-001/009, ADR-0046)."""
+"""Peer sets and valuation history (Phase 7h, FR-PS-001/008, ADR-0046)."""
 
 from datetime import date, datetime
 from typing import Any

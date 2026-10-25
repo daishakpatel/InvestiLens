@@ -17,8 +17,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.comparison.peers import refresh_default_peer_set
 from app.config import get_settings
 from app.finance.valuation_builder import build_company_valuation
+from app.finance.valuation_history import build_valuation_history
 from app.models import Company
 from app.providers.prices import PriceBar, PriceSource, get_price_source
 from app.repositories import companies as company_repo
@@ -74,6 +76,8 @@ def _revalue(session: Session, company: Company) -> None:
     try:
         with session.begin_nested():  # a failure here must not undo the price run (ING-005)
             build_company_valuation(session, company)
+            build_valuation_history(session, company)  # today's band position (Phase 7h)
+            refresh_default_peer_set(session, company)  # market caps moved
     except Exception as exc:
         log_event(
             logger, logging.ERROR, "valuation.rebuild.failed", ticker=company.ticker, error=str(exc)

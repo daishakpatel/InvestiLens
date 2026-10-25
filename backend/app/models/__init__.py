@@ -15,6 +15,7 @@ from app.models.financial import (
     PriceHistory,
 )
 from app.models.governance import ExecCompFact
+from app.models.guidance import GuidanceItem, GuidanceOutcome
 from app.models.news import InsiderTransaction, InstitutionalHolding, News
 from app.models.ops import (
     DataFreshness,
@@ -64,6 +65,8 @@ __all__ = [
     "FinancialFact",
     "FinancialMetric",
     "FiscalCalendar",
+    "GuidanceItem",
+    "GuidanceOutcome",
     "IngestionDeadLetter",
     "IngestionRun",
     "InsiderTransaction",
