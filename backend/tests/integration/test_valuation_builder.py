@@ -144,5 +144,11 @@ def test_the_citation_panel_lists_the_price_without_a_dead_link(
     pe = next(r for r in _rows(session, nvda, "pe_ratio") if r.period_type == LATEST)
     detail = resolve_source(session, pe.source_id or "")
     assert detail is not None
-    assert {"name": "price"} in detail.lineage  # listed, no "None" source to click
+    # Since Phase 7h the latest P/E is market cap / TTM net income (ADR-0046): market cap is
+    # listed without a dead link, and the net income cites the fact it came from.
+    assert {"name": "market_cap"} in detail.lineage
+    income = next(i for i in detail.lineage if i["name"] == "net_income_ttm")
+    assert income["source_id"].startswith("xbrl:")
+    pe = next(r for r in _rows(session, nvda, "pe_ratio") if r.period_type == LATEST)
+    assert (pe.quality_flags or {})["basis"]["figures"].startswith("TTM to ")
     assert (detail.text or "").startswith("Price-to-earnings ratio as of ")
