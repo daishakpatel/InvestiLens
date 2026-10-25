@@ -1,15 +1,14 @@
-"""Persist each company's valuation multiples over time (Phase 7h, FR-PS-008/009, ADR-0046).
+"""Persist each company's valuation multiples over time (Phase 7h, FR-PS-008, ADR-0046).
 
 For the last five fiscal year ends and the latest close, every multiple in
 `point_in_time.MULTIPLES` is computed from what was known on that date: the close on or before
 it, the latest share count reported (and filed) by then, and TTM figures from filings made by
 then (DR-PS-003). Rows replace the company's previous history on every run (idempotent), and each
-records its price, share count and every figure's source IDs (FR-PS-009).
+records its price, share count and every figure's source IDs (FR-PS-008).
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
@@ -21,7 +20,7 @@ from app.finance.facts import fact_view_from_orm, with_composites
 from app.finance.point_in_time import figures_as_of, inputs_record, multiples
 from app.finance.valuation_builder import (
     PricePoint,
-    ShareCount,
+    count_as_of,
     load_splits,
     price_on_or_before,
     share_counts,
@@ -52,12 +51,6 @@ def year_ends(
         if fy is not None and end is not None:
             ends[fy] = max(end, ends.get(fy, end))
     return sorted(ends.items())[-years:]
-
-
-def count_as_of(counts: Sequence[ShareCount], as_of: date) -> ShareCount | None:
-    """The latest share count dated and filed by `as_of` (never one reported later)."""
-    known = [c for c in counts if c.record_date <= as_of and (c.filed is None or c.filed <= as_of)]
-    return max(known, key=lambda c: c.record_date) if known else None
 
 
 def build_valuation_history(session: Session, company: Company) -> int:

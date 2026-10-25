@@ -13,8 +13,9 @@ P/E uses the raw close with diluted EPS, and the share count is moved to the pri
 any stock split in between (DR-025/026). Every row stores its price date, close, share count,
 share record date and fiscal year, so it can be reproduced from stored data (FR-024).
 
-shortcut: "TTM" inputs use the fiscal year's figures. TTM rows are stored since Phase 7b
-(ADR-0040); switch these multiples to them with the Phase 7h valuation bands (Instructions/TODO.md).
+Since Phase 7h (ADR-0046) the latest-close row uses TTM figures as known at the price date
+(`point_in_time`): the same numbers as the valuation bands' "today", with P/E as market cap / TTM
+net income. Fiscal-year rows keep that year's figures, labelled as such in their basis.
 """
 
 from __future__ import annotations
@@ -30,8 +31,11 @@ from sqlalchemy.orm import Session
 
 from app.finance import metrics
 from app.finance.concept_map import load_concept_map
+from app.finance.facts import fact_view_from_orm, with_composites
+from app.finance.point_in_time import derived_values, figures_as_of
 from app.finance.shares import total_shares_outstanding
 from app.models import Company, CorporateAction, FinancialFact, FinancialMetric, PriceHistory
+from app.repositories import facts as facts_repo
 from app.repositories import metrics as metrics_repo
 from app.schemas.sources import MetricResult
 
@@ -82,6 +86,12 @@ def shares_on(count: ShareCount, day: date, splits: Sequence[tuple[date, Decimal
     return count.shares / split_factor(splits, day, count.record_date)
 
 
+def count_as_of(counts: Sequence[ShareCount], as_of: date) -> ShareCount | None:
+    """The latest share count dated and filed by `as_of` (never one reported later)."""
+    known = [c for c in counts if c.record_date <= as_of and (c.filed is None or c.filed <= as_of)]
+    return max(known, key=lambda c: c.record_date) if known else None
+
+
 def share_count_for(counts: Sequence[ShareCount], year_end: date) -> ShareCount | None:
     """The cover-page count reported nearest after a year end (its 10-K), else the last before."""
     after = [c for c in counts if c.record_date >= year_end]
@@ -127,6 +137,7 @@ def _compute(
     source: dict[str, str],
     eps: Decimal | None,
     ev_applies: bool,
+    net_income: Decimal | None = None,
 ) -> list[MetricResult]:
     def src(*names: str, **renamed: str) -> dict[str, str]:
         """Lineage keyed by the formula's own input names (`revenue_ttm=` maps from `revenue`)."""
@@ -151,7 +162,11 @@ def _compute(
     return [
         mc,
         ev,
-        metrics.pe_ratio(price.close, eps, sources=src(eps_diluted_ttm="eps_diluted")),
+        (
+            metrics.pe_from_earnings(mc.value, net_income, sources=src(net_income_ttm="net_income"))
+            if net_income is not None
+            else metrics.pe_ratio(price.close, eps, sources=src(eps_diluted_ttm="eps_diluted"))
+        ),
         metrics.ps_ratio(mc.value, revenue, sources=src(revenue_ttm="revenue")),
         metrics.p_fcf(mc.value, fcf, sources=src(fcf_ttm="free_cash_flow")),
         metrics.ev_to_revenue(
@@ -258,33 +273,50 @@ def build_company_valuation(session: Session, company: Company) -> int:
     cmap = load_concept_map(ticker=company.ticker, cik=company.cik, sector=company.sector)
     ev_applies = cmap.applies("ev_ebitda")  # EV-based multiples are N/A for banks (Appendix C)
 
+    facts = with_composites(
+        [fact_view_from_orm(f) for f in facts_repo.facts_for_company(session, company.id)],
+        cmap.composites,
+    )
+
     def run(fy: int, price: PricePoint, period: str, period_type: str) -> int:
-        count = (
-            share_count_for(counts, year_end[fy])
-            if period_type == "FY"
-            else (max(counts, key=lambda c: c.record_date) if counts else None)
-        )
+        net_income: Decimal | None = None
+        if period_type == "FY":
+            count = share_count_for(counts, year_end[fy])
+            figures, sources = value[fy], source.get(fy, {})
+            eps = figures.get("eps_diluted")
+            if eps is not None:
+                # Reported EPS sits on the year end's share basis; restate it for any later split.
+                eps = eps / split_factor(splits, year_end[fy], price.day)
+            basis = {"fiscal_year": f"FY{fy}", "figures": "fiscal year (not TTM)"}
+        else:
+            count = count_as_of(counts, price.day)
+            quarter_end, found = figures_as_of(facts, cmap, price.day)
+            derived = derived_values(found)
+            figures = {name: value for name, (value, _) in derived.items()}
+            # One input row per figure, citing its first fact; `ttm_sources` lists them all.
+            sources = {name: ids[0] for name, (_, ids) in derived.items() if ids}
+            eps, net_income = None, figures.get("net_income")
+            basis = {
+                "fiscal_year": f"FY{fy}",
+                "figures": f"TTM to {quarter_end.isoformat() if quarter_end else 'n/a'}, "
+                "as filed by the price date",
+                "ttm_sources": ";".join(
+                    f"{n}={','.join(ids)}" for n, (_, ids) in sorted(derived.items())
+                ),
+            }
         shares = shares_on(count, price.day, splits) if count else None
-        eps = value[fy].get("eps_diluted")
-        if eps is not None:
-            # Reported EPS sits on the year end's share basis; restate it for any later split.
-            eps = eps / split_factor(splits, year_end[fy], price.day)
-        basis = {
-            "price_date": price.day.isoformat(),
-            "price_close": str(price.close),
-            "fiscal_year": f"FY{fy}",
-            "figures": "fiscal year (not TTM)",
-        }
+        basis |= {"price_date": price.day.isoformat(), "price_close": str(price.close)}
         if count is not None and shares is not None:
             basis.update(shares=str(shares), shares_record_date=count.record_date.isoformat())
         results = _compute(
             price=price,
             shares=shares,
             shares_source=count.source_id if count else None,
-            value=value[fy],
-            source=source.get(fy, {}),
+            value=figures,
+            source=sources,
             eps=eps,
             ev_applies=ev_applies,
+            net_income=net_income,
         )
         for result in results:
             _persist(

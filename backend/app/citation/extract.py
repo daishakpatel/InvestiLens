@@ -19,6 +19,7 @@ _SCALES = {
     "tn": Decimal(10) ** 12,
     "billion": Decimal(10) ** 9,
     "bn": Decimal(10) ** 9,
+    "b": Decimal(10) ** 9,  # "5.4B" (Phase 7i guidance)
     "million": Decimal(10) ** 6,
     "mm": Decimal(10) ** 6,
     "mn": Decimal(10) ** 6,
@@ -28,7 +29,7 @@ _SCALES = {
 
 _PERCENT = re.compile(r"(\d[\d,]*\.?\d*)\s*(%|percent|percentage points?|bps)", re.IGNORECASE)
 _SCALED = re.compile(
-    r"\$?\s*(\d[\d,]*\.?\d*)\s*(trillion|billion|million|thousand|tn|bn|mm|mn|k)\b",
+    r"\$?\s*(\d[\d,]*\.?\d*)\s*(trillion|billion|million|thousand|tn|bn|mm|mn|k|b)\b",
     re.IGNORECASE,
 )
 _CURRENCY = re.compile(r"\$\s*(\d[\d,]*\.?\d*)")

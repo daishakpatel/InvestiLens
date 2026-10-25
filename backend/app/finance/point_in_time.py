@@ -41,7 +41,9 @@ MULTIPLES = (
     "earnings_yield",
 )
 YIELDS = frozenset({"fcf_yield", "earnings_yield"})
-MAX_MULTIPLE = Decimal(1000)  # beyond this the denominator is effectively zero
+# Beyond this the denominator is effectively zero (Intel's FY2025 P/E would read 872x on near-zero
+# earnings): such a multiple says nothing about valuation, so it is not meaningful.
+MAX_MULTIPLE = Decimal(200)
 
 OK = "ok"
 NOT_MEANINGFUL = "not_meaningful"
@@ -136,32 +138,37 @@ def _find(periods: dict[tuple[date, date], FactView], end: date, days: int) -> F
 
 
 def ttm(facts: Sequence[FactView], tags: Sequence[str], quarter_end: date) -> Figure | None:
-    """The twelve months to `quarter_end` for the first tag that yields them."""
+    """The twelve months to `quarter_end`. Each period takes the first tag in priority order that
+    reports it, like the annual builder: filers switch tags between years (NVIDIA's FY2021 revenue
+    is `RevenueFromContractWithCustomerExcludingAssessedTax`, its later quarters `Revenues`)."""
+    periods: dict[tuple[date, date], FactView] = {}
     for tag in tags:
-        periods = _durations(facts, tag)
-        ending = [f for (_, stop), f in periods.items() if stop == quarter_end]
-        year = next((f for f in ending if _YEAR[0] <= _days(f) <= _YEAR[1]), None)
-        if year is not None:
-            return Figure(tag, year.value, _sources(year))
-        partial = [f for f in ending if _days(f) < _YEAR[0]]
-        if not partial:
-            continue
-        ytd = max(partial, key=_days)
-        assert ytd.period_start is not None  # noqa: S101
-        prior = _find(periods, quarter_end - timedelta(days=365), _days(ytd))
-        previous_year = next(
-            (
-                f
-                for (_, stop), f in periods.items()
-                if _near(stop, ytd.period_start - timedelta(days=1))
-                and _YEAR[0] <= _days(f) <= _YEAR[1]
-            ),
-            None,
-        )
-        if prior is not None and previous_year is not None:
-            value = previous_year.value + ytd.value - prior.value
-            return Figure(tag, value, (*_sources(previous_year), *_sources(ytd), *_sources(prior)))
-    return None
+        for period, fact in _durations(facts, tag).items():
+            periods.setdefault(period, fact)
+    ending = [f for (_, stop), f in periods.items() if stop == quarter_end]
+    year = next((f for f in ending if _YEAR[0] <= _days(f) <= _YEAR[1]), None)
+    if year is not None:
+        return Figure(year.concept_tag, year.value, _sources(year))
+    partial = [f for f in ending if _days(f) < _YEAR[0]]
+    if not partial:
+        return None
+    ytd = max(partial, key=_days)
+    assert ytd.period_start is not None  # noqa: S101
+    prior = _find(periods, quarter_end - timedelta(days=365), _days(ytd))
+    previous_year = next(
+        (
+            f
+            for (_, stop), f in periods.items()
+            if _near(stop, ytd.period_start - timedelta(days=1))
+            and _YEAR[0] <= _days(f) <= _YEAR[1]
+        ),
+        None,
+    )
+    if prior is None or previous_year is None:
+        return None
+    value = previous_year.value + ytd.value - prior.value
+    sources = (*_sources(previous_year), *_sources(ytd), *_sources(prior))
+    return Figure(ytd.concept_tag, value, sources)
 
 
 def instant(facts: Sequence[FactView], tags: Sequence[str], quarter_end: date) -> Figure | None:
@@ -198,14 +205,25 @@ def figures_as_of(
     return quarter_end, found
 
 
-def _value(figures: Mapping[str, Figure], name: str) -> Decimal | None:
-    figure = figures.get(name)
-    return figure.value if figure else None
+def derived_values(figures: Mapping[str, Figure]) -> dict[str, tuple[Decimal, tuple[str, ...]]]:
+    """The valuation inputs built from the figures, each with every fact it rests on: the raw
+    TTM flows and balances, plus total debt, EBITDA and free cash flow when their parts exist."""
+    out = {name: (f.value, f.source_ids) for name, f in figures.items()}
 
+    def combine(
+        name: str, parts: tuple[str, ...], signs: tuple[int, ...], *, all_needed: bool
+    ) -> None:
+        present = [(p, s) for p, s in zip(parts, signs, strict=True) if p in figures]
+        if not present or (all_needed and len(present) < len(parts)):
+            return
+        value = sum((s * figures[p].value for p, s in present), Decimal(0))
+        out[name] = (value, tuple(i for p, _ in present for i in figures[p].source_ids))
 
-def _combined(figures: Mapping[str, Figure], a: str, b: str, sign: int) -> Decimal | None:
-    x, y = _value(figures, a), _value(figures, b)
-    return None if x is None or y is None else x + sign * y
+    # Debt is whatever of the two is reported; EBITDA and FCF need both parts.
+    combine("total_debt", ("short_term_debt", "long_term_debt"), (1, 1), all_needed=False)
+    combine("ebitda", ("operating_income", "depreciation_amortization"), (1, 1), all_needed=True)
+    combine("free_cash_flow", ("operating_cash_flow", "capex"), (1, -1), all_needed=True)
+    return out
 
 
 def multiples(
@@ -218,29 +236,30 @@ def multiples(
 ) -> list[Multiple]:
     """Every multiple at one date, with its status. Lineage (each figure's source IDs, the price
     and share count) is recorded by `inputs_record`: a TTM figure rests on several facts."""
+    derived = derived_values(figures)
+
+    def v(name: str) -> Decimal | None:
+        found = derived.get(name)
+        return found[0] if found else None
+
     mc = metrics.market_cap(price, shares)
-    short, long = _value(figures, "short_term_debt"), _value(figures, "long_term_debt")
-    debt = None if short is None and long is None else (short or Decimal(0)) + (long or Decimal(0))
     ev = metrics.enterprise_value(
         mc.value,
-        debt,
-        _value(figures, "cash_and_equivalents"),
-        _value(figures, "short_term_investments"),
-        _value(figures, "preferred_stock"),
-        _value(figures, "minority_interest"),
+        v("total_debt"),
+        v("cash_and_equivalents"),
+        v("short_term_investments"),
+        v("preferred_stock"),
+        v("minority_interest"),
         applicable=ev_applies,
     )
-    income, revenue = _value(figures, "net_income"), _value(figures, "revenue")
-    ebitda = _combined(figures, "operating_income", "depreciation_amortization", 1)
-    fcf = _combined(figures, "operating_cash_flow", "capex", -1)
-    book = _value(figures, "shareholders_equity")
+    income, revenue, fcf = v("net_income"), v("revenue"), v("free_cash_flow")
     results = [
         metrics.pe_from_earnings(mc.value, income),
         metrics.ps_ratio(mc.value, revenue),
         _renamed(metrics.ev_to_revenue(ev.value, revenue, applicable=ev_applies), "ev_revenue"),
-        _renamed(metrics.ev_to_ebitda(ev.value, ebitda, applicable=ev_applies), "ev_ebitda"),
+        _renamed(metrics.ev_to_ebitda(ev.value, v("ebitda"), applicable=ev_applies), "ev_ebitda"),
         metrics.ev_to_fcf(ev.value, fcf, applicable=ev_applies),
-        metrics.pb_ratio(mc.value, book, applicable=book_applies),
+        metrics.pb_ratio(mc.value, v("shareholders_equity"), applicable=book_applies),
         metrics.fcf_yield(fcf, mc.value),
         metrics.earnings_yield(income, mc.value),
     ]
@@ -264,7 +283,7 @@ def _judge(result: MetricResult) -> Multiple:
 def inputs_record(
     quarter_end: date | None, figures: Mapping[str, Figure], extra: Mapping[str, Any]
 ) -> dict[str, Any]:
-    """What a multiple was computed from, for `valuation_history.inputs` (FR-PS-009)."""
+    """What a multiple was computed from, for `valuation_history.inputs` (FR-PS-008)."""
     return {
         "quarter_end": quarter_end.isoformat() if quarter_end else None,
         "figures": [

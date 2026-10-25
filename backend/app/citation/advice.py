@@ -34,6 +34,12 @@ _ADVICE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
         r"\b(recommend|advise)\s+(buying|selling|holding|rebalancing|overweighting)\b", re.I
     ),
+    # Valuation calls (Phase 7h, FR-PS-011): a multiple's position is described, never judged.
+    re.compile(
+        r"\b(cheap(?:er|est|ly)?|expensive|pricey|(?:under|over)-?valued|bargain|"
+        r"(?:richly|attractively|fairly|fully) valued|a steal)\b",
+        re.I,
+    ),
 )
 
 
@@ -67,3 +73,18 @@ def is_screening_source(source_id: str) -> bool:
 def accuses_on_screening_score(text: str, source_ids: list[str]) -> bool:
     """True when `text` cites a screening score and calls the company fraudulent/manipulative."""
     return any(is_screening_source(s) for s in source_ids) and bool(_ACCUSATION.search(text))
+
+
+# Guidance is described by position only (Phase 7i, FR-GD-012): "above the guided range in 6 of
+# 8 quarters", never a judgement of management's habits. Kept apart from the advice patterns, so
+# "conservative accounting" in a report is not discarded as advice.
+_CHARACTERISATION = re.compile(
+    r"\b(sandbag\w*|low-?ball\w*|conservative(?:ly)?|aggressive(?:ly)?|(?:un)?reliab(?:le|ly|ility)|"
+    r"credib(?:le|ility)|beat[- ]and[- ]raise)\b",
+    re.I,
+)
+
+
+def characterises_guidance(text: str) -> bool:
+    """True when `text` judges how a company guides (sandbagging, conservative, reliable...)."""
+    return bool(_CHARACTERISATION.search(text))
