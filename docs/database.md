@@ -16,7 +16,7 @@ file in the same PR (DB-001).
 - **Constraint/index names** follow a fixed naming convention (see `app/models/base.py`) so
   migrations stay deterministic and reviewable.
 
-## Tables by domain (37 tables)
+## Tables by domain (40 tables)
 
 ```text
 Reference        companies ──< company_identifiers
@@ -27,6 +27,11 @@ Documents        companies ──< documents ──< filings (filings.amends_fil
                  documents ──< news (news.document_id, nullable)                 │
                  filings ──< red_flags >── companies, documents                    │
                  documents ──< exec_comp_facts >── companies (proxy pay figures)    │
+                 documents ──< guidance_items ──1 guidance_outcomes (company guidance)
+
+Comparison       companies ──< peer_sets ──< peer_set_members >── companies (peers)
+                 users ──< peer_sets (owner; NULL for the system default)
+                 companies ──< valuation_history (multiples by date, point in time)
 
 Financials       companies ──< financial_facts        (raw XBRL, point-in-time)
                  companies ──< financial_metrics       (computed, versioned)
@@ -72,6 +77,11 @@ evidence set. No schema change; the resolver matches whatever `source_id` is sto
 Valuation multiples (ADR-0036) are stored twice: per fiscal year (`period_type` FY, priced at the
 year end) and at the latest close (`period_type` LATEST, `period` = the price date, source ID
 `derived:<TICKER>:<metric>:<date>`); the latest-close rows are rebuilt with every price run.
+Since Phase 7h (ADR-0046) the latest-close rows use TTM figures as filed by the price date (P/E =
+market cap / TTM net income, `quality_flags.basis.figures` = "TTM to <quarter end> …"); fiscal-year
+rows keep that year's figures. Composite tags (`composite:depreciation_amortization` for AMD and
+Intel, from `concept_overrides/*.yaml` `composite_tags`) are summed per period and filing at load
+time; `minority_interest` and `preferred_stock` are new stock metrics for enterprise value.
 
 Base metrics and derived fourth quarters follow the same rule (ADR-0034): a base annual metric is
 `xbrl:<TICKER>:<metric>:FY<year>` and a derived Q4 is `derived:<TICKER>:<metric>:Q4-FY<year>`. A base
@@ -265,6 +275,56 @@ statement (`document_id` is the DEF 14A):
   DISTINCT. The builder deletes and reinserts a proxy's rows, so rebuilds are idempotent. FKs
   `ON DELETE CASCADE`; index `(company_id, fiscal_year)`.
 
+### Peer sets and valuation history (Phase 7h, ADR-0046)
+
+- `peer_sets (id, owner_user_id NULL, company_id, name, kind, created_at)`: `kind`
+  `system_default` (one per company, `owner_user_id` NULL, rebuilt with prices and by
+  `scripts/build_metrics.py`) or `user` (private to its owner; the API answers 404 to anyone else).
+  Index `(company_id, owner_user_id)`.
+- `peer_set_members (id, peer_set_id, peer_company_id, rationale, position)`: one row per peer,
+  unique `(peer_set_id, peer_company_id)`. `rationale` is "same SIC 3674; market cap 1.8× target"
+  for the default rule, "chosen by you" for a user's set; `position` keeps the rule's order. A set
+  with fewer than three members is "insufficient peers".
+- `valuation_history (id, company_id, as_of_date, kind, fiscal_year, multiple, value NULL, status,
+  inputs JSONB, created_at)`: every multiple (`pe_ratio`, `ps_ratio`, `ev_revenue`, `ev_ebitda`,
+  `ev_fcf`, `pb_ratio`, `fcf_yield`, `earnings_yield`) at each of the last five fiscal year ends
+  (`kind` fiscal_year_end) and the latest close (`current`), computed only from facts filed by
+  `as_of_date`. `status` is `ok`, `not_meaningful` (zero or negative denominator, or over 200x),
+  `missing_input` or `not_applicable`; `value` is NULL unless ok. `inputs` holds `quarter_end`, the
+  price (`price:<TICKER>:<date>`), the share count (`xbrl:<fact id>`) and each figure with its
+  `source_ids`. Unique `(company_id, as_of_date, multiple)`; rebuilt per company on every price run
+  and metrics build.
+- All FKs `ON DELETE CASCADE`.
+
+### Guidance and outcomes (Phase 7i, ADR-0047)
+
+- `guidance_items (id, company_id, source_document_id, paragraph_id, issued_at, fiscal_year NULL,
+  fiscal_period NULL, metric, low NULL, high NULL, point NULL, unit NULL, basis NULL,
+  derived_range, quote, period_text NULL, confidence_state, rejection_reason NULL, superseded_by
+  NULL, taxonomy_version, prompt_version, created_at)`: one figure a company guided to in an
+  earnings release (`documents.document_type = 'earnings_release'`, EX-99.1/EX-99 only).
+  `confidence_state` is `verified` (shown) or `rejected` (kept with its `rejection_reason` for
+  audit, never shown; period, unit and basis may be NULL). `metric` is from `guidance_metric_v1`;
+  `unit` `usd | ratio | percent_of_revenue`, money raw USD, ratios decimals; `basis`
+  `gaap | non_gaap | unspecified`, set by keyword, not by the model. CHECK `one_value_form`: a
+  verified row holds `point` or both `low` and `high`, never both forms. `derived_range` marks a
+  range computed in code from "X, plus or minus Y". `superseded_by` (self FK, `ON DELETE SET NULL`)
+  points at the next release's item for the same `(fiscal_year, fiscal_period, metric, basis)`;
+  an item nothing points at is the initial guidance (the headline). `issued_at` is the release's
+  `published_at`. Indexes `(company_id, fiscal_year)` and `(source_document_id)`. A document's rows
+  are replaced together when it is re-extracted; the extraction cache sits in
+  `documents.metadata.guidance_extraction["<prompt>|<model>"]`.
+- `guidance_outcomes (guidance_id PK/FK, actual_value NULL, actual_source_ids JSONB, delta_vs_low,
+  delta_vs_high, delta_vs_mid, delta_vs_mid_pct, result, reason_code NULL, computed_at)`: each
+  verified item against the same fiscal period's GAAP `financial_metrics` rows. `result` (CHECK
+  `result_known`) is `above_range | within_range | below_range | not_comparable |
+  actual_unavailable`; the last two leave `actual_value` and the deltas NULL with a `reason_code`
+  (`non_gaap_basis`, `basis_unspecified`, `actual_not_reported`), never zero. `actual_source_ids`
+  are the metric rows' own source IDs (a ratio lists both inputs). Upserted on every metrics build;
+  `computed_at` moves only when the result or actual changes, which is what the `guidance_miss`
+  alert keys on.
+- FKs to companies and documents `ON DELETE CASCADE`; an outcome goes with its item.
+
 ### Alerts and notifications (Phase 7a, ADR-0039)
 
 `alerts`: `event_type` (a key in `app/alerts/registry.py`), `params` JSONB (validated against that
@@ -317,3 +377,5 @@ Migrations are tested up and down, on empty and populated databases, in
 | `c3f8a1d2e9b7` | Add `red_flags` (FKs to companies, filings, documents `ON DELETE CASCADE`; unique `uq_red_flags_event (company_id, rule_key, taxonomy_version, filing_id, paragraph_id)` NULLS NOT DISTINCT, named explicitly because the generated name passes Postgres's 63 characters; index `(company_id, event_date)`). Phase 7e, FR-RF-006, ADR-0043. |
 | — | Phase 7f adds no migration: notes and summaries live in `documents.metadata`, footnote facts in `financial_metrics`/`metric_gaps` (ADR-0044). |
 | `f2a9c4e7b1d3` | Add `exec_comp_facts` (FKs to companies and documents `ON DELETE CASCADE`; unique `uq_exec_comp_facts_fact (document_id, fiscal_year, fact_key, person)` NULLS NOT DISTINCT; index `(company_id, fiscal_year)`). Phase 7g, FR-GV-004, ADR-0045. |
+| `a6d2f8c3e5b1` | Add `peer_sets`, `peer_set_members` (unique `(peer_set_id, peer_company_id)`) and `valuation_history` (unique `(company_id, as_of_date, multiple)`); FKs `ON DELETE CASCADE`. Phase 7h, FR-PS-001/008, ADR-0046. |
+| `b9e4d7a2c6f1` | Add `guidance_items` (FKs to companies and documents `ON DELETE CASCADE`, self FK `superseded_by` `ON DELETE SET NULL`, CHECK `one_value_form`, indexes `(company_id, fiscal_year)` and `(source_document_id)`) and `guidance_outcomes` (PK/FK `guidance_id` `ON DELETE CASCADE`, `actual_source_ids` JSONB default `[]`, CHECK `result_known`). Phase 7i, FR-GD-001/002, ADR-0047. |

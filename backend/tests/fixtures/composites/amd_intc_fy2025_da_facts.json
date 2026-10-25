@@ -1,0 +1,54 @@
+{
+ "source": "SEC companyfacts as ingested in the dev DB on 2026-10-24: FY2025 annual depreciation & amortization components",
+ "facts": {
+  "AMD": [
+   {
+    "concept_tag": "us-gaap:AmortizationOfIntangibleAssets",
+    "period_start": "2024-12-29",
+    "period_end": "2025-12-27",
+    "value": "2300000000.00000000",
+    "unit": "USD",
+    "accession_number": "0000002488-26-000018",
+    "filed_date": "2026-02-04"
+   },
+   {
+    "concept_tag": "us-gaap:Depreciation",
+    "period_start": "2024-12-29",
+    "period_end": "2025-12-27",
+    "value": "521000000.00000000",
+    "unit": "USD",
+    "accession_number": "0000002488-26-000018",
+    "filed_date": "2026-02-04"
+   },
+   {
+    "concept_tag": "us-gaap:OtherDepreciationAndAmortization",
+    "period_start": "2024-12-29",
+    "period_end": "2025-12-27",
+    "value": "750000000.00000000",
+    "unit": "USD",
+    "accession_number": "0000002488-26-000018",
+    "filed_date": "2026-02-04"
+   }
+  ],
+  "INTC": [
+   {
+    "concept_tag": "us-gaap:AmortizationOfIntangibleAssets",
+    "period_start": "2024-12-29",
+    "period_end": "2025-12-27",
+    "value": "949000000.00000000",
+    "unit": "USD",
+    "accession_number": "0000050863-26-000011",
+    "filed_date": "2026-01-23"
+   },
+   {
+    "concept_tag": "us-gaap:Depreciation",
+    "period_start": "2024-12-29",
+    "period_end": "2025-12-27",
+    "value": "10757000000.00000000",
+    "unit": "USD",
+    "accession_number": "0000050863-26-000011",
+    "filed_date": "2026-01-23"
+   }
+  ]
+ }
+}

@@ -26,6 +26,11 @@ import type {
   FootnoteFactsResponse,
   GovernanceHistoryResponse,
   GovernanceResponse,
+  GuidanceResponse,
+  GuidanceTrackRecord,
+  PeerSetOut,
+  PeerSetsResponse,
+  ValuationBandsResponse,
   NotesResponse,
   RedFlagsResponse,
   NewsResponse,
@@ -345,6 +350,59 @@ const governanceHistory = z.object({
       ceo_total_pay_source: z.string().nullish(),
       ceo_total_pay_source_id: z.string().nullish(),
       independence_ratio: decimal.nullish(),
+    }),
+  ),
+});
+
+// Phase 7h (FR-PS-012): peer sets and valuation bands. Every percentile comes with its `n`.
+const peerSet = z.object({
+  id: z.number(),
+  name: z.string(),
+  kind: z.enum(["system_default", "user"]),
+  members: z.array(z.object({ ticker: z.string(), name: z.string(), rationale: z.string() })),
+  insufficient: z.boolean(),
+  reason: z.string().nullish(),
+});
+const peerSets = z.object({ company_ticker: z.string(), peer_sets: z.array(peerSet) });
+const valuationBands = z.object({
+  company_ticker: z.string(),
+  as_of: z.string().nullable(),
+  peer_set: peerSet.nullable(),
+  disclaimer: z.string(),
+  bands: z.array(
+    z.object({
+      multiple: z.string(),
+      unit: z.enum(["x", "ratio"]),
+      status: z.string(),
+      value: z.string().nullish(),
+      reason: z.string().nullish(),
+      own: z.object({
+        n: z.number(),
+        min: z.string().nullish(),
+        median: z.string().nullish(),
+        max: z.string().nullish(),
+        percentile: z.string().nullish(),
+        label: z.string().nullish(),
+        reason: z.string().nullish(),
+      }),
+      peers: z.object({
+        n: z.number(),
+        median: z.string().nullish(),
+        percentile: z.string().nullish(),
+        premium_to_peer_median: z.string().nullish(),
+        label: z.string().nullish(),
+        reason: z.string().nullish(),
+        excluded: z.array(z.object({ ticker: z.string(), reason: z.string() })).default([]),
+      }),
+      history: z.array(
+        z.object({
+          as_of: z.string(),
+          kind: z.enum(["fiscal_year_end", "current"]),
+          fiscal_year: z.number().nullish(),
+          value: z.string().nullish(),
+          status: z.string(),
+        }),
+      ),
     }),
   ),
 });
@@ -746,6 +804,85 @@ const notification = z.object({
   created_at: z.string(),
 });
 
+// Phase 7i (FR-GD-014): company guidance with outcomes; decimals arrive as strings.
+const guidanceResult = z.enum([
+  "above_range",
+  "within_range",
+  "below_range",
+  "not_comparable",
+  "actual_unavailable",
+]);
+const guidanceValue = {
+  id: z.number(),
+  issued_at: z.string().nullable(),
+  low: decimal.nullable(),
+  high: decimal.nullable(),
+  point: decimal.nullable(),
+  midpoint: decimal,
+  derived_range: z.boolean(),
+  quote: z.string(),
+  source_id: z.string(),
+  release: z.object({ document_id: z.number(), title: z.string().nullable(), url: z.string().nullable() }),
+  outcome: z
+    .object({
+      result: guidanceResult,
+      actual_value: decimal.nullable(),
+      actual_source_ids: z.array(z.string()),
+      delta_vs_low: decimal.nullable(),
+      delta_vs_high: decimal.nullable(),
+      delta_vs_mid: decimal.nullable(),
+      delta_vs_mid_pct: decimal.nullable(),
+      reason_code: z.string().nullable(),
+      explanation: z.string().nullable(),
+      computed_at: z.string(),
+    })
+    .nullable(),
+};
+const guidance = z.object({
+  ticker: z.string(),
+  fiscal_year: z.number().nullable(),
+  fiscal_years: z.array(z.number()),
+  scope: z.string(),
+  items: z.array(
+    z.object({
+      ...guidanceValue,
+      fiscal_year: z.number(),
+      fiscal_period: z.string(),
+      period_label: z.string(),
+      metric: z.string(),
+      metric_label: z.string(),
+      basis: z.enum(["gaap", "non_gaap", "unspecified"]),
+      unit: z.enum(["usd", "ratio", "percent_of_revenue"]),
+      revisions: z.array(z.object(guidanceValue)),
+    }),
+  ),
+});
+const guidanceTrackRecord = z.object({
+  ticker: z.string(),
+  metric: z.string(),
+  metric_label: z.string(),
+  n_quarters: z.number(),
+  n_comparable: z.number(),
+  n_above: z.number(),
+  n_within: z.number(),
+  n_below: z.number(),
+  avg_delta_vs_mid: decimal.nullable(),
+  avg_delta_vs_mid_pct: decimal.nullable(),
+  sufficient: z.boolean(),
+  label: z.string(),
+  quarters: z.array(
+    z.object({
+      period_label: z.string(),
+      low: decimal,
+      high: decimal,
+      actual_value: decimal.nullable(),
+      result: guidanceResult,
+      delta_vs_mid_pct: decimal.nullable(),
+      source_id: z.string(),
+    }),
+  ),
+});
+
 export const parse = {
   watchlist: (d: unknown): Watchlist => watchlist.parse(d) as Watchlist,
   watchlists: (d: unknown): Watchlist[] => z.array(watchlist).parse(d) as Watchlist[],
@@ -770,6 +907,13 @@ export const parse = {
   redFlags: (d: unknown): RedFlagsResponse => redFlags.parse(d) as RedFlagsResponse,
   notes: (d: unknown): NotesResponse => notes.parse(d) as NotesResponse,
   governance: (d: unknown): GovernanceResponse => governance.parse(d) as GovernanceResponse,
+  guidance: (d: unknown): GuidanceResponse => guidance.parse(d) as GuidanceResponse,
+  guidanceTrackRecord: (d: unknown): GuidanceTrackRecord =>
+    guidanceTrackRecord.parse(d) as GuidanceTrackRecord,
+  peerSets: (d: unknown): PeerSetsResponse => peerSets.parse(d) as PeerSetsResponse,
+  peerSet: (d: unknown): PeerSetOut => peerSet.parse(d) as PeerSetOut,
+  valuationBands: (d: unknown): ValuationBandsResponse =>
+    valuationBands.parse(d) as ValuationBandsResponse,
   governanceHistory: (d: unknown): GovernanceHistoryResponse =>
     governanceHistory.parse(d) as GovernanceHistoryResponse,
   footnoteFacts: (d: unknown): FootnoteFactsResponse =>

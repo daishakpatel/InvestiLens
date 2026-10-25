@@ -1359,7 +1359,7 @@ Rules:
 - Report generation is recorded with `data_version` (hash of metric snapshot + document set IDs) for reproducibility.
 
 ## 17.3 Prompt inventory (owned by Research agent; see Appendix D)
-`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_{section}_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `claim_verifier_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `note_summary_v1`, `governance_v1`.
+`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_{section}_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `claim_verifier_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `note_summary_v1`, `governance_v1`, `guidance_extract_v1`.
 
 ---
 
@@ -3048,6 +3048,10 @@ Actual: $X
 ```
 **Only use expectations data if the relevant data source/license supports it.** v2: guidance vs actual tracker, earnings-day price reaction (deterministic), Q&A themes, "what changed vs last quarter."
 
+*Phase 7i (ADR-0047):* the guidance tracker compares results only with the company's **own**
+guidance from its EX-99.1 press releases. Analyst consensus estimates remain unbuilt: no licensed
+source exists, so "beat/miss vs consensus" and surprise percentages are not shown or approximated.
+
 ## 37.4 Filing change detection [P2] — very strong AI feature
 Compare:
 ```text
@@ -3239,7 +3243,10 @@ cost), persisted only by `footnote_builder`. Executive pay comes from the SEC `e
 (`PeoTotalCompAmt`, `PeoActuallyPaidCompAmt`, `NonPeoNeoAvgTotalCompAmt`,
 `NonPeoNeoAvgCompActuallyPaidAmt`, `TotalShareholderRtnAmt`, `PeerGroupTotalShareholderRtnAmt`,
 `CoSelectedMeasureAmt`) via `app/governance/builder.py` into `exec_comp_facts` (Phase 7g,
-ADR-0045), not the concept map: these are proxy-year facts, not company periods.
+ADR-0045), not the concept map: these are proxy-year facts, not company periods. Phase 7h
+(ADR-0046) adds `minority_interest` (`us-gaap:MinorityInterest`) and `preferred_stock`
+(`us-gaap:PreferredStockValue`) for enterprise value, and company `composite_tags`: AMD's and
+Intel's D&A is the sum of the parts they tag (`composite:depreciation_amortization`).
 
 > Starter list only; the Financial Data agent must validate against seed companies and extend with company-level overrides. Bank/insurer taxonomies (interest income, net interest margin, provision for credit losses, CET1) are a separate sector map.
 
@@ -3257,7 +3264,7 @@ ADR-0045), not the concept map: these are proxy-year facts, not company periods.
 | Net interest margin | N/A | ✓ [P2] | N/A |
 
 ## Appendix D — Prompt inventory
-`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_executive_summary_v1`, `section_generator_company_overview_v1`, `section_generator_revenue_v1`, `section_generator_profitability_v1`, `section_generator_balance_sheet_v1`, `section_generator_cash_flow_v1`, `section_generator_valuation_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `bull_bear_generator_v1`, `claim_verifier_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `judge_faithfulness_v1`, `governance_v1` (Phase 7g: one proxy → `GovernanceFacts`, each field a verbatim quote with a backend `paragraph_id` or null; no computing; `app/governance/facts.py`), `note_summary_v1` (Phase 7f: one note → ≤5 bullets, each with a verbatim quote and the backend-issued `paragraph_id`; untrusted-data, no-advice, no-forecast and no-prior-year-change rules; `app/footnotes/summary.py`).
+`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_executive_summary_v1`, `section_generator_company_overview_v1`, `section_generator_revenue_v1`, `section_generator_profitability_v1`, `section_generator_balance_sheet_v1`, `section_generator_cash_flow_v1`, `section_generator_valuation_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `bull_bear_generator_v1`, `claim_verifier_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `judge_faithfulness_v1`, `governance_v1` (Phase 7g: one proxy → `GovernanceFacts`, each field a verbatim quote with a backend `paragraph_id` or null; no computing; `app/governance/facts.py`), `note_summary_v1` (Phase 7f: one note → ≤5 bullets, each with a verbatim quote and the backend-issued `paragraph_id`; untrusted-data, no-advice, no-forecast and no-prior-year-change rules; `app/footnotes/summary.py`). `guidance_extract_v1` (Phase 7i: the outlook sentences of one EX-99.1 → `{items: [{metric, low, high, point, unit, basis, period_text, quote, paragraph_id}]}`, metric from `guidance_metric_v1`, money raw USD, ratios decimal, "plus or minus" left to code; untrusted data, no computing, no advice; every item checked in code; `app/guidance/extract.py`).
 Each prompt file contains: purpose, inputs, output schema, safety rules (untrusted-content wrapper), examples, version, changelog, eval results link.
 
 ## Appendix E — Endpoint index (v1)
@@ -3460,6 +3467,54 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | DR-GV-002 | A proxy whose fiscal year cannot be read from its content MUST store no figures. |
 | DR-GV-003 | A figure not found or not verified MUST be absent with a reason, never zero. |
 | AGT-GV-001 | The model MUST NOT compute any value, and a quote that reads as an instruction MUST NOT support a field. |
+
+**Peer sets and valuation bands (Phase 7h, ADR-0046)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-PS-001 | Peer sets MUST be stored (`peer_sets`, `peer_set_members` with a rationale per member), `kind` `system_default` (no owner) or `user`. |
+| FR-PS-002 | The system default MUST follow a deterministic rule (same SIC, same reporting currency, market cap within a configured band, default 0.25×–4×, target excluded, ≤8, nearest market cap first), never AI, with a stored reason per member. |
+| FR-PS-003 | A user MUST be able to create, edit and delete private sets of 1–12 known tickers; unknown tickers MUST be rejected with a message pointing to the watchlist, never dropped; other users get 404. |
+| FR-PS-004 | Peer comparisons MUST put different fiscal year ends on one calendar basis; a peer without the four quarters (or other inputs) for a multiple MUST be excluded from it and listed with the reason. |
+| FR-PS-005 | P/E (TTM), P/S, EV/Revenue, EV/EBITDA, EV/FCF, P/B (not for banks), FCF yield and earnings yield MUST come from TTM figures and period-end market data; EV = market cap + debt + minority interest + preferred − cash − short-term investments, with formula and inputs recorded. |
+| FR-PS-006 | EV/EBITDA for AMD and Intel MUST compute from their tagged D&A parts (golden values in tests) or carry a specific reason. |
+| FR-PS-007 | A zero or negative denominator (or a multiple over 200×) MUST yield `not_meaningful`, never a negative multiple, and be excluded from percentiles and bands. |
+| FR-PS-008 | Each multiple MUST be computed at each of the last five fiscal year ends and the latest close and persisted in `valuation_history` with its status and the source IDs of the price, share count and figures. |
+| FR-PS-009 | Bands MUST give own min, median, max and percentile (`percentile_rank`), peer median, peer percentile and premium to peer median (decimal); fewer than three fiscal year ends is `insufficient_history`. |
+| FR-PS-010 | A percentile MUST need ≥5 own values or ≥3 peers, else be null with a reason; every percentile MUST report its `n`. |
+| FR-PS-011 | Labels MUST be positional only ("in the top quartile of its 5-year range", "18% above peer median"); the advice guard MUST reject cheap/expensive/undervalued-style wording and test every label template. |
+| FR-PS-012 | `GET/POST/PATCH/DELETE /companies/{ticker}/peer-sets` and `GET /companies/{ticker}/valuation-bands?peer_set_id=` MUST exist, and `/compare` MUST accept `peer_set_id`. |
+| FR-PS-013 | The Compare view MUST show the peer set with its rationale ("why these peers?"), an Edit control, and peers left out greyed with the reason. |
+| FR-PS-014 | The Valuation section MUST draw each multiple's 5-year range with today's marker and the peer-median tick, labelled in text (never colour alone), with sample sizes; non-ok statuses show the reason instead of a bar; multiples print as `x.x×`, yields as `%`. |
+| DR-PS-001 | A peer set with fewer than three members is "insufficient peers"; peer percentiles MUST be hidden. |
+| DR-PS-002 | Peer values MUST NOT be raw FY-vs-FY across different fiscal year ends. |
+| DR-PS-003 | A multiple at date D MUST use only facts filed on or before D; a later restatement MUST NOT change it. |
+| DR-PS-004 | Only `ok` values enter any statistic. |
+
+**Guidance vs actual (Phase 7i, ADR-0047)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-GD-001 | Guidance MUST be stored in `guidance_items` with `metric` from `guidance_metric_v1` (revenue, gross_margin, operating_margin, eps_gaap, eps_non_gaap, operating_expenses, capex, tax_rate, free_cash_flow), `unit` (usd, ratio, percent_of_revenue; raw USD, decimal ratios), `basis` (gaap, non_gaap, unspecified), exactly one of `point` or `low`+`high` on a verified row, the verbatim `quote` and its `paragraph_id`, and `confidence_state` verified or rejected; only verified rows are shown. |
+| FR-GD-002 | Each verified item's outcome MUST be stored in `guidance_outcomes`: `actual_value`, `actual_source_ids`, deltas vs low, high and midpoint, `result` (above_range, within_range, below_range, not_comparable, actual_unavailable). |
+| FR-GD-003 | Extraction MUST read only `earnings_release` documents (EX-99.1 or a lone EX-99), only their outlook section found by heading, and show the model only the sentences there that name a metric with a number or a period. |
+| FR-GD-004 | Each proposed item MUST pass, in code: (a) a verbatim quote in a paragraph shown; (b) every number equal to a figure in the quote after scale normalisation by the citation extractor; (c) a fiscal period resolved unambiguously on the company's fiscal calendar, ending after the release date and within two years; (d) a basis set by the "GAAP"/"non-GAAP" keywords of its sentence, overriding the model, with a "respectively" figure matched to its basis by position. A failing item is stored as `rejected` with a reason code and never shown. |
+| FR-GD-005 | "X, plus or minus N%" (money), "N basis points" (ratios) or "$N million" (money) MUST yield low/high computed in code with `derived_range` true, only when the sentence states one figure (or one per basis with "respectively") and one tolerance; any other tolerance wording MUST be rejected. |
+| FR-GD-006 | The prompt `guidance_extract_v1` MUST treat the release as untrusted data and be cached by (document, prompt version, model); extraction runs after parsing or by `make guidance-backfill`, never on page load. |
+| FR-GD-007 | Actuals MUST come from the same fiscal period's GAAP `financial_metrics` rows through one explicit metric map in code (unit-tested); margins and rates are computed from that period's rows. |
+| FR-GD-008 | Deltas MUST be Decimal: money in USD, ratios in ratio points, plus the delta over the midpoint for display. |
+| FR-GD-009 | A later release's guidance for the same period, metric and basis MUST be stored and chained through `superseded_by`; the headline outcome uses the initial guidance and the rest are listed as revisions. |
+| FR-GD-010 | An actual MUST cite the source IDs the rest of the app cites for that metric. |
+| FR-GD-011 | The track record MUST cover the latest 8 guided quarters of revenue (initial guidance): `n_comparable`, `n_above`, `n_within`, `n_below` and the average delta vs midpoint, shown only from 4 comparable quarters, else "Insufficient history (n=…)". |
+| FR-GD-012 | Every label MUST be positional ("came in above the guided range in 6 of 8 quarters"); no template may characterise how a company guides (sandbagging, conservative, reliable…), checked by test. |
+| FR-GD-013 | The `guidance_miss` alert MUST fire once per initial-guidance outcome outside the range (`below_range` by default, `above_range` optional) for chosen metrics (default revenue, eps_gaap), keyed `guidance_outcome:{id}`, with the neutral template "{metric} came in below the guided range ({actual} vs {low}–{high}). Source: {source_id}."; backfilled history does not alert. |
+| FR-GD-014 | `GET /companies/{ticker}/guidance?fiscal_year=` MUST return items with outcome and revisions; `GET /companies/{ticker}/guidance/track-record` the track record. |
+| FR-GD-015 | The Guidance section MUST show a table (period, metric, guided range, actual, result chip with text, delta), a range-vs-actual plot for revenue and the track-record line; a guided figure opens its quote in the citation drawer. |
+| FR-GD-016 | A non-comparable row MUST be shown with its explanation, never hidden. |
+| DR-GD-001 | Non-GAAP guidance MUST NOT be compared with a GAAP actual (`not_comparable`); guidance of unstated basis is compared only for revenue and capex. |
+| DR-GD-002 | A missing actual MUST be `actual_unavailable` with NULL values, never zero. |
+| DR-GD-003 | No consensus or analyst estimate MAY be stored, shown or approximated. |
+| AGT-GD-001 | The model MUST NOT compute a number (ranges from tolerances are computed in code), and an item whose quote comes from a sentence that reads as an instruction MUST be rejected. |
 
 ---
 

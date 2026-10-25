@@ -122,6 +122,12 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 |--------|------|-------|
 | GET | `/sources/{source_id}` | Source record + span + deep link (CIT-006). A `redflag:<TICKER>:<rule_key>:<accession>` ID resolves to the flag's quoted filing text as a `text_chunk` (section path `[form, label]`), with the filing as `deep_link` (Phase 7e). |
 
+### Guidance vs actual (Phase 7i, FR-GD-014, ADR-0047)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/companies/{ticker}/guidance?fiscal_year=` | Verified company guidance (from the company's own EX-99.1 releases; never consensus estimates), newest period first; `fiscal_year` (1990–2100) filters, omitted = all. `scope` states the company-guidance-only rule; `fiscal_years` lists years with guidance. Each item is the **initial** guidance for a `(period, metric, basis)`: `fiscal_year`, `fiscal_period` (Q1–Q4/FY), `period_label`, `metric` (`guidance_metric_v1`), `metric_label`, `basis` (`gaap`/`non_gaap`/`unspecified`), `unit` (`usd`/`ratio`/`percent_of_revenue`), `low`+`high` or `point`, `midpoint`, `derived_range` (range computed from "plus or minus"), `quote`, `source_id` (the release paragraph; opens the citation drawer), `issued_at`, `release {document_id, title, url}`, `outcome` (`result` above/within/below_range, `not_comparable` or `actual_unavailable`; `actual_value`, `actual_source_ids` (the metric rows' IDs), deltas vs low/high/mid, `delta_vs_mid_pct`, `reason_code`, `explanation`), and `revisions[]` (later releases' guidance for the same key, same shape without period fields). Decimals are strings. Never calls a model. |
+| GET | `/companies/{ticker}/guidance/track-record` | Revenue against its initial guided range over the latest 8 guided quarters: `n_quarters`, `n_comparable`, `n_above`, `n_within`, `n_below`, `avg_delta_vs_mid`, `avg_delta_vs_mid_pct`, `sufficient` (needs 4 comparable), `label` (positional: "Revenue came in above the guided range in 6 of 8 quarters, …", or "Insufficient history (n=3)"), `quarters[]` newest first (`period_label`, `low`, `high`, `actual_value`, `result`, `delta_vs_mid_pct`, `source_id`). |
+
 ### Red flags (Phase 7e, FR-RF-009/010, ADR-0043)
 | Method | Path | Notes |
 |--------|------|-------|
@@ -176,7 +182,10 @@ but **may not** generate reports, use chat, or touch user-owned data (anonymous 
 the JSON Schema of that type's params, so a client renders the rule form with no hard-coded list.
 Types today: `new_filing` (`form_types` ⊆ `10-K`/`10-Q`/`8-K`), `price_move` (`threshold`, a
 fraction: 0.05 = 5%), `new_risk_factor` (no params; fires when the newest parsed 10-K/10-Q adds a
-risk factor its predecessor did not, Phase 6b), `news_category` (optional `category`).
+risk factor its predecessor did not, Phase 6b), `news_category` (optional `category`),
+`red_flag` (Phase 7e) and `guidance_miss` (Phase 7i: `metrics` default `revenue`, `eps_gaap`;
+`results` default `below_range`, may add `above_range`; event key `guidance_outcome:{id}`, fires
+once per initial-guidance outcome, not for history older than 200 days).
 
 `POST /alerts` body: `{event_type, ticker?, params?, channels?, enabled?}`. `ticker` omitted or
 null = every company on the caller's watchlist, evaluated at dispatch time. `params` are
@@ -206,10 +215,19 @@ are not (yet) resolvable through `GET /sources/{id}`.
 ### Comparison & portfolio (Phase 6a, §37.1/§37.2)
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/compare?tickers=NVDA,AMD,INTC&metrics=…&period=…` | Deterministic side-by-side: calendarized (aligned fiscal periods, DR-021), sector-normalized percentiles. Public. 2–6 tickers; `metrics`/`period` optional (default set; latest common calendar year). |
+| GET | `/compare?tickers=NVDA,AMD,INTC&metrics=…&period=…` | Deterministic side-by-side: calendarized (aligned fiscal periods, DR-021), sector-normalized percentiles. Public. 2–6 tickers; `metrics`/`period` optional (default set; latest common calendar year). Or `peer_set_id=` instead of `tickers` (Phase 7h): the set's company and all its members; a private set of another user is 404, an empty set 422. |
 | GET | `/compare/peers/{ticker}` | Peer-set suggestions by SIC/industry + market-cap band. Public. |
 | POST | `/compare/commentary` | AI commentary on the differences — cited + verified by the Phase 3a pipeline, non-advisory (LGL-006). Requires auth + AI budget (like research/chat). |
 | POST | `/portfolio/analyze` | Analyze a hypothetical portfolio (ticker + weight). Deterministic weighted metrics, HHI concentration, sector exposure, price-based volatility/correlation, and aggregated **cited** risk themes. Public (no LLM generation). Returns `holdings_data` so the client recomputes what-if weight changes with no round-trip. |
+
+### Peer sets and valuation bands (Phase 7h, FR-PS-012, ADR-0046)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/companies/{ticker}/peer-sets` | The system default set (rule: same SIC, 0.25×–4× market cap, same currency, ≤8, nearest cap first) and, with a bearer token, the caller's own sets. Each: `id`, `name`, `kind`, `members[]` (`ticker`, `name`, `rationale`), `insufficient` (<3 members), `reason`. |
+| POST | `/companies/{ticker}/peer-sets` | Auth. `{name, tickers}` (1–12). 422 names unknown tickers ("Not in Assay Desk yet: … Add this company to your watchlist first …"), the company itself, or too many. 201 with the set. |
+| PATCH | `/companies/{ticker}/peer-sets/{id}` | Auth, owner only (else 404; the system default is not editable). `name` and/or `tickers`. |
+| DELETE | `/companies/{ticker}/peer-sets/{id}` | Auth, owner only. 204. |
+| GET | `/companies/{ticker}/valuation-bands?peer_set_id=` | Per multiple: `unit` (`x` or `ratio`), today's `status`/`value`/`reason`; `own` (`n`, `min`, `median`, `max`, `percentile`, positional `label`, `reason`: a band needs 3 fiscal year ends, a percentile 5 values); `peers` (`n`, `median`, `percentile`, `premium_to_peer_median` as a decimal, `label`, `reason`, `excluded[]` with reasons; needs 3 peers with a value); `history[]` (each fiscal year end and today, point in time). `peer_set_id` defaults to the system default; a private set of another user is 404. Never judges value: labels are positions only. |
 
 Every comparison/portfolio response carries a `disclaimer`: analysis only, never a buy/sell/hold
 recommendation. The `compare_companies(tickers, metrics, period)` read-only tool (§16.7) exposes the

@@ -165,6 +165,43 @@ Research.
   props).
 - With no processed proxy, an empty state gives the reason and how many proxies were ingested.
 
+## Valuation bands and peer sets (Phase 7h)
+
+- Financials → Valuation (`components/valuation/ValuationBands.tsx`): under the existing stats, a
+  "Valuation bands" block with a peer-set select. Each multiple gets a `RangeBar`: the 5-year
+  min–max as a darker segment on a track, a marker labelled "Today 26.4×", and a dashed tick
+  labelled "Peer median 30.0×". Every mark has text; colour only separates the track from the
+  range. Below it: the 5-year range and median, the positional labels with `n`, and peers left
+  out (struck through, with the reason). A multiple that is `not_meaningful`, missing or has
+  insufficient history shows its reason instead of a bar. Multiples print as `x.x×`, yields as `%`.
+- Compare (`components/valuation/PeerSetPanel.tsx`): under the company picker, the first company's
+  peer sets as chips. "Why these peers?" lists each member's rationale, greying members the P/E
+  band had to leave out. "Compare with these" puts the set on the page (six companies at most,
+  stated when cut), and "Edit" opens an editor (name, up to 12 tickers) that saves a user set
+  (signed-in only; the server's message names unknown tickers).
+
+## Guidance vs actual (Phase 7i)
+
+Filings tab, earnings area (`components/guidance/GuidanceSection.tsx`, `lib/guidance.ts`), above
+"Earnings-day price reaction", under the AI marker (the figures are read by a model and kept only
+if they match the release's words):
+- A one-line scope note: company guidance only, no consensus estimates.
+- The track-record line: "Revenue came in above the guided range in 7 of 7 quarters, within it in 0
+  and below it in 0. (n=7)", or "Insufficient history (n=3)" below 4 comparable quarters.
+  Positional wording only; never "conservative", "sandbagging" or "reliable".
+- A range-vs-actual dot plot for revenue, oldest quarter first: each row puts the guided range
+  (a band) and the actual (a dot) on one shared axis of "% from the guided midpoint", so quarters
+  of different size compare; the right column and each row's accessible name state the result in
+  text. A row opens the guidance quote.
+- A table (Period, Metric with a GAAP/Non-GAAP tag, Guided, Actual, Result chip with text, vs
+  midpoint). The guided figure is a dotted-underline button opening the citation drawer on the
+  release paragraph; revisions are listed under it ("Revised 2026-08-26: …"). The actual opens its
+  metric's evidence. A non-comparable row stays, with its explanation in the Actual cell ("Guided
+  on a non-GAAP basis; GAAP actual not comparable."). Money deltas are `+5.7%`, margin deltas
+  `+0.4 pts`.
+- States: loading/error from `AsyncContent`; empty "No guidance has been read from this company's
+  earnings releases yet."
+
 ## Adding a screen
 
 1. Add the route in `App.tsx` as a `lazy` import, so it is its own chunk.

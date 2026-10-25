@@ -112,10 +112,14 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] **TTM EPS right after a split**: the identity takes each term's latest restatement, but a
       split after the last 10-K and before any filing restates the prior year still mixes share
       bases; the `share_count_changed` flag marks such windows (ADR-0040). `[code]`
-- [ ] **Five-year average multiples** (spec §10.7 "5Y Average P/E") are not computed; the
-      per-year history is stored, so this is a deterministic average in the report payload. `[code]`
-- [ ] **EV/EBITDA is N/A for AMD and Intel**: their depreciation & amortization is not mapped in
-      the concept map, so EBITDA is missing. `[code]`
+- [ ] **Five-year average multiples** (spec §10.7 "5Y Average P/E"): Phase 7h stores each
+      multiple at the last five fiscal year ends (point in time) and serves min/median/max in
+      `/valuation-bands`; the research report payload does not use them yet. `[code]`
+- [x] **EV/EBITDA is N/A for AMD and Intel**: fixed in Phase 7h (ADR-0046). Neither tags a total
+      D&A any more, so company overrides sum the parts they do tag (Intel FY2025 $11,706M, its
+      statement's own lines; AMD FY2025 $3,050M, $46M of non-acquisition intangible amortization
+      counted twice because AMD's statement line uses its own tag). AMD tagged no D&A before 2022,
+      so its EV/EBITDA for those year ends stays `missing_input`. `[code]`
 - [ ] A latest-close valuation is replaced on every price run, so a report that cited yesterday's
       dated ID (`derived:NVDA:pe_ratio:<date>`) no longer resolves it. `[code]`
 - [ ] **Seed universe is 5 of 10 in dev, 3 in fixtures** (fixtures: NVDA, AAPL, JPM). Missing
@@ -179,9 +183,9 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] **ROIC (annual) and revenue CAGR are still unpersisted** (§37.7 leftovers): Phase 7d
       stores the earnings-quality measures (below, "Done") and 7b stores TTM ROIC, but no annual
       ROIC or multi-year CAGR row exists. `[code]`
-- [ ] **Guidance vs actual** (§37.3): EX-99.1 press releases are ingested since Phase 7c
-      (`earnings_release` documents); extracting the guidance numbers is Phase 7i. Transcripts
-      are deferred (ADR-0011). `[code]`
+- [ ] **Consensus estimates** (§37.3, ADR-0047): "beat/miss vs Street" and surprise
+      percentages need a licensed estimates source; none exists, so only company guidance is
+      compared (Phase 7i). Transcripts are deferred (ADR-0011). `[decision]`
 - [ ] **Report analytics** (§10.3–10.7): revenue waterfall, seasonality, segment/geo mix
       (dimensional XBRL), margin bridge, valuation percentile bands. `[notes]`
 - [ ] **RAG / AI**: semantic cache (RAG-050); cheap-model intent classifier and query rewriter;
@@ -222,6 +226,25 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       say-on-pay heading). The Gemini client rejects JSON followed by extra text, so an occasional
       `governance_v1` call fails and is retried on the next run. `ecd:PeoName` is matched to the
       table by name words; a CEO change within one year shows one PEO. `[code]`
+
+- [ ] **Peer-set and band leftovers** (Phase 7h, ADR-0046): with five dev companies every
+      default peer set is "insufficient peers" (NVIDIA's same-SIC peers are 6-12x smaller), so peer
+      statistics need a user's own set until the universe grows; NVIDIA's FY2021 capex is not in
+      companyfacts, so its FY2022-FY2024 EV/FCF and FCF yield are `missing_input`; price to tangible
+      book for banks needs goodwill/intangibles mapped (P/B is N/A for JPM); the 200x
+      not-meaningful cutoff is a judgement call; a user set's members beyond five are not all shown
+      on Compare (six-company limit, stated on the page); the earnings-quality peer percentiles
+      (Phase 7d) still compare latest fiscal years rather than the TTM basis used here. `[code]`
+
+- [ ] **Guidance leftovers** (Phase 7i, ADR-0047): outlooks set out as a table (Intel's) are not
+      read, so Intel has no guidance; "17.0%, plus or minus 1%" tax-rate guidance (NVIDIA through
+      Q4 FY2026) is rejected as ambiguous (points or relative?); single-figure guidance
+      ("approximately $9.2 billion") compares literally, so any difference is above or below; EPS
+      guidance without a stated basis is never compared; the raw model response is not kept, so a
+      verification-rule change means clearing `documents.metadata.guidance_extraction` and paying
+      for the calls again; AAPL/JPM releases have no numeric outlook; `avg_delta_vs_mid` is
+      returned at full Decimal precision (display rounds it); the track record covers revenue
+      only. `[code]`
 
 ## 4. Never verified live
 
@@ -352,3 +375,26 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   values, and the model pairing a current-board count with a nominee count (now dropped in code).
   Dev DB migrated, re-parsed, all 15 proxies built (0 rejected rows), Tier C extracted with
   gemini-3.8-flash.
+- 2026-10-24 — **Peer sets v2 and valuation bands** (Phase 7h, ADR-0046): `peer_sets` /
+  `peer_set_members` / `valuation_history` (migration `a6d2f8c3e5b1`); deterministic default peer
+  rule with stored rationales; private user sets (≤12, unknown tickers named); point-in-time
+  multiples (only facts filed by the date; TTM via prior FY + YTD − prior YTD, tags merged per
+  period) for P/E, P/S, EV/Revenue, EV/EBITDA, EV/FCF, P/B, FCF and earnings yield, with
+  `not_meaningful` for losses; five-year history and today persisted with source IDs; bands with
+  `n` and minimum samples; positional labels checked by the advice guard (which now rejects
+  cheap/expensive wording); `/peer-sets` CRUD, `/valuation-bands`, `/compare?peer_set_id=`;
+  latest-close header multiples moved to TTM; Financials range bars and the Compare peer panel.
+  Caught: NVIDIA's revenue switched tags between years (TTM now merges tags per period); Intel's
+  FY2025 P/E read 872x on near-zero earnings (now not meaningful).
+- 2026-10-24 — **Guidance vs actual** (Phase 7i, ADR-0047): `guidance_items` /
+  `guidance_outcomes` (migration `b9e4d7a2c6f1`); the outlook of each EX-99.1 is read by one
+  quote-checked model call (`guidance_extract_v1`, only the outlook sentences shown), and every
+  item is verified in code (verbatim quote, exact numbers, fiscal-calendar period, keyword basis,
+  "plus or minus" ranges computed in code); rejected items kept with reasons. Outcomes against
+  the same period's GAAP rows in Decimal, non-GAAP never compared, initial guidance as headline
+  with revisions; 8-quarter revenue track record (shown from 4); `guidance_miss` alert;
+  `GET /companies/{t}/guidance` and `/guidance/track-record`; Guidance section on the Filings
+  tab; `make guidance-backfill`. Dev: NVIDIA 46 verified items (revenue above the range in 7 of
+  7 quarters), AMD 14 (5 of 6). Caught: an injected sentence produced a clean-looking quote (now
+  the whole sentence is checked); NVIDIA's shared "respectively, plus or minus 50 basis points"
+  and AMD's "plus or minus $300 million" needed their own tolerance rules.

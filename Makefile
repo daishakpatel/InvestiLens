@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup reparse-8k redflags-backfill footnote-summaries governance-backfill
+.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup reparse-8k redflags-backfill footnote-summaries governance-backfill guidance-backfill
 
 install:
 	cd backend && uv sync
@@ -58,6 +58,10 @@ footnote-summaries:
 # Proxy pay figures (Tiers A/B) and quoted board facts (Tier C, one model call per uncached proxy).
 governance-backfill:
 	cd backend && uv run python ../scripts/governance_backfill.py
+
+# Guidance from earnings releases (one model call per uncached EX-99.1), then outcomes vs actuals.
+guidance-backfill:
+	cd backend && uv run python ../scripts/guidance_backfill.py
 
 # Evaluation smoke run (§18.4, Phase 5b). Full/gate variants: see scripts/run_eval.py.
 eval:

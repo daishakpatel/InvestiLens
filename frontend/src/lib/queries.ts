@@ -28,6 +28,11 @@ import type {
   FootnoteFactsResponse,
   GovernanceHistoryResponse,
   GovernanceResponse,
+  GuidanceResponse,
+  GuidanceTrackRecord,
+  PeerSetOut,
+  PeerSetsResponse,
+  ValuationBandsResponse,
   NotesResponse,
   RedFlagsResponse,
   NewsResponse,
@@ -127,6 +132,30 @@ export function useRedFlags(ticker: string): UseQueryResult<RedFlagsResponse> {
   });
 }
 
+/** Company guidance with outcomes and revisions, newest period first (FR-GD-014). */
+export function useGuidance(ticker: string): UseQueryResult<GuidanceResponse> {
+  return useQuery({
+    queryKey: ["guidance", ticker],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/guidance`, { signal });
+      return parse.guidance(data);
+    },
+  });
+}
+
+/** Revenue against the initial guided range over the last 8 guided quarters (FR-GD-011). */
+export function useGuidanceTrackRecord(ticker: string): UseQueryResult<GuidanceTrackRecord> {
+  return useQuery({
+    queryKey: ["guidance-track-record", ticker],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/guidance/track-record`, { signal });
+      return parse.guidanceTrackRecord(data);
+    },
+  });
+}
+
 /** Earnings-quality measures for the last five fiscal years (FR-EQ-009). */
 export function useEarningsQuality(ticker: string): UseQueryResult<EarningsQualityResponse> {
   return useQuery({
@@ -188,6 +217,66 @@ export function useGovernanceHistory(ticker: string): UseQueryResult<GovernanceH
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/governance/history`, { signal });
       return parse.governanceHistory(data);
     },
+  });
+}
+
+/** The company's system default peer set and, when signed in, the caller's own (FR-PS-012). */
+export function usePeerSets(ticker: string, signedIn: boolean): UseQueryResult<PeerSetsResponse> {
+  return useQuery({
+    queryKey: ["peer-sets", ticker, signedIn],
+    enabled: ticker !== "",
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/peer-sets`, { signal });
+      return parse.peerSets(data);
+    },
+  });
+}
+
+/** Each multiple's own-history and peer band (FR-PS-009); `peerSetId` null = the default set. */
+export function useValuationBands(ticker: string, peerSetId: number | null): UseQueryResult<ValuationBandsResponse> {
+  return useQuery({
+    queryKey: ["valuation-bands", ticker, peerSetId],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/valuation-bands`, {
+        query: { peer_set_id: peerSetId === null ? undefined : String(peerSetId) },
+        signal,
+      });
+      return parse.valuationBands(data);
+    },
+  });
+}
+
+export interface PeerSetInput {
+  id?: number; // present = update that set
+  name: string;
+  tickers: string[];
+}
+
+/** Create or update the caller's own peer set; the API names unknown tickers (FR-PS-003). */
+export function useSavePeerSet(ticker: string): UseMutationResult<PeerSetOut, Error, PeerSetInput> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name, tickers }: PeerSetInput) => {
+      const path = id === undefined ? `/companies/${ticker}/peer-sets` : `/companies/${ticker}/peer-sets/${id}`;
+      const { data } = await apiRequest<unknown>(path, {
+        method: id === undefined ? "POST" : "PATCH",
+        body: { name, tickers },
+      });
+      return parse.peerSet(data);
+    },
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["peer-sets", ticker] }),
+  });
+}
+
+export function useDeletePeerSet(ticker: string): UseMutationResult<void, Error, number> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest<unknown>(`/companies/${ticker}/peer-sets/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["peer-sets", ticker] }),
   });
 }
 

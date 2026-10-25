@@ -108,19 +108,19 @@ comparison docs, spec Appendix H, ADR-0046 (peer-set rule, look-ahead rule, mini
 
 ## Definition of Done
 
-- [ ] Default peer set for NVDA is deterministic across runs and each member has a stored
+- [x] Default peer set for NVDA is deterministic across runs and each member has a stored
       rationale; a company with <3 candidates returns "insufficient peers"
-- [ ] User peer sets are private, validated, capped at 12; unknown ticker rejected with a
+- [x] User peer sets are private, validated, capped at 12; unknown ticker rejected with a
       useful message
-- [ ] Calendarization is applied to peers with different fiscal year ends; a peer missing
+- [x] Calendarization is applied to peers with different fiscal year ends; a peer missing
       quarters is excluded with a reason (test)
-- [ ] EV/EBITDA for AMD and INTC either computes (with golden value) or has a specific,
+- [x] EV/EBITDA for AMD and INTC either computes (with golden value) or has a specific,
       documented reason in `metric_gaps`; `TODO.md` item is updated accordingly
-- [ ] Negative-earnings fixture yields `not_meaningful` and is excluded from percentiles
-- [ ] Look-ahead test: a figure filed after date D does not affect D's multiple
-- [ ] Percentiles are `null` with a reason when n is below thresholds; `n` is returned
-- [ ] No "cheap/expensive/undervalued" wording anywhere (advice test over all label templates)
-- [ ] Valuation range bars render in light and dark themes with text labels and are tested for
+- [x] Negative-earnings fixture yields `not_meaningful` and is excluded from percentiles
+- [x] Look-ahead test: a figure filed after date D does not affect D's multiple
+- [x] Percentiles are `null` with a reason when n is below thresholds; `n` is returned
+- [x] No "cheap/expensive/undervalued" wording anywhere (advice test over all label templates)
+- [x] Valuation range bars render in light and dark themes with text labels and are tested for
       all states
-- [ ] Docs and ADR-0046 written; `make coverage` still 100% on `app/finance/*`;
+- [x] Docs and ADR-0046 written; `make coverage` still 100% on `app/finance/*`;
       `make check` and `make openapi` clean

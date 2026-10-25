@@ -115,19 +115,19 @@ non-GAAP exclusion, initial-guidance rule).
 
 ## Definition of Done
 
-- [ ] From the NVDA EX-99.1 fixture, the revenue outlook (range) is extracted with a verbatim
+- [x] From the NVDA EX-99.1 fixture, the revenue outlook (range) is extracted with a verbatim
       quote, correct low/high in raw USD, and correct fiscal period
-- [ ] A fabricated number or quote in a recorded LLM response is rejected and stored as
+- [x] A fabricated number or quote in a recorded LLM response is rejected and stored as
       `rejected` with a reason
-- [ ] GAAP/non-GAAP: a non-GAAP guidance item is never compared to a GAAP actual
+- [x] GAAP/non-GAAP: a non-GAAP guidance item is never compared to a GAAP actual
       (`not_comparable`), proven by test
-- [ ] Period resolution uses the fiscal calendar (NVDA's year ending January) and rejects
+- [x] Period resolution uses the fiscal calendar (NVDA's year ending January) and rejects
       ambiguous wording
-- [ ] Outcome computation covers above, within, below, unavailable; midpoint deltas use Decimal
-- [ ] A later revision is stored; headline outcome uses the initial guidance
-- [ ] Track record is hidden when `n_comparable < 4`, shows `n` otherwise
-- [ ] `guidance_miss` alert fires once for a simulated below-range quarter
-- [ ] Prompt-injection fixture does not alter extraction
-- [ ] No characterisation words ("sandbag", "conservative") appear in any template (test)
-- [ ] Guidance UI shows populated, non-comparable and insufficient-history states
-- [ ] Docs and ADR-0047 written; `make check` and `make openapi` clean
+- [x] Outcome computation covers above, within, below, unavailable; midpoint deltas use Decimal
+- [x] A later revision is stored; headline outcome uses the initial guidance
+- [x] Track record is hidden when `n_comparable < 4`, shows `n` otherwise
+- [x] `guidance_miss` alert fires once for a simulated below-range quarter
+- [x] Prompt-injection fixture does not alter extraction
+- [x] No characterisation words ("sandbag", "conservative") appear in any template (test)
+- [x] Guidance UI shows populated, non-comparable and insufficient-history states
+- [x] Docs and ADR-0047 written; `make check` and `make openapi` clean

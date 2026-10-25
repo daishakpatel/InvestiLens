@@ -1425,6 +1425,24 @@
         "title": "EvalRunSummary",
         "type": "object"
       },
+      "ExcludedPeer": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "reason"
+        ],
+        "title": "ExcludedPeer",
+        "type": "object"
+      },
       "Factor": {
         "description": "A bull or bear factor.",
         "properties": {
@@ -2368,6 +2386,561 @@
         "title": "GovernanceResponse",
         "type": "object"
       },
+      "GuidanceOutcomeView": {
+        "properties": {
+          "actual_source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actual Source Ids",
+            "type": "array"
+          },
+          "actual_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Value"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "delta_vs_high": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Vs High"
+          },
+          "delta_vs_low": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Vs Low"
+          },
+          "delta_vs_mid": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Vs Mid"
+          },
+          "delta_vs_mid_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Vs Mid Pct"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "result": {
+            "enum": [
+              "above_range",
+              "within_range",
+              "below_range",
+              "not_comparable",
+              "actual_unavailable"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result",
+          "actual_value",
+          "actual_source_ids",
+          "delta_vs_low",
+          "delta_vs_high",
+          "delta_vs_mid",
+          "delta_vs_mid_pct",
+          "reason_code",
+          "explanation",
+          "computed_at"
+        ],
+        "title": "GuidanceOutcomeView",
+        "type": "object"
+      },
+      "GuidanceRelease": {
+        "properties": {
+          "document_id": {
+            "title": "Document Id",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "document_id",
+          "title",
+          "url"
+        ],
+        "title": "GuidanceRelease",
+        "type": "object"
+      },
+      "GuidanceResponse": {
+        "properties": {
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "fiscal_years": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Fiscal Years",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GuidanceRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "fiscal_year",
+          "fiscal_years",
+          "items",
+          "scope"
+        ],
+        "title": "GuidanceResponse",
+        "type": "object"
+      },
+      "GuidanceRow": {
+        "description": "The initial guidance for a period, metric and basis (the headline), with later revisions.",
+        "properties": {
+          "basis": {
+            "enum": [
+              "gaap",
+              "non_gaap",
+              "unspecified"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "derived_range": {
+            "title": "Derived Range",
+            "type": "boolean"
+          },
+          "fiscal_period": {
+            "title": "Fiscal Period",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "metric_label": {
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "midpoint": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Midpoint",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GuidanceOutcomeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "point": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Point"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "release": {
+            "$ref": "#/components/schemas/GuidanceRelease"
+          },
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/GuidanceValue"
+            },
+            "title": "Revisions",
+            "type": "array"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "usd",
+              "ratio",
+              "percent_of_revenue"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "issued_at",
+          "low",
+          "high",
+          "point",
+          "midpoint",
+          "derived_range",
+          "quote",
+          "source_id",
+          "release",
+          "outcome",
+          "fiscal_year",
+          "fiscal_period",
+          "period_label",
+          "metric",
+          "metric_label",
+          "basis",
+          "unit",
+          "revisions"
+        ],
+        "title": "GuidanceRow",
+        "type": "object"
+      },
+      "GuidanceTrackRecord": {
+        "properties": {
+          "avg_delta_vs_mid": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Delta Vs Mid"
+          },
+          "avg_delta_vs_mid_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Delta Vs Mid Pct"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "metric_label": {
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "n_above": {
+            "title": "N Above",
+            "type": "integer"
+          },
+          "n_below": {
+            "title": "N Below",
+            "type": "integer"
+          },
+          "n_comparable": {
+            "title": "N Comparable",
+            "type": "integer"
+          },
+          "n_quarters": {
+            "title": "N Quarters",
+            "type": "integer"
+          },
+          "n_within": {
+            "title": "N Within",
+            "type": "integer"
+          },
+          "quarters": {
+            "items": {
+              "$ref": "#/components/schemas/TrackRecordQuarter"
+            },
+            "title": "Quarters",
+            "type": "array"
+          },
+          "sufficient": {
+            "title": "Sufficient",
+            "type": "boolean"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "metric",
+          "metric_label",
+          "n_quarters",
+          "n_comparable",
+          "n_above",
+          "n_within",
+          "n_below",
+          "avg_delta_vs_mid",
+          "avg_delta_vs_mid_pct",
+          "sufficient",
+          "label",
+          "quarters"
+        ],
+        "title": "GuidanceTrackRecord",
+        "type": "object"
+      },
+      "GuidanceValue": {
+        "description": "One guided figure as one release stated it.",
+        "properties": {
+          "derived_range": {
+            "title": "Derived Range",
+            "type": "boolean"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "midpoint": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Midpoint",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GuidanceOutcomeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "point": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Point"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "release": {
+            "$ref": "#/components/schemas/GuidanceRelease"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "issued_at",
+          "low",
+          "high",
+          "point",
+          "midpoint",
+          "derived_range",
+          "quote",
+          "source_id",
+          "release",
+          "outcome"
+        ],
+        "title": "GuidanceValue",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2391,6 +2964,58 @@
           }
         },
         "title": "Health",
+        "type": "object"
+      },
+      "HistoryPoint": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year"
+          },
+          "kind": {
+            "enum": [
+              "fiscal_year_end",
+              "current"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "as_of",
+          "kind",
+          "value",
+          "status"
+        ],
+        "title": "HistoryPoint",
         "type": "object"
       },
       "Holding": {
@@ -3798,6 +4423,90 @@
         "title": "Notification",
         "type": "object"
       },
+      "OwnBand": {
+        "description": "Today's value within the company's own fiscal-year-end values (and today's).",
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "percentile": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentile"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "n"
+        ],
+        "title": "OwnBand",
+        "type": "object"
+      },
       "OwnershipHolding": {
         "properties": {
           "change_shares": {
@@ -4019,6 +4728,240 @@
           "source_ids"
         ],
         "title": "PayVersusPerformancePoint",
+        "type": "object"
+      },
+      "PeerBand": {
+        "properties": {
+          "excluded": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExcludedPeer"
+            },
+            "title": "Excluded",
+            "type": "array"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "percentile": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentile"
+          },
+          "premium_to_peer_median": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Premium To Peer Median"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "n"
+        ],
+        "title": "PeerBand",
+        "type": "object"
+      },
+      "PeerMember": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "name",
+          "rationale"
+        ],
+        "title": "PeerMember",
+        "type": "object"
+      },
+      "PeerSetCreate": {
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "tickers": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Tickers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "tickers"
+        ],
+        "title": "PeerSetCreate",
+        "type": "object"
+      },
+      "PeerSetOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "insufficient": {
+            "title": "Insufficient",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "system_default",
+              "user"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/PeerMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "members",
+          "insufficient"
+        ],
+        "title": "PeerSetOut",
+        "type": "object"
+      },
+      "PeerSetUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "tickers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tickers"
+          }
+        },
+        "title": "PeerSetUpdate",
+        "type": "object"
+      },
+      "PeerSetsResponse": {
+        "properties": {
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "peer_sets": {
+            "items": {
+              "$ref": "#/components/schemas/PeerSetOut"
+            },
+            "title": "Peer Sets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "company_ticker",
+          "peer_sets"
+        ],
+        "title": "PeerSetsResponse",
         "type": "object"
       },
       "PeerSuggestion": {
@@ -5559,6 +6502,74 @@
         "title": "ToolTraceEntry",
         "type": "object"
       },
+      "TrackRecordQuarter": {
+        "properties": {
+          "actual_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Value"
+          },
+          "delta_vs_mid_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Vs Mid Pct"
+          },
+          "high": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Low",
+            "type": "string"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "above_range",
+              "within_range",
+              "below_range",
+              "not_comparable",
+              "actual_unavailable"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_label",
+          "low",
+          "high",
+          "actual_value",
+          "result",
+          "delta_vs_mid_pct",
+          "source_id"
+        ],
+        "title": "TrackRecordQuarter",
+        "type": "object"
+      },
       "UserProfile": {
         "properties": {
           "email": {
@@ -5626,6 +6637,122 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "ValuationBand": {
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryPoint"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "multiple": {
+            "title": "Multiple",
+            "type": "string"
+          },
+          "own": {
+            "$ref": "#/components/schemas/OwnBand"
+          },
+          "peers": {
+            "$ref": "#/components/schemas/PeerBand"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "x",
+              "ratio"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "multiple",
+          "unit",
+          "status",
+          "own",
+          "peers",
+          "history"
+        ],
+        "title": "ValuationBand",
+        "type": "object"
+      },
+      "ValuationBandsResponse": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "bands": {
+            "items": {
+              "$ref": "#/components/schemas/ValuationBand"
+            },
+            "title": "Bands",
+            "type": "array"
+          },
+          "company_ticker": {
+            "title": "Company Ticker",
+            "type": "string"
+          },
+          "disclaimer": {
+            "default": "Positions within ranges, not judgements of value. Not investment advice.",
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "peer_set": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeerSetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "company_ticker",
+          "as_of",
+          "peer_set",
+          "bands"
+        ],
+        "title": "ValuationBandsResponse",
         "type": "object"
       },
       "ValuationResponse": {
@@ -7748,6 +8875,110 @@
         ]
       }
     },
+    "/api/v1/companies/{ticker}/guidance": {
+      "get": {
+        "description": "Verified guidance with outcome and revisions, newest period first (FR-GD-014).",
+        "operationId": "company_guidance_api_v1_companies__ticker__guidance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 1990,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fiscal Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Company Guidance",
+        "tags": [
+          "Guidance"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/guidance/track-record": {
+      "get": {
+        "description": "Revenue against the initial guided range over the last 8 guided quarters (FR-GD-011).",
+        "operationId": "company_guidance_track_record_api_v1_companies__ticker__guidance_track_record_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidanceTrackRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Company Guidance Track Record",
+        "tags": [
+          "Guidance"
+        ]
+      }
+    },
     "/api/v1/companies/{ticker}/insiders": {
       "get": {
         "description": "Form 4 insider transactions. Not yet ingested (Appendix F #10, P2) \u2192 empty.",
@@ -8231,6 +9462,265 @@
         ]
       }
     },
+    "/api/v1/companies/{ticker}/peer-sets": {
+      "get": {
+        "operationId": "list_peer_sets_api_v1_companies__ticker__peer_sets_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerSetsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Peer Sets",
+        "tags": [
+          "Peer sets"
+        ]
+      },
+      "post": {
+        "operationId": "create_peer_set_api_v1_companies__ticker__peer_sets_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerSetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Peer Set",
+        "tags": [
+          "Peer sets"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/peer-sets/{peer_set_id}": {
+      "delete": {
+        "operationId": "delete_peer_set_api_v1_companies__ticker__peer_sets__peer_set_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "peer_set_id",
+            "required": true,
+            "schema": {
+              "title": "Peer Set Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Peer Set",
+        "tags": [
+          "Peer sets"
+        ]
+      },
+      "patch": {
+        "operationId": "update_peer_set_api_v1_companies__ticker__peer_sets__peer_set_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "peer_set_id",
+            "required": true,
+            "schema": {
+              "title": "Peer Set Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerSetUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Peer Set",
+        "tags": [
+          "Peer sets"
+        ]
+      }
+    },
     "/api/v1/companies/{ticker}/prices": {
       "get": {
         "operationId": "get_prices_api_v1_companies__ticker__prices_get",
@@ -8497,6 +9987,82 @@
         ]
       }
     },
+    "/api/v1/companies/{ticker}/valuation-bands": {
+      "get": {
+        "operationId": "get_valuation_bands_api_v1_companies__ticker__valuation_bands_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default: the system default set",
+            "in": "query",
+            "name": "peer_set_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: the system default set",
+              "title": "Peer Set Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValuationBandsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Valuation Bands",
+        "tags": [
+          "Peer sets"
+        ]
+      }
+    },
     "/api/v1/compare": {
       "get": {
         "description": "Deterministic, calendarized, percentile-ranked comparison (no AI).",
@@ -8506,11 +10072,18 @@
             "description": "Comma-separated tickers, e.g. NVDA,AMD,INTC",
             "in": "query",
             "name": "tickers",
-            "required": true,
+            "required": false,
             "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Comma-separated tickers, e.g. NVDA,AMD,INTC",
-              "title": "Tickers",
-              "type": "string"
+              "title": "Tickers"
             }
           },
           {
@@ -8547,6 +10120,40 @@
               ],
               "description": "Calendar year or fiscal period; default latest",
               "title": "Period"
+            }
+          },
+          {
+            "description": "Compare a company with a peer set instead of listing tickers (7h)",
+            "in": "query",
+            "name": "peer_set_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Compare a company with a peer set instead of listing tickers (7h)",
+              "title": "Peer Set Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
