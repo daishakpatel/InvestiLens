@@ -1,0 +1,47 @@
+{
+  "kind": "json",
+  "model": "gemini-3.8-flash",
+  "prompt_summary": "demo recording (NVDA): You write for an analyst's earnings brief. Use ONLY the lines given; never add a",
+  "response": {
+    "sentences": [
+      {
+        "text": "Revenue for Q2 FY2027 was $96.22 billion, up 17.9% from $81.62 billion in Q1 FY2027 and up 105.85% from $46.74 billion in Q2 FY2026.",
+        "source_ids": [
+          "xbrl:NVDA:revenue:Q2-FY2027",
+          "xbrl:NVDA:revenue:Q1-FY2027",
+          "xbrl:NVDA:revenue:Q2-FY2026"
+        ]
+      },
+      {
+        "text": "Gross margin was 74.98%, compared to 74.93% in the prior quarter and 72.42% in Q2 FY2026, while operating margin reached 66.24%.",
+        "source_ids": [
+          "xbrl:NVDA:gross_profit:Q2-FY2027",
+          "xbrl:NVDA:revenue:Q2-FY2027",
+          "xbrl:NVDA:gross_profit:Q1-FY2027",
+          "xbrl:NVDA:revenue:Q1-FY2027",
+          "xbrl:NVDA:gross_profit:Q2-FY2026",
+          "xbrl:NVDA:revenue:Q2-FY2026",
+          "xbrl:NVDA:operating_income:Q2-FY2027",
+          "xbrl:NVDA:operating_income:Q1-FY2027",
+          "xbrl:NVDA:operating_income:Q2-FY2026"
+        ]
+      },
+      {
+        "text": "EPS (GAAP, diluted) for Q2 FY2027 was $2.46 per share, versus $2.39 per share in Q1 FY2027 and $1.08 per share in Q2 FY2026.",
+        "source_ids": [
+          "xbrl:NVDA:eps_diluted:Q2-FY2027",
+          "xbrl:NVDA:eps_diluted:Q1-FY2027",
+          "xbrl:NVDA:eps_diluted:Q2-FY2026"
+        ]
+      },
+      {
+        "text": "Operating cash flow for Q2 FY2027 was $24.08 billion, versus $50.34 billion in Q1 FY2027 and $15.37 billion in Q2 FY2026.",
+        "source_ids": [
+          "derived:NVDA:operating_cash_flow:Q2-FY2027",
+          "xbrl:NVDA:operating_cash_flow:Q1-FY2027",
+          "derived:NVDA:operating_cash_flow:Q2-FY2026"
+        ]
+      }
+    ]
+  }
+}

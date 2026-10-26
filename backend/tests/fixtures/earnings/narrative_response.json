@@ -1,0 +1,17 @@
+{
+  "kind": "json",
+  "prompt": "earnings_narrative_v1 (narrative)",
+  "prompt_summary": "Recorded response mixing verifiable sentences with a changed number, an uncited sentence, a forecast and an unknown source ID; only verified, cited, guard-clean sentences may survive.",
+  "response": {
+    "sentences": [
+      {"text": "Revenue for Q2 FY2027 was $96.22 billion, versus $81.62 billion in the prior quarter.", "source_ids": ["xbrl:T:revenue:Q2-FY2027", "xbrl:T:revenue:Q1-FY2027"]},
+      {"text": "Revenue for Q2 FY2027 was $99.5 billion.", "source_ids": ["xbrl:T:revenue:Q2-FY2027"]},
+      {"text": "Gross margin for Q2 FY2027 was 74.98%, versus 72.42% in the prior-year quarter.", "source_ids": ["xbrl:T:gross_profit:Q2-FY2027", "xbrl:T:revenue:Q2-FY2027"]},
+      {"text": "Revenue was well above what the market wanted at $96.22 billion.", "source_ids": []},
+      {"text": "Shares should rally further after the share price moved +7.01%.", "source_ids": ["filing:22", "price:T:2026-08-25:2026-08-27"]},
+      {"text": "Revenue for Q2 FY2027 (guided $89.18 billion to $92.82 billion) came in above the guided range [SOURCE:2719_0_5].", "source_ids": []},
+      {"text": "From the close before the earnings 8-K to the first close after it, the share price moved +7.01%.", "source_ids": ["filing:22", "price:T:2026-08-25:2026-08-27"]},
+      {"text": "Revenue for Q2 FY2027 was $96.22 billion.", "source_ids": ["made-up-id"]}
+    ]
+  }
+}

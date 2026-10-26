@@ -1,0 +1,14 @@
+{
+  "kind": "json",
+  "prompt": "earnings_narrative_v1 (watch rewording)",
+  "prompt_summary": "Recorded bad response: w1 changes a number, w2 forecasts, w3 is two sentences, w9 is an unknown id; only w4 is acceptable.",
+  "response": {
+    "items": [
+      {"id": "w1", "text": "Revenue growth cooled to 30% year over year in Q2 FY2027, from 69.2% in Q1 FY2027."},
+      {"id": "w2", "text": "Gross margin fell for two quarters in a row, to 70% in Q2 FY2027 from 72.5% in Q4 FY2026, and investors should expect more of the same."},
+      {"id": "w3", "text": "Mentions of supply chain rose to 2.4 per 1,000 words. That was from 1.1 in the prior 10-Q."},
+      {"id": "w9", "text": "An item the model made up."},
+      {"id": "w4", "text": "In the 10-Q filed 2026-08-26, MD&A mentions of export controls climbed to 3.2 per 1,000 words from 1.5 in the prior 10-Q."}
+    ]
+  }
+}

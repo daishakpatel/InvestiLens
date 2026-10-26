@@ -1,0 +1,6 @@
+{
+  "kind": "text",
+  "model": "gemini-3.8-flash",
+  "prompt_summary": "demo recording (NVDA): You are a financial research assistant. Answer the question using ONLY the evide",
+  "response": "Other than a newly highlighted risk factor, there were no material changes from the risk factors previously described in the Annual Report on Form 10-K for the fiscal year ended January 25, 2026, and the Quarterly Report on Form 10-Q for the fiscal quarter ended April 26, 2026 [SOURCE:2_P2-1A_478]. \n\nThe specific addition notes that commitments, guarantees, and other commercial arrangements expose the company to financial, counterparty, and execution risks and may not provide anticipated benefits [SOURCE:2_P2-1A_478]. To support operations and growth, capital is committed to secure supply and capacity, obtain cloud services, and lease data center capacity, requiring substantial payments over many years [SOURCE:2_P2-1A_478]. If future demand, needs, or plans differ from expectations, the company may be unable to reduce these commitments [SOURCE:2_P2-1A_478]. Additionally, future demand may be impacted by the ability of customers and partners, including those developing open models, to generate revenue and sustain investment in computing infrastructure [SOURCE:2_P2-1A_478]."
+}
