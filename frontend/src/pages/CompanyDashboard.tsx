@@ -22,11 +22,13 @@ import { useDocumentTitle } from "../lib/useDocumentTitle";
 import type { CompanyResponse } from "../types";
 import { NotFound } from "./NotFoundPage";
 
-// The UI plan's five tabs, plus Earnings quality (Phase 7d). The assistant is not one of them:
+// The UI plan's five tabs, plus Earnings (Phase 7j), Thesis (7k) and Earnings quality (7d). The assistant is not one of them:
 // "Ask" in the header opens it as a panel beside whichever tab is showing.
 const TABS: TabDef[] = [
   { to: "", label: "Overview" },
   { to: "financials", label: "Financials" },
+  { to: "earnings", label: "Earnings" },
+  { to: "thesis", label: "Thesis" },
   { to: "quality", label: "Earnings quality" },
   { to: "footnotes", label: "Footnotes" },
   { to: "governance", label: "Governance" },

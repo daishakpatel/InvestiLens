@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 
 import { apiRequest } from "./apiClient";
-import { setAccessToken } from "./authStore";
+import { hasSessionHint, setAccessToken, setSessionHint } from "./authStore";
 import { parse } from "./schemas";
 import type { UserProfile } from "../types";
 
@@ -13,6 +13,8 @@ interface AuthContextValue {
   ready: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  /** Sign in as the public demo's shared sandbox account (demo deployments only). */
+  enterDemo: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -30,10 +32,15 @@ async function fetchProfile(): Promise<UserProfile> {
 let sessionRestore: Promise<string | null> | null = null;
 
 function restoreSession(): Promise<string | null> {
-  sessionRestore ??= apiRequest<unknown>("/auth/refresh", { method: "POST" }).then(
-    ({ data }) => parse.token(data).access_token,
-    () => null, // no valid refresh cookie: anonymous
-  );
+  sessionRestore ??= hasSessionHint()
+    ? apiRequest<unknown>("/auth/refresh", { method: "POST" }).then(
+        ({ data }) => parse.token(data).access_token,
+        () => {
+          setSessionHint(false); // no valid refresh cookie: anonymous from now on
+          return null;
+        },
+      )
+    : Promise.resolve(null);
   return sessionRestore;
 }
 
@@ -43,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyToken = useCallback(async (token: string): Promise<void> => {
     setAccessToken(token);
+    setSessionHint(true);
     setUser(await fetchProfile());
   }, []);
 
@@ -65,6 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [login],
   );
 
+  const enterDemo = useCallback(async (): Promise<void> => {
+    const { data } = await apiRequest<unknown>("/auth/demo", { method: "POST" });
+    await applyToken(parse.token(data).access_token);
+  }, [applyToken]);
+
   const logout = useCallback(async (): Promise<void> => {
     try {
       await apiRequest<unknown>("/auth/logout", { method: "POST" });
@@ -72,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Already logged out / network error — clear local state regardless.
     }
     setAccessToken(null);
+    setSessionHint(false);
     setUser(null);
   }, []);
 
@@ -94,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyToken]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, ready, login, register, logout }),
-    [user, ready, login, register, logout],
+    () => ({ user, ready, login, register, enterDemo, logout }),
+    [user, ready, login, register, enterDemo, logout],
   );
   return <AuthContext value={value}>{children}</AuthContext>;
 }

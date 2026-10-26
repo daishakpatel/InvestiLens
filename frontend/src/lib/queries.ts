@@ -15,7 +15,11 @@ import type {
   CompanySearchResult,
   ComparisonResponse,
   DataFreshnessResponse,
+  DemoInfo,
+  EarningsBriefsResponse,
+  EarningsCalendarResponse,
   EarningsResponse,
+  GenerateBriefResponse,
   FilingDiffResponse,
   FilingSectionsResponse,
   FilingSummary,
@@ -153,6 +157,47 @@ export function useGuidanceTrackRecord(ticker: string): UseQueryResult<GuidanceT
       const { data } = await apiRequest<unknown>(`/companies/${ticker}/guidance/track-record`, { signal });
       return parse.guidanceTrackRecord(data);
     },
+  });
+}
+
+/** Reported and upcoming earnings dates, newest quarter first (FR-EB-001/002). */
+export function useEarningsCalendar(ticker: string): UseQueryResult<EarningsCalendarResponse> {
+  return useQuery({
+    queryKey: ["earnings-calendar", ticker],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/earnings/calendar`, { signal });
+      return parse.earningsCalendar(data);
+    },
+  });
+}
+
+/** Stored previews and briefs, every version, latest quarter first (FR-EB-013/015). */
+export function useEarningsBriefs(ticker: string): UseQueryResult<EarningsBriefsResponse> {
+  return useQuery({
+    queryKey: ["earnings-briefs", ticker],
+    staleTime: 5 * MINUTE,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/earnings/briefs`, { signal });
+      return parse.earningsBriefs(data);
+    },
+  });
+}
+
+/** Make (or get back, if nothing changed) the current preview or brief; signed in, rate-limited. */
+export function useGenerateBrief(
+  ticker: string,
+): UseMutationResult<GenerateBriefResponse, Error, "preview" | "brief"> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (kind: "preview" | "brief") => {
+      const { data } = await apiRequest<unknown>(`/companies/${ticker}/earnings/briefs`, {
+        method: "POST",
+        body: { kind },
+      });
+      return parse.generatedBrief(data);
+    },
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["earnings-briefs", ticker] }),
   });
 }
 
@@ -408,9 +453,11 @@ export function useFilingDiff(
   against: string | null,
   kind: "risk_factor" | null,
   noteCategory: string | null = null,
+  enabled = true,
 ): UseQueryResult<FilingDiffResponse> {
   return useQuery({
     queryKey: ["filing-diff", filingId, against, kind, noteCategory],
+    enabled,
     staleTime: 10 * MINUTE,
     retry: false, // 404/422 here mean "nothing to compare", not a transient failure
     queryFn: async ({ signal }) => {
@@ -685,5 +732,17 @@ export function useMarkNotificationsRead(): UseMutationResult<void, Error, strin
       );
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+/** Whether this deployment is the public demo, and its fixture date (NFR-ME-007). Fetched once. */
+export function useDemoInfo(): UseQueryResult<DemoInfo> {
+  return useQuery({
+    queryKey: ["demo-info"],
+    staleTime: Infinity,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiRequest<unknown>("/meta/demo", { signal });
+      return parse.demoInfo(data);
+    },
   });
 }

@@ -3,11 +3,13 @@ import type { FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { Wordmark } from "../components/AppShell";
+import { DemoBanner } from "../components/DemoBanner";
 import { Footer } from "../components/chrome";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { useAuth } from "../lib/auth";
 import { PASSWORD_MIN_LENGTH } from "../lib/config";
+import { useDemoInfo } from "../lib/queries";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 
 type Mode = "login" | "register";
@@ -49,7 +51,8 @@ function useReturnPath(): string {
 }
 
 export default function AuthPage() {
-  const { user, login, register } = useAuth();
+  const { user, login, register, enterDemo } = useAuth();
+  const demo = useDemoInfo().data?.enabled === true;
   const navigate = useNavigate();
   const returnPath = useReturnPath();
   const [mode, setMode] = useState<Mode>("login");
@@ -93,6 +96,19 @@ export default function AuthPage() {
     }
   };
 
+  const openDemo = async () => {
+    setFailure(null);
+    setBusy(true);
+    try {
+      await enterDemo();
+      navigate(returnPath, { replace: true });
+    } catch {
+      setFailure("The demo account couldn’t be opened. Try again in a moment.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const switchMode = () => {
     setMode((current) => (current === "login" ? "register" : "login"));
     setErrors({});
@@ -101,6 +117,7 @@ export default function AuthPage() {
 
   return (
     <div className="flex min-h-full flex-col">
+      <DemoBanner />
       <main className="flex flex-1 items-center justify-center px-4 py-16">
         <div className="w-full max-w-[400px]">
           <Wordmark />
@@ -174,16 +191,30 @@ export default function AuthPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-sm text-muted">
-            {copy.prompt}{" "}
-            <button
-              type="button"
-              onClick={switchMode}
-              className="font-medium text-primary hover:underline"
-            >
-              {copy.switchTo}
-            </button>
-          </p>
+          {demo && (
+            <div className="mt-8 border-t border-border pt-6">
+              <p className="text-sm text-muted">
+                This is the public demo. Accounts are closed; everyone shares one sandbox that resets
+                nightly.
+              </p>
+              <Button variant="primary" loading={busy} onClick={() => void openDemo()} className="mt-4 h-10 w-full">
+                Enter the demo
+              </Button>
+            </div>
+          )}
+
+          {!demo && (
+            <p className="mt-6 text-sm text-muted">
+              {copy.prompt}{" "}
+              <button
+                type="button"
+                onClick={switchMode}
+                className="font-medium text-primary hover:underline"
+              >
+                {copy.switchTo}
+              </button>
+            </p>
+          )}
         </div>
       </main>
       <Footer />

@@ -13,35 +13,46 @@ import type {
   CompanySearchResult,
   ComparisonResponse,
   DataFreshnessResponse,
+  DemoInfo,
+  DraftResponse,
+  EarningsBriefsResponse,
+  EarningsCalendarResponse,
+  EarningsQualityResponse,
   EarningsResponse,
   FilingDiffResponse,
   FilingSectionsResponse,
   FilingSummary,
   FinancialsResponse,
-  JobState,
-  ManagementLanguageResponse,
-  MetricResult,
-  MetricsCoverageResponse,
-  EarningsQualityResponse,
   FootnoteFactsResponse,
+  GenerateBriefResponse,
   GovernanceHistoryResponse,
   GovernanceResponse,
   GuidanceResponse,
   GuidanceTrackRecord,
+  JobState,
+  ManagementLanguageResponse,
+  MetricRegistryResponse,
+  MetricResult,
+  MetricsCoverageResponse,
+  NewsResponse,
+  NotesResponse,
   PeerSetOut,
   PeerSetsResponse,
-  ValuationBandsResponse,
-  NotesResponse,
-  RedFlagsResponse,
-  NewsResponse,
   PeerSuggestionsResponse,
   PortfolioAnalysis,
   PricesResponse,
+  RedFlagsResponse,
   ResearchAccepted,
   ResearchReportEnvelope,
   SourceDetail,
+  ThesisDetail,
+  ThesisEvent,
+  ThesisKpi,
+  ThesisRevision,
+  ThesisSummary,
   TokenResponse,
   UserProfile,
+  ValuationBandsResponse,
   ValuationResponse,
   VerifiedOutput,
   Watchlist,
@@ -155,28 +166,27 @@ const earningsQuality = z.object({
 });
 
 // Phase 7e (FR-RF-009/010): reported filing events; an empty list still says when it was scanned.
+const redFlagItem = z.object({
+  source_id: z.string(),
+  ticker: z.string(),
+  rule_key: z.string(),
+  label: z.string(),
+  severity: z.enum(["info", "warning", "critical"]),
+  explanation: z.string(),
+  rule_source: z.string(),
+  event_date: z.string().nullable(),
+  snippet: z.string(),
+  filing: z.object({
+    id: z.number(),
+    filing_type: z.string(),
+    accession_number: z.string(),
+    filing_date: z.string().nullish(),
+    url: z.string().nullish(),
+  }),
+  details: z.record(z.string(), z.unknown()),
+});
 const redFlags = z.object({
-  items: z.array(
-    z.object({
-      source_id: z.string(),
-      ticker: z.string(),
-      rule_key: z.string(),
-      label: z.string(),
-      severity: z.enum(["info", "warning", "critical"]),
-      explanation: z.string(),
-      rule_source: z.string(),
-      event_date: z.string().nullable(),
-      snippet: z.string(),
-      filing: z.object({
-        id: z.number(),
-        filing_type: z.string(),
-        accession_number: z.string(),
-        filing_date: z.string().nullish(),
-        url: z.string().nullish(),
-      }),
-      details: z.record(z.string(), z.unknown()),
-    }),
-  ),
+  items: z.array(redFlagItem),
   last_scanned_at: z.string().nullable(),
   taxonomy_version: z.string(),
 });
@@ -541,6 +551,7 @@ const filingSections = z.object({
 
 const dataFreshness = z.object({ ticker: z.string(), sources: z.array(freshness) });
 const token = z.object({ access_token: z.string(), token_type: z.string(), expires_in: z.number() });
+const demoInfo = z.object({ enabled: z.boolean(), data_as_of: z.string().nullable().optional() });
 const profile = z.object({
   id: z.string(),
   email: z.string(),
@@ -731,6 +742,9 @@ const earnings = z.object({
       post_close: z.string().nullish(),
       move: z.string().nullish(),
       reason: z.string().nullish(),
+      move_at_open: z.string().nullish(),
+      move_5d: z.string().nullish(),
+      volume_ratio: z.string().nullish(),
     }),
   ),
 });
@@ -838,24 +852,23 @@ const guidanceValue = {
     })
     .nullable(),
 };
+const guidanceRow = z.object({
+  ...guidanceValue,
+  fiscal_year: z.number(),
+  fiscal_period: z.string(),
+  period_label: z.string(),
+  metric: z.string(),
+  metric_label: z.string(),
+  basis: z.enum(["gaap", "non_gaap", "unspecified"]),
+  unit: z.enum(["usd", "ratio", "percent_of_revenue"]),
+  revisions: z.array(z.object(guidanceValue)),
+});
 const guidance = z.object({
   ticker: z.string(),
   fiscal_year: z.number().nullable(),
   fiscal_years: z.array(z.number()),
   scope: z.string(),
-  items: z.array(
-    z.object({
-      ...guidanceValue,
-      fiscal_year: z.number(),
-      fiscal_period: z.string(),
-      period_label: z.string(),
-      metric: z.string(),
-      metric_label: z.string(),
-      basis: z.enum(["gaap", "non_gaap", "unspecified"]),
-      unit: z.enum(["usd", "ratio", "percent_of_revenue"]),
-      revisions: z.array(z.object(guidanceValue)),
-    }),
-  ),
+  items: z.array(guidanceRow),
 });
 const guidanceTrackRecord = z.object({
   ticker: z.string(),
@@ -881,6 +894,266 @@ const guidanceTrackRecord = z.object({
       source_id: z.string(),
     }),
   ),
+});
+
+// Phase 7j (FR-EB-013): earnings calendar, previews and briefs; decimals arrive as strings.
+const calendarEvent = z.object({
+  fiscal_year: z.number(),
+  fiscal_period: z.string(),
+  period_label: z.string(),
+  report_date: z.string().nullable(),
+  report_time: z.enum(["bmo", "amc", "unknown"]),
+  source: z.enum(["sec_8k", "announcement", "estimated"]),
+  status: z.enum(["scheduled", "reported", "unknown"]),
+  estimated: z.boolean(),
+  source_id: z.string().nullish(),
+  quote: z.string().nullish(),
+});
+const earningsCalendar = z.object({
+  ticker: z.string(),
+  upcoming: calendarEvent.nullable(),
+  events: z.array(calendarEvent),
+  method: z.string(),
+});
+const metricTable = z.object({
+  fiscal_year: z.number(),
+  fiscal_period: z.string(),
+  period_label: z.string(),
+  prior_quarter_label: z.string(),
+  prior_year_label: z.string(),
+  rows: z.array(
+    z.object({
+      metric: z.string(),
+      label: z.string(),
+      unit: z.enum(["usd", "usd_per_share", "ratio"]),
+      change_kind: z.enum(["growth", "points"]),
+      value: decimal.nullable(),
+      source_ids: z.array(z.string()).default([]),
+      prior_quarter: decimal.nullish(),
+      prior_quarter_source_ids: z.array(z.string()).default([]),
+      change_vs_prior_quarter: decimal.nullish(),
+      prior_year: decimal.nullish(),
+      prior_year_source_ids: z.array(z.string()).default([]),
+      change_vs_prior_year: decimal.nullish(),
+      reason: z.string().nullish(),
+    }),
+  ),
+});
+const reaction = z.object({
+  filing_id: z.number(),
+  filing_date: z.string().nullable(),
+  pre_date: z.string().nullish(),
+  post_date: z.string().nullish(),
+  move_at_open: decimal.nullish(),
+  move: decimal.nullish(),
+  move_5d: decimal.nullish(),
+  volume_ratio: decimal.nullish(),
+  source_ids: z.array(z.string()).default([]),
+  reason: z.string().nullish(),
+});
+const briefHeader = z.object({
+  ticker: z.string(),
+  company_name: z.string().nullable(),
+  fiscal_year: z.number(),
+  fiscal_period: z.string(),
+  period_label: z.string(),
+  report_date: z.string().nullable(),
+  report_time: z.enum(["bmo", "amc", "unknown"]),
+  date_source: z.enum(["sec_8k", "announcement", "estimated"]),
+  date_estimated: z.boolean(),
+  date_source_id: z.string().nullish(),
+});
+const missing = z.array(z.object({ section: z.string(), reason: z.string() })).default([]);
+const earningsPreview = z.object({
+  header: briefHeader,
+  last_quarter_snapshot: metricTable.nullish(),
+  guidance_for_period: z.array(guidanceRow).default([]),
+  track_record: guidanceTrackRecord.nullish(),
+  valuation_snapshot: z
+    .object({
+      as_of: z.string().nullable(),
+      lines: z.array(
+        z.object({
+          multiple: z.string(),
+          label: z.string(),
+          value: decimal,
+          source_ids: z.array(z.string()),
+          own_label: z.string().nullish(),
+          own_n: z.number(),
+          peer_label: z.string().nullish(),
+          peer_n: z.number(),
+        }),
+      ),
+    })
+    .nullish(),
+  open_flags: z.array(redFlagItem).default([]),
+  last_reaction: reaction.nullish(),
+  watch_items: z
+    .array(
+      z.object({
+        kind: z.enum(["growth_deceleration", "new_risk_factor", "topic_rise", "margin_reversal"]),
+        text: z.string(),
+        source_ids: z.array(z.string()).min(1),
+        reworded: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  missing,
+});
+const earningsBrief = z.object({
+  header: briefHeader,
+  headline_table: metricTable.nullish(),
+  versus_guidance: z.array(guidanceRow).default([]),
+  reaction: reaction.nullish(),
+  what_changed: z
+    .object({
+      filing_id: z.number(),
+      filing_type: z.string(),
+      filing_date: z.string().nullable(),
+      against_filing_id: z.number(),
+      against_filing_date: z.string().nullable(),
+      new_risks: z.number(),
+      removed_risks: z.number(),
+      reworded_risks: z.number(),
+      top_changes: z.array(
+        z.object({
+          status: z.enum(["new", "removed", "reworded"]),
+          heading: z.string(),
+          old_quote: z.string().nullish(),
+          new_quote: z.string().nullish(),
+          source_ids: z.array(z.string()),
+        }),
+      ),
+      topic_shifts: z.array(
+        z.object({
+          topic: z.string(),
+          label: z.string(),
+          before_per_1k: z.number(),
+          after_per_1k: z.number(),
+          source_ids: z.array(z.string()),
+        }),
+      ),
+    })
+    .nullish(),
+  new_flags: z.array(redFlagItem).default([]),
+  narrative: z
+    .object({
+      sentences: z.array(z.object({ text: z.string(), source_ids: z.array(z.string()).min(1) })),
+      dropped: z.number(),
+      prompt_version: z.string(),
+      model: z.string(),
+    })
+    .nullish(),
+  missing,
+});
+const storedBrief = z.object({
+  id: z.number(),
+  kind: z.enum(["preview", "brief"]),
+  fiscal_year: z.number(),
+  fiscal_period: z.string(),
+  period_label: z.string(),
+  version: z.number(),
+  inputs_label: z.string(),
+  created_at: z.string(),
+  preview: earningsPreview.nullish(),
+  brief: earningsBrief.nullish(),
+});
+const earningsBriefs = z.object({
+  ticker: z.string(),
+  items: z.array(storedBrief),
+  scope: z.string(),
+});
+const generatedBrief = z.object({ created: z.boolean(), item: storedBrief });
+
+// Phase 7k (FR-TH-013): the caller's own theses; decimals arrive as strings.
+const thesisUnit = z.enum(["usd", "usd_per_share", "ratio", "multiple", "score", "days"]);
+const periodType = z.enum(["FY", "Q", "TTM", "LATEST"]);
+const comparator = z.enum(["gte", "lte", "gt", "lt"]);
+const thesisSummary = z.object({
+  id: z.number(),
+  ticker: z.string(),
+  title: z.string(),
+  stance: z.enum(["long", "short", "watch", "avoid"]),
+  status: z.enum(["active", "closed"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+  kpi_states: z.object({ met: z.number(), broken: z.number(), no_data: z.number() }),
+});
+const thesisKpi = z.object({
+  id: z.number(),
+  metric: z.string(),
+  metric_label: z.string(),
+  unit: thesisUnit,
+  period_type: periodType,
+  comparator,
+  threshold: decimal,
+  label: z.string(),
+  rationale: z.string().nullable(),
+  state: z.enum(["met", "broken", "no_data"]),
+  last_value: decimal.nullable(),
+  last_source_ids: z.array(z.string()),
+  last_period: z.string().nullable(),
+  last_period_end: z.string().nullable(),
+  evaluated_at: z.string().nullable(),
+  history: z.array(
+    z.object({
+      period: z.string(),
+      period_end: z.string().nullable(),
+      value: decimal,
+      source_ids: z.array(z.string()),
+    }),
+  ),
+});
+const thesisDetail = thesisSummary.extend({ body_md: z.string(), kpis: z.array(thesisKpi) });
+const thesisEvent = z.object({
+  id: z.number(),
+  kind: z.enum(["kpi_met", "kpi_broken", "red_flag", "brief_published", "user_note", "status_changed"]),
+  occurred_at: z.string(),
+  kpi_id: z.number().nullable(),
+  ref_type: z.string().nullable(),
+  ref_id: z.string().nullable(),
+  note: z.string().nullable(),
+  payload: z.record(z.string(), z.unknown()),
+});
+const thesisRevision = z.object({
+  revision: z.number(),
+  title: z.string(),
+  body_md: z.string(),
+  created_at: z.string(),
+  word_diff: z.array(z.object({ op: z.enum(["equal", "insert", "delete"]), text: z.string() })).nullable(),
+});
+const metricRegistry = z.object({
+  version: z.string(),
+  ticker: z.string().nullable(),
+  metrics: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      group: z.string(),
+      unit: thesisUnit,
+      period_types: z.array(periodType),
+      description: z.string(),
+      applicable: z.boolean().nullable(),
+    }),
+  ),
+});
+const thesisDraft = z.object({
+  title: z.string().nullable(),
+  kpis: z.array(
+    z.object({
+      metric: z.string(),
+      metric_label: z.string(),
+      unit: thesisUnit,
+      period_type: periodType,
+      comparator,
+      threshold: decimal,
+      label: z.string(),
+      rationale: z.string().nullable(),
+    }),
+  ),
+  dropped: z.number(),
+  prompt_version: z.string(),
+  notice: z.string(),
 });
 
 export const parse = {
@@ -910,6 +1183,22 @@ export const parse = {
   guidance: (d: unknown): GuidanceResponse => guidance.parse(d) as GuidanceResponse,
   guidanceTrackRecord: (d: unknown): GuidanceTrackRecord =>
     guidanceTrackRecord.parse(d) as GuidanceTrackRecord,
+  earningsCalendar: (d: unknown): EarningsCalendarResponse =>
+    earningsCalendar.parse(d) as EarningsCalendarResponse,
+  earningsBriefs: (d: unknown): EarningsBriefsResponse =>
+    earningsBriefs.parse(d) as EarningsBriefsResponse,
+  generatedBrief: (d: unknown): GenerateBriefResponse =>
+    generatedBrief.parse(d) as GenerateBriefResponse,
+  theses: (d: unknown): ThesisSummary[] => z.array(thesisSummary).parse(d) as ThesisSummary[],
+  thesis: (d: unknown): ThesisDetail => thesisDetail.parse(d) as ThesisDetail,
+  thesisKpi: (d: unknown): ThesisKpi => thesisKpi.parse(d) as ThesisKpi,
+  thesisEvents: (d: unknown): ThesisEvent[] => z.array(thesisEvent).parse(d) as ThesisEvent[],
+  thesisEvent: (d: unknown): ThesisEvent => thesisEvent.parse(d) as ThesisEvent,
+  thesisRevisions: (d: unknown): ThesisRevision[] =>
+    z.array(thesisRevision).parse(d) as ThesisRevision[],
+  metricRegistry: (d: unknown): MetricRegistryResponse =>
+    metricRegistry.parse(d) as MetricRegistryResponse,
+  thesisDraft: (d: unknown): DraftResponse => thesisDraft.parse(d) as DraftResponse,
   peerSets: (d: unknown): PeerSetsResponse => peerSets.parse(d) as PeerSetsResponse,
   peerSet: (d: unknown): PeerSetOut => peerSet.parse(d) as PeerSetOut,
   valuationBands: (d: unknown): ValuationBandsResponse =>
@@ -928,6 +1217,7 @@ export const parse = {
     dataFreshness.parse(d) as DataFreshnessResponse,
   token: (d: unknown): TokenResponse => token.parse(d) as TokenResponse,
   profile: (d: unknown): UserProfile => profile.parse(d) as UserProfile,
+  demoInfo: (d: unknown): DemoInfo => demoInfo.parse(d) as DemoInfo,
   researchEnvelope: (d: unknown): ResearchReportEnvelope =>
     researchEnvelope.parse(d) as ResearchReportEnvelope,
   researchAccepted: (d: unknown): ResearchAccepted =>
