@@ -8,11 +8,11 @@ password-reset are minimal single-use-token flows (AUTH-003); email delivery is 
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.auth import service
+from app.auth import demo, service
 from app.auth.service import IssuedTokens
 from app.config import Settings, get_settings
 from app.db import get_db
@@ -65,6 +65,8 @@ def _token_response(issued: IssuedTokens) -> TokenResponse:
 
 @router.post("/register", status_code=201, response_model=UserProfile)
 def register(body: RegisterRequest, db: Session = _DB) -> UserProfile:
+    if get_settings().demo_mode:  # NFR-ME-007: the public demo has one shared sandbox account
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Registration is disabled in the demo.")
     user = service.register(db, email=body.email, password=body.password)
     db.commit()
     return _profile(user)
@@ -83,6 +85,22 @@ def login(
     )
     db.commit()
     _set_refresh_cookie(response, issued, get_settings())
+    return _token_response(issued)
+
+
+@router.post("/demo", response_model=TokenResponse)
+def demo_login(request: Request, response: Response, db: Session = _DB) -> TokenResponse:
+    """Sign in as the shared demo user (demo mode only; NFR-ME-007, ADR-0050)."""
+    settings = get_settings()
+    if not settings.demo_mode:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+    issued = demo.demo_login(
+        db,
+        user_agent=request.headers.get("user-agent"),
+        ip=request.client.host if request.client else None,
+    )
+    db.commit()
+    _set_refresh_cookie(response, issued, settings)
     return _token_response(issued)
 
 

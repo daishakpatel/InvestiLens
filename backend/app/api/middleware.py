@@ -31,10 +31,11 @@ def _is_ai_route(path: str) -> bool:
     return path.startswith(_AI_PATH_PREFIXES)
 
 
-def _identity(request: Request) -> str:
-    """`user:<id>` when the bearer token decodes cleanly, else `ip:<host>` (spec §25.4)."""
+def _identity(request: Request, settings: Settings) -> str:
+    """`user:<id>` when the bearer token decodes cleanly, else `ip:<host>` (spec §25.4). In demo
+    mode every visitor shares one account, so the client IP is the identity (NFR-ME-009)."""
     auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
+    if auth.startswith("Bearer ") and not settings.demo_mode:
         try:
             return f"user:{decode_access_token(auth[len('Bearer ') :])}"
         except TokenError:
@@ -70,11 +71,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         settings = get_settings()
-        if not settings.rate_limit_enabled:
+        if not (settings.rate_limit_enabled or settings.demo_mode):
             return await call_next(request)
 
         prefix, limit, window = _tier(request.url.path, settings)
-        bucket_key = f"{prefix}:{_identity(request)}"
+        bucket_key = f"{prefix}:{_identity(request, settings)}"
         if settings.rate_limit_backend == "redis":
             allowed, retry_after = await self._get_redis_limiter(settings).allow(
                 key=bucket_key, limit=limit, window_seconds=window
@@ -98,3 +99,44 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 headers={"Retry-After": str(retry_after)},
             )
         return await call_next(request)
+
+
+_BODY_METHODS = {"POST", "PUT", "PATCH"}
+
+
+def _problem(request: Request, status: int, title: str, detail: str) -> JSONResponse:
+    problem = Problem(
+        title=title,
+        status=status,
+        detail=detail,
+        instance=str(request.url),
+        request_id=getattr(request.state, "request_id", None),
+    )
+    return JSONResponse(
+        status_code=status,
+        media_type=PROBLEM_MEDIA_TYPE,
+        content=problem.model_dump(exclude_none=True),
+    )
+
+
+async def request_size_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """Refuse a request body over `max_request_bytes` before it is read (NFR-ME-009, SEC-008).
+
+    A body without a Content-Length (chunked) is refused too, since its size is unknown until
+    it has been read; browsers and the frontend always send one.
+    """
+    if request.method not in _BODY_METHODS:
+        return await call_next(request)
+    limit = get_settings().max_request_bytes
+    length = request.headers.get("content-length")
+    if length is None:
+        if request.headers.get("transfer-encoding"):
+            return _problem(request, 411, "Length Required", "Send a Content-Length header.")
+        return await call_next(request)
+    if not length.isdigit() or int(length) > limit:
+        return _problem(
+            request, 413, "Content Too Large", f"Request bodies are limited to {limit} bytes."
+        )
+    return await call_next(request)

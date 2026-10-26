@@ -404,6 +404,9 @@ def list_earnings_reactions(ticker: str, db: Session = _DB) -> EarningsResponse:
                 post_close=r.post_close,
                 move=r.move,
                 reason=r.reason,
+                move_at_open=r.move_at_open,
+                move_5d=r.move_5d,
+                volume_ratio=r.volume_ratio,
             )
             for r in earnings_reactions(db, company_id=company.id)
         ],

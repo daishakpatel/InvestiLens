@@ -254,6 +254,18 @@ class Settings(BaseSettings):
     peer_market_cap_band_high: float = Field(default=4.0)
     peer_set_max_default: int = Field(default=8)
 
+    # --- Earnings briefs (Phase 7j, FR-EB-012) ---
+    # Briefs call the model, so they are made only for watched companies and these seed tickers,
+    # at most `earnings_brief_daily_cap` new versions a day (UTC) across all companies, and a
+    # user may ask for at most `earnings_brief_regen_per_hour` regenerations an hour.
+    earnings_brief_seed_tickers: list[str] = Field(default=["NVDA", "AAPL", "JPM"])
+    earnings_brief_daily_cap: int = Field(default=50)
+    earnings_brief_regen_per_hour: int = Field(default=5)
+    earnings_preview_lead_days: int = Field(default=3)
+
+    # --- Thesis tracker (Phase 7k, FR-TH-010) ---
+    thesis_draft_per_hour: int = Field(default=10)  # "Draft from my notes" calls per user
+
     # --- Object storage (Phase 5d, ADR-0012) ---
     # "filesystem" (MVP default, storage_dir) or "s3" (MinIO locally / S3 in prod, via the
     # object_storage_* settings). The ObjectStorage interface is unchanged either way.
@@ -264,10 +276,13 @@ class Settings(BaseSettings):
     object_storage_bucket: str = Field(default="investilens-filings")
     object_storage_secure: bool = Field(default=False)  # True for real S3/https
 
-    # --- Demo mode (Phase 5d, scope #12) ---
-    # When on: anonymous visitors are read-only, AI generation is disabled (quota 0), and only
-    # pre-generated seed-company reports are served. The resume-link configuration.
+    # --- Demo mode (Phase 5d scope #12, wired in Phase 7l, ADR-0050) ---
+    # When on: registration is off and visitors share one sandbox account reset nightly; the LLM
+    # and embedder replay recorded/offline output only; rate limits are on and keyed by IP.
     demo_mode: bool = Field(default=False)
+    # Largest request body accepted on any route, in bytes (NFR-ME-009). The biggest legitimate
+    # body is a 20,000-character thesis (≤ 80 KB as UTF-8), so 256 KiB leaves ample room.
+    max_request_bytes: int = Field(default=262_144)
 
 
 @lru_cache

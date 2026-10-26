@@ -23,6 +23,7 @@ from app.api import (
     chat,
     companies,
     comparison,
+    earnings,
     earnings_quality,
     filings,
     footnotes,
@@ -34,10 +35,11 @@ from app.api import (
     red_flags,
     research,
     sources,
+    theses,
     watchlist,
 )
 from app.api.errors import register_error_handlers
-from app.api.middleware import RateLimitMiddleware
+from app.api.middleware import RateLimitMiddleware, request_size_middleware
 from app.api.security_headers import security_headers_middleware
 from app.config import get_settings
 from app.db import _session_factory
@@ -80,6 +82,7 @@ def create_app() -> FastAPI:
     # (runs first on the way in, last on the way out), so a response gets every layer's headers
     # and even a rate-limited/erroring request still gets a request id and CORS headers.
     app.add_middleware(RateLimitMiddleware)  # ADR-0018/0022
+    app.middleware("http")(request_size_middleware)  # NFR-ME-009
 
     @app.middleware("http")
     async def request_id_middleware(
@@ -131,6 +134,8 @@ def create_app() -> FastAPI:
         governance,
         peers,
         guidance,
+        earnings,
+        theses,
     ):
         app.include_router(module.router, prefix=API_V1_PREFIX)
     app.include_router(metrics_module.router)  # root-level /metrics (Prometheus scrape convention)

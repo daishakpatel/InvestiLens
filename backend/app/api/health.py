@@ -5,15 +5,16 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.api._support import freshness_from_row
 from app.config import get_settings
 from app.db import get_db
+from app.models import Filing
 from app.repositories import companies as company_repo
 from app.repositories import freshness as freshness_repo
-from app.schemas.health import DataFreshnessResponse, Health, Readiness
+from app.schemas.health import DataFreshnessResponse, DemoInfo, Health, Readiness
 
 router = APIRouter(tags=["Health"])
 
@@ -68,3 +69,11 @@ def data_freshness(ticker: str, db: Session = _DB) -> DataFreshnessResponse:
         ticker=company.ticker,
         sources=[freshness_from_row(r, source=r.source) for r in rows],
     )
+
+
+@router.get("/meta/demo", response_model=DemoInfo, tags=["Meta"])
+def demo_info(db: Session = _DB) -> DemoInfo:
+    """Demo banner data (NFR-ME-007): on in demo mode, with the fixtures' latest filing date."""
+    if not get_settings().demo_mode:
+        return DemoInfo(enabled=False)
+    return DemoInfo(enabled=True, data_as_of=db.scalar(select(func.max(Filing.filing_date))))
