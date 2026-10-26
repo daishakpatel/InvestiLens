@@ -139,6 +139,34 @@ and `alerts.py`. `detect.scan_company` runs the rules over a company's 8-Ks, NT 
 `/companies/{t}/red-flags` and `/red-flags?watchlist=true`, cited as `redflag:` source IDs, and
 alerted through the `red_flag` event type. No model is involved.
 
+**Earnings briefs** (Phase 7j, ADR-0048): `app/earnings/` holds:
+- `calendar.py` builds `earnings_events`: dates from Item 2.02 8-Ks, a company's own announced
+  date, or an estimate (last year plus 52 weeks).
+- `sections.py` assembles each section from stored 7b/7h/7i/7e/6b data.
+- `watch.py` holds the deterministic watch candidates plus a checked rewording.
+- `narrative.py` writes a ≤4-sentence summary through `citation.verify_claims`.
+- `prompt.py` holds the one prompt, `earnings_narrative_v1`.
+- `service.py` versions briefs by inputs hash and applies the watched/seed and daily-cap guards.
+- `alerts.py` adds the `brief_ready` event type.
+
+Briefs are made after filings and metrics land (`after_filings`, called at the end of
+`update_financial_metrics` and the refresh chain), daily for previews of confirmed dates within 3
+days (beat `earnings-previews` → `generate_due_previews`, 06:00 ET), by the
+`generate_earnings_brief(company_id, kind)` task, and on a user's `POST
+/companies/{t}/earnings/briefs`.
+
+**Thesis tracker** (Phase 7k, ADR-0049): `app/thesis/` holds:
+- `registry.py`: the trackable metrics, their units and series readers.
+- `evaluator.py`: Decimal comparison, events only on data transitions.
+- `links.py`: `refresh_company_theses`, which links new red flags and briefs and re-evaluates.
+  It is called after `update_financial_metrics`, the refresh chain, `parse_documents`,
+  `scan_red_flags`, a stored brief, and `scripts/build_metrics.py`.
+- `alerts.py`: the `thesis_trigger` event type.
+- `draft.py`: `thesis_draft_v1`, suggestions only.
+- `service.py`: the API use cases.
+
+No model is involved in any KPI state.
+
 **SEC ingestion** (Phase 1a; exhibits and extra forms in Phase 7c, ADR-0041). `SecSource`
 (`app/providers/sec/`, live EDGAR or frozen fixtures) offers `company_tickers`, `company_metadata`,
 `list_filings(cik, since=)` (EDGAR's recent block, plus older `filings.files[]` pages when

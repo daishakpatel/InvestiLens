@@ -43,6 +43,13 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
   every route and a tighter AI tier (default 20/hour) applies to `/chat*` and `POST /research`,
   keyed per-user when authenticated else per-IP. Backend is `"memory"` (default, in-process) or
   `"redis"` (real cross-worker limiting via `REDIS_URL`). Responses carry `Retry-After`.
+- **Request size (NFR-ME-009, Phase 7l):** every `POST`/`PUT`/`PATCH` body over
+  `MAX_REQUEST_BYTES` (default 256 KiB) is refused with `413` before it is read; a body sent
+  without a `Content-Length` (chunked) gets `411`. Problem+json, like every error.
+- **Demo mode (NFR-ME-007/009, ADR-0050):** with `DEMO_MODE=true`, `POST /auth/register` answers
+  `403`, `POST /auth/demo` signs the caller into the shared sandbox account, rate limiting is on
+  whatever `rate_limit_enabled` says and is keyed by client IP (everyone shares one account), and
+  the LLM and embedder replay recorded/offline output only.
 - **AI budget (NFR-008, ADR-0022):** `POST /chat` (qualitative answers only) and `POST /research`
   return `402` (`application/problem+json`) once a user's monthly AI spend reaches their
   `ai_budget_month_usd` cap (set at registration; `default_ai_budget_month_usd` in config).
@@ -59,6 +66,7 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 | GET | `/health` | Liveness |
 | GET | `/ready` | Readiness (db, redis, queue) |
 | GET | `/meta/data-freshness/{ticker}` | Per-source freshness |
+| GET | `/meta/demo` | `{enabled, data_as_of}`: whether this is the public demo, and the latest fixture filing date for its banner (NFR-ME-007) |
 
 ### Company
 | Method | Path | Notes |
@@ -85,7 +93,7 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 | GET | `/filings/{filing_id}` | Filing detail (incl. `document_type`; 8-K `items` are full dotted codes, e.g. `5.02`) |
 | GET | `/filings/{filing_id}/sections` | Section outline |
 | GET | `/filings/{filing_id}/diff?against=&kind=` | Filing diff (Phase 6b, §37.4): what is `unchanged / reworded / new / removed` versus an older filing of the same type. `against` defaults to the prior filing of that type (last year's 10-K, last quarter's 10-Q). `kind=risk_factor\|section` filters. Every item carries `old`/`new` passages with backend-issued `source_ids` (resolve via `/sources/{id}`), `decided_by`, and a word-level `word_diff` when reworded. Public and deterministic: no LLM. 404 = no earlier parsed filing; 422 = different company/type or an unparsed filing. |
-| GET | `/companies/{ticker}/earnings` | Earnings-day price reaction (§37.3): adjusted-close move around each Item 2.02 8-K. `move` is a ratio; `null` + `reason` when prices are missing. No expectations data (ADR-0027). |
+| GET | `/companies/{ticker}/earnings` | Earnings-day price reaction (§37.3): adjusted-close move around each Item 2.02 8-K. `move` is a ratio; `null` + `reason` when prices are missing. No expectations data (ADR-0027). Phase 7j adds `move_at_open` (first session's open, adjusted, vs the prior close), `move_5d` (fifth session's close vs the prior close) and `volume_ratio` (first session's volume over the prior 20-session average; null without volume data). |
 | GET | `/companies/{ticker}/management-language?filing_type=10-K&limit=8` | Management language tracking (§37.5): per-filing topic mentions per 1,000 MD&A words (`topic_taxonomy_v1`), a lexicon hedging index, first-appearance/disappearance flags, and the counted statements with `source_id`s. Lexicon counts, not AI. |
 
 ### Footnotes (Phase 7f, FR-FN-010/011, ADR-0044)
@@ -127,6 +135,9 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 |--------|------|-------|
 | GET | `/companies/{ticker}/guidance?fiscal_year=` | Verified company guidance (from the company's own EX-99.1 releases; never consensus estimates), newest period first; `fiscal_year` (1990–2100) filters, omitted = all. `scope` states the company-guidance-only rule; `fiscal_years` lists years with guidance. Each item is the **initial** guidance for a `(period, metric, basis)`: `fiscal_year`, `fiscal_period` (Q1–Q4/FY), `period_label`, `metric` (`guidance_metric_v1`), `metric_label`, `basis` (`gaap`/`non_gaap`/`unspecified`), `unit` (`usd`/`ratio`/`percent_of_revenue`), `low`+`high` or `point`, `midpoint`, `derived_range` (range computed from "plus or minus"), `quote`, `source_id` (the release paragraph; opens the citation drawer), `issued_at`, `release {document_id, title, url}`, `outcome` (`result` above/within/below_range, `not_comparable` or `actual_unavailable`; `actual_value`, `actual_source_ids` (the metric rows' IDs), deltas vs low/high/mid, `delta_vs_mid_pct`, `reason_code`, `explanation`), and `revisions[]` (later releases' guidance for the same key, same shape without period fields). Decimals are strings. Never calls a model. |
 | GET | `/companies/{ticker}/guidance/track-record` | Revenue against its initial guided range over the latest 8 guided quarters: `n_quarters`, `n_comparable`, `n_above`, `n_within`, `n_below`, `avg_delta_vs_mid`, `avg_delta_vs_mid_pct`, `sufficient` (needs 4 comparable), `label` (positional: "Revenue came in above the guided range in 6 of 8 quarters, …", or "Insufficient history (n=3)"), `quarters[]` newest first (`period_label`, `low`, `high`, `actual_value`, `result`, `delta_vs_mid_pct`, `source_id`). |
+| GET | `/companies/{ticker}/earnings/calendar` | Earnings dates per fiscal quarter, newest first (Phase 7j, FR-EB-001/002, ADR-0048). Refreshes the calendar from stored filings first (idempotent upsert). Each event: `fiscal_year`, `fiscal_period` (Q1–Q4), `period_label`, `report_date` (null when `status` is `unknown`), `report_time` (`bmo`/`amc`/`unknown`), `source` (`sec_8k` = an Item 2.02 8-K was filed, `source_id` `filing:<id>`; `announcement` = the company's own sentence in a later 8-K or release, kept in `quote`, `source_id` its paragraph; `estimated` = last year's date plus 52 weeks), `status` (`reported`/`scheduled`/`unknown`), `estimated` (show with "~"; an estimate never triggers a preview or notification). `upcoming` is the newest unreported quarter or null. |
+| GET | `/companies/{ticker}/earnings/briefs?kind=&fiscal_year=&fiscal_period=` | Stored pre-earnings previews and post-earnings briefs, every version (FR-EB-013/015): latest quarter first, then highest version, at most 20. `kind` is `preview`/`brief`, `fiscal_period` `Q1`–`Q4` (422 otherwise). Each item: `id`, `kind`, `fiscal_year`, `fiscal_period`, `period_label`, `version`, `inputs_label` (what changed from the previous version, e.g. "after 10-Q filed"), `created_at`, and `preview` or `brief`. Both carry `header` (date, its source, `date_estimated`) and `missing[]` (`section`, `reason`: a section whose input is missing, shown as "Not available: {reason}"). Preview: `last_quarter_snapshot` (revenue, gross/operating margin, GAAP EPS, operating cash flow with prior-quarter and prior-year changes; growth as a ratio, margins in ratio points; every value with `source_ids`), `guidance_for_period[]` (7i rows), `track_record` (only when sufficient), `valuation_snapshot` (P/E, EV/EBITDA with 7h positional labels), `open_flags[]` (red flags of the last 90 days), `last_reaction`, `watch_items[]` (`kind`, `text`, `source_ids`, `reworded`: built in code, optionally reworded by the model with every number kept). Brief: `headline_table`, `versus_guidance[]` (rows with outcomes), `reaction`, `what_changed` (this 10-Q against the previous one: new/removed/reworded risk counts, `top_changes[]` with old/new quotes, `topic_shifts[]`), `new_flags[]` (since the previous report), `narrative` (`sentences[]` each with `source_ids`, at most 4 and 120 words, all verified; `dropped`, `prompt_version` `earnings_narrative_v1`, `model`). `scope` states that no analyst estimates are used. Never calls a model. |
+| POST | `/companies/{ticker}/earnings/briefs` | Body `{kind}`, `preview` or `brief`. Signed in, within the AI budget, and at most `EARNINGS_BRIEF_REGEN_PER_HOUR` (default 5) calls per user per hour (429 with the wait in `detail`). Makes the current quarter's preview (next unreported quarter) or brief (latest reported quarter). Returns `{created, item}`: `created` false means the inputs were unchanged and the stored version came back without a model call. 409 when the company is not on any watchlist or in the seed set, or there is no quarter yet; 429 when today's `EARNINGS_BRIEF_DAILY_CAP` is reached (logged). |
 
 ### Red flags (Phase 7e, FR-RF-009/010, ADR-0043)
 | Method | Path | Notes |
@@ -151,7 +162,8 @@ and `message_id` (for feedback).
 ### Auth (Phase 4b — implemented, ADR-0005/0006)
 | Method | Path | Notes |
 |--------|------|-------|
-| POST | `/auth/register` | Argon2id hash, password policy (AUTH-001); 201 → profile |
+| POST | `/auth/register` | Argon2id hash, password policy (AUTH-001); 201 → profile. `403` in demo mode |
+| POST | `/auth/demo` | Demo mode only (else `404`): tokens for the shared sandbox account, created on first use and deleted nightly with its data (NFR-ME-007, ADR-0050) |
 | POST | `/auth/login` | Access JWT in body + rotating refresh token in httpOnly/Secure/SameSite cookie; rate-limited (AUTH-006) |
 | POST | `/auth/refresh` | Rotates the refresh cookie; reuse of a revoked token revokes the family (AUTH-002). A token rotated in the last 10 s whose successor is unused is a second tab, and gets its own token (ADR-0030) |
 | POST | `/auth/logout` | Revokes the token family and clears the cookie |
@@ -177,6 +189,24 @@ but **may not** generate reports, use chat, or touch user-owned data (anonymous 
 | GET | `/notifications`, POST `/notifications/{id}/read` |
 | POST | `/feedback/report` |
 
+### Investment theses (Phase 7k, FR-TH-013, ADR-0049)
+Signed-in only; every route is scoped to the caller, so another user's thesis, KPI, event or
+revision answers **404** (SEC-TH-001). Thresholds and values are decimal strings in the metric's
+unit (ratios as decimals). Thesis text is private and never logged.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/theses?ticker=` | The caller's theses, most recently updated first: `id`, `ticker`, `title`, `stance` (`long`/`short`/`watch`/`avoid`, the user's tag), `status` (`active`/`closed`), dates, `kpi_states {met, broken, no_data}`. |
+| POST | `/theses` | `{ticker, title ≤200, body_md ≤20,000, stance}` → 201 `ThesisDetail` (summary + `body_md` + `kpis[]`); revision 1 is stored. 404 unknown ticker; 409 at 20 active theses. |
+| GET / PATCH / DELETE | `/theses/{id}` | PATCH any of `title`, `body_md`, `stance`, `status`. A new title or body adds a revision; a status change adds a `status_changed` event. DELETE (204) hard-deletes the thesis with its KPIs, events and revisions (FR-TH-014). |
+| POST | `/theses/{id}/kpis` | `{metric, period_type, comparator (gte/lte/gt/lt), threshold, label ≤120, rationale? ≤1,000}` → 201 `Kpi`, evaluated at once as a baseline (no event). Problems are 422 with `errors[].field`: `Unknown metric`, `Unsupported period`, `Metric not applicable` (sector), `Threshold looks like a unit mistake` (e.g. 62 for a ratio: "enter 0.25 for 25%"). 409 at 10 KPIs. |
+| PATCH / DELETE | `/theses/{id}/kpis/{kpi_id}` | Changing metric, period, comparator or threshold re-validates and sets a new baseline (no event). |
+| GET | `/theses/{id}/events?limit=` | The timeline, newest first (`limit` 1–200, default 50): `kind`, `occurred_at`, `kpi_id`, `ref_type` (`metric`/`red_flag`/`earnings_brief`), `ref_id` (a source ID to open), `note`, `payload` (KPI value, period, `period_end`, source IDs, threshold). |
+| POST | `/theses/{id}/events` | `{note ≤2,000}`: a `user_note` on the timeline. |
+| GET | `/theses/{id}/revisions` | Every revision, newest first, with `word_diff` (ops `equal`/`insert`/`delete`) against the previous one; null for the first. |
+| POST | `/theses/draft` | `{ticker, notes ≤5,000}` → suggested `title` and up to 5 `kpis` (registry metrics only, each re-validated), `dropped`, `prompt_version` `thesis_draft_v1`, `notice`. Nothing is saved; no stance is ever suggested. Within the AI budget and at most `THESIS_DRAFT_PER_HOUR` (default 10) per user per hour (429). |
+| GET | `/thesis/metric-registry?ticker=` | Trackable metrics: `key`, `label`, `group`, `unit` (`usd`/`usd_per_share`/`ratio`/`multiple`/`score`/`days`), `period_types`, `description`, `applicable` for the ticker's sector (null without one). Public. |
+
 **Alert rules (Phase 7a, ADR-0039).** `GET /alerts/event-types` returns the event-type registry:
 `{key, label, description, params_schema, default_enabled}` per type, where `params_schema` is
 the JSON Schema of that type's params, so a client renders the rule form with no hard-coded list.
@@ -185,7 +215,13 @@ fraction: 0.05 = 5%), `new_risk_factor` (no params; fires when the newest parsed
 risk factor its predecessor did not, Phase 6b), `news_category` (optional `category`),
 `red_flag` (Phase 7e) and `guidance_miss` (Phase 7i: `metrics` default `revenue`, `eps_gaap`;
 `results` default `below_range`, may add `above_range`; event key `guidance_outcome:{id}`, fires
-once per initial-guidance outcome, not for history older than 200 days).
+once per initial-guidance outcome, not for history older than 200 days), and `brief_ready`
+(Phase 7j, no params; event key `brief_ready:{ticker}:{fiscal_year}:{fiscal_period}:{kind}`, so a
+quarter's preview or brief notifies once whatever its version; previews of estimated dates never
+notify; `source_ids` is `earnings_brief:{id}`, which the UI opens on the Earnings tab), and
+`thesis_trigger` (Phase 7k: `notify_on` default `broken`, may add `met`; only the alert owner's
+own theses; key `thesis_kpi:{kpi_id}:{state}:{period_end}`, so a flapping value notifies once per
+state per period; the body quotes the user's label and threshold and the cited value only).
 
 `POST /alerts` body: `{event_type, ticker?, params?, channels?, enabled?}`. `ticker` omitted or
 null = every company on the caller's watchlist, evaluated at dispatch time. `params` are

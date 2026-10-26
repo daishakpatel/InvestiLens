@@ -22,6 +22,8 @@ const DOCK_QUERY = "(min-width: 1440px)";
 interface AssistantContextValue {
   isOpen: boolean;
   open: () => void;
+  /** Open the assistant and ask a question straight away (the `?ask=` deep link). */
+  ask: (question: string) => void;
   toggle: () => void;
 }
 
@@ -115,9 +117,17 @@ export function PanelProvider({
     setStack([]);
     setAssistantOpen((isOpen) => !isOpen);
   }, []);
+  const { ask: askConversation } = conversation;
+  const ask = useCallback(
+    (question: string) => {
+      open();
+      askConversation(question);
+    },
+    [open, askConversation],
+  );
   const assistant = useMemo<AssistantContextValue>(
-    () => ({ isOpen: assistantOpen, open, toggle }),
-    [assistantOpen, open, toggle],
+    () => ({ isOpen: assistantOpen, open, ask, toggle }),
+    [assistantOpen, open, ask, toggle],
   );
 
   const close = useCallback(() => {

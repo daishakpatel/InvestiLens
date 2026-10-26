@@ -16,7 +16,7 @@ file in the same PR (DB-001).
 - **Constraint/index names** follow a fixed naming convention (see `app/models/base.py`) so
   migrations stay deterministic and reviewable.
 
-## Tables by domain (40 tables)
+## Tables by domain (46 tables)
 
 ```text
 Reference        companies ──< company_identifiers
@@ -43,6 +43,8 @@ Ownership        companies ──< insider_transactions
                  companies ──< institutional_holdings
 
 AI output        companies ──< research_reports ──< research_sources
+                 companies ──< earnings_events (one per fiscal quarter: report date + its source)
+                 companies ──< earnings_briefs (preview / brief versions by inputs hash)
                  research_reports ──< claim_verifications >── chat_messages
                  research_reports (supersedes_report_id ─┐ self-ref)
 
@@ -52,6 +54,8 @@ Users            users ──< refresh_tokens (replaced_by_id ─┐ self-ref, r
                  users ──< alerts >── companies   (company_id NULL = whole watchlist)
                  users ──< notifications >── alerts, companies
                  users ──< chat_sessions ──< chat_messages
+                 users ──< theses >── companies
+                 theses ──< thesis_kpis, thesis_events, thesis_revisions (private; cascade)
                  users ──< report_feedback >── research_reports
 
 Operations       ingestion_runs, ingestion_dead_letters, jobs, llm_calls,
@@ -325,6 +329,60 @@ statement (`document_id` is the DEF 14A):
   alert keys on.
 - FKs to companies and documents `ON DELETE CASCADE`; an outcome goes with its item.
 
+### Earnings calendar and briefs (Phase 7j, ADR-0048)
+
+- `earnings_events (id, company_id, fiscal_year, fiscal_period, report_date NULL, report_time,
+  source, status, source_id NULL, quote NULL, created_at)`: one row per fiscal quarter (unique
+  `uq_earnings_events_period (company_id, fiscal_year, fiscal_period)`), upserted each time the
+  calendar is built. `source` (CHECK `source_known`) is `sec_8k` (an Item 2.02 8-K was filed;
+  `source_id` `filing:<id>`), `announcement` (the company's own sentence, kept in `quote`;
+  `source_id` its paragraph ID) or `estimated` (last year's date for the quarter plus 52 weeks;
+  shown with "~", never notifies). `status` (CHECK `status_known`) is `reported | scheduled |
+  unknown`; `unknown` leaves `report_date` NULL. `report_time` (CHECK `report_time_known`) is
+  `bmo | amc | unknown`. Fiscal period is stored apart from the calendar date (it is never
+  inferred from it).
+- `earnings_briefs (id, company_id, fiscal_year, fiscal_period, kind, version, inputs_hash,
+  inputs_label, report_date_estimated, content JSONB, prompt_version, model NULL, created_at)`:
+  one row per version of a preview or brief. `kind` (CHECK `kind_known`) is `preview | brief`.
+  `inputs_hash` is the sha-256 of the assembled sections (every input's IDs and values), unique
+  per `(company_id, fiscal_year, fiscal_period, kind, inputs_hash)` (`uq_earnings_briefs_inputs`):
+  the same inputs return the stored row; new inputs add `version` n+1 (unique
+  `uq_earnings_briefs_version`), and old versions are kept for audit. `content` is the
+  `EarningsPreview`/`EarningsBrief` schema (money raw USD as strings, ratios decimals).
+  `report_date_estimated` lets the `brief_ready` detector skip previews of estimated dates.
+- FKs to companies `ON DELETE CASCADE`.
+
+### Investment theses (Phase 7k, ADR-0049)
+
+Private, user-owned rows. Every API read filters by the signed-in user (another user's row is a
+404), and deleting a thesis, or the user (`hard_delete_user`), removes everything below by FK
+cascade. Thesis text is never written to logs or metrics (SEC-TH-002).
+
+- `theses (id, user_id, company_id, title, body_md, stance, status, created_at, updated_at)`:
+  `stance` (CHECK `stance_known`) `long | short | watch | avoid` is the user's own tag; `status`
+  (CHECK `status_known`) `active | closed`. Indexes `(user_id, status)` and `(company_id)`. At
+  most 20 active per user, `body_md` at most 20,000 characters (enforced by the API).
+- `thesis_kpis (id, thesis_id, metric, period_type, comparator, threshold, unit, label,
+  rationale NULL, state, last_value NULL, last_source_ids JSONB, last_period NULL,
+  last_period_end NULL, evaluated_at NULL, created_at)`: `metric` is a key of
+  `thesis_metric_registry_v1`, validated at write, with `unit` its canonical unit (ratios as
+  decimals). `comparator` (CHECK `comparator_known`) `gte | lte | gt | lt`; `threshold`
+  NUMERIC(28,8). `state` (CHECK `state_known`) `met | broken | no_data`, with the value, source
+  IDs and period it rests on. `evaluated_at` NULL means "no baseline yet": the next evaluation
+  records a state without an event. At most 10 per thesis.
+- `thesis_events (id, thesis_id, kpi_id NULL, kind, occurred_at, ref_type NULL, ref_id NULL,
+  note NULL, payload JSONB)`: the append-only timeline.
+  - `kind` (CHECK `kind_known`) is `kpi_met | kpi_broken | red_flag | brief_published |
+    user_note | status_changed`.
+  - KPI events are written only on a data-driven state change; their `payload` holds the value,
+    period, `period_end`, source IDs, comparator and threshold.
+  - `ref_id` is a backend source ID (`derived:…`, `redflag:…`, `earnings_brief:{id}`).
+  - A partial unique index `uq_thesis_events_link (thesis_id, kind, ref_id) WHERE kind IN
+    ('red_flag', 'brief_published')` links each flag or brief once.
+  - `kpi_id` is `ON DELETE SET NULL`, so a removed KPI's history stays.
+- `thesis_revisions (thesis_id, revision, title, body_md, created_at)`: PK `(thesis_id,
+  revision)`, numbered from 1; every change of title or body adds one, nothing is overwritten.
+
 ### Alerts and notifications (Phase 7a, ADR-0039)
 
 `alerts`: `event_type` (a key in `app/alerts/registry.py`), `params` JSONB (validated against that
@@ -379,3 +437,5 @@ Migrations are tested up and down, on empty and populated databases, in
 | `f2a9c4e7b1d3` | Add `exec_comp_facts` (FKs to companies and documents `ON DELETE CASCADE`; unique `uq_exec_comp_facts_fact (document_id, fiscal_year, fact_key, person)` NULLS NOT DISTINCT; index `(company_id, fiscal_year)`). Phase 7g, FR-GV-004, ADR-0045. |
 | `a6d2f8c3e5b1` | Add `peer_sets`, `peer_set_members` (unique `(peer_set_id, peer_company_id)`) and `valuation_history` (unique `(company_id, as_of_date, multiple)`); FKs `ON DELETE CASCADE`. Phase 7h, FR-PS-001/008, ADR-0046. |
 | `b9e4d7a2c6f1` | Add `guidance_items` (FKs to companies and documents `ON DELETE CASCADE`, self FK `superseded_by` `ON DELETE SET NULL`, CHECK `one_value_form`, indexes `(company_id, fiscal_year)` and `(source_document_id)`) and `guidance_outcomes` (PK/FK `guidance_id` `ON DELETE CASCADE`, `actual_source_ids` JSONB default `[]`, CHECK `result_known`). Phase 7i, FR-GD-001/002, ADR-0047. |
+| `f186174c8045` | Add `earnings_events` (unique `uq_earnings_events_period`, CHECKs `status_known`, `source_known`, `report_time_known`) and `earnings_briefs` (unique `uq_earnings_briefs_inputs` and `uq_earnings_briefs_version`, CHECK `kind_known`, `content` JSONB); FKs to companies `ON DELETE CASCADE`. Phase 7j, FR-EB-001/007, ADR-0048. |
+| `69ec64a10d9e` | Add `theses` (FKs to users and companies `ON DELETE CASCADE`, CHECKs `stance_known`/`status_known`), `thesis_kpis` (CHECKs `comparator_known`/`state_known`), `thesis_events` (CHECK `kind_known`, `kpi_id` `ON DELETE SET NULL`, partial unique `uq_thesis_events_link`) and `thesis_revisions` (PK `(thesis_id, revision)`); child FKs `ON DELETE CASCADE`. Phase 7k, FR-TH-001, ADR-0049. |

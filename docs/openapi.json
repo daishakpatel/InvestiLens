@@ -275,6 +275,241 @@
         "title": "BoardFacts",
         "type": "object"
       },
+      "BriefHeader": {
+        "properties": {
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "date_estimated": {
+            "title": "Date Estimated",
+            "type": "boolean"
+          },
+          "date_source": {
+            "enum": [
+              "sec_8k",
+              "announcement",
+              "estimated"
+            ],
+            "title": "Date Source",
+            "type": "string"
+          },
+          "date_source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Source Id"
+          },
+          "fiscal_period": {
+            "title": "Fiscal Period",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Date"
+          },
+          "report_time": {
+            "enum": [
+              "bmo",
+              "amc",
+              "unknown"
+            ],
+            "title": "Report Time",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "company_name",
+          "fiscal_year",
+          "fiscal_period",
+          "period_label",
+          "report_date",
+          "report_time",
+          "date_source",
+          "date_estimated"
+        ],
+        "title": "BriefHeader",
+        "type": "object"
+      },
+      "CalendarEvent": {
+        "properties": {
+          "estimated": {
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "fiscal_period": {
+            "title": "Fiscal Period",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "report_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Date"
+          },
+          "report_time": {
+            "enum": [
+              "bmo",
+              "amc",
+              "unknown"
+            ],
+            "title": "Report Time",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "sec_8k",
+              "announcement",
+              "estimated"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "reported",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fiscal_year",
+          "fiscal_period",
+          "period_label",
+          "report_date",
+          "report_time",
+          "source",
+          "status",
+          "estimated"
+        ],
+        "title": "CalendarEvent",
+        "type": "object"
+      },
+      "ChangedPassage": {
+        "properties": {
+          "heading": {
+            "title": "Heading",
+            "type": "string"
+          },
+          "new_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Quote"
+          },
+          "old_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Quote"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "removed",
+              "reworded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "heading",
+          "source_ids"
+        ],
+        "title": "ChangedPassage",
+        "type": "object"
+      },
       "ChatMessage": {
         "properties": {
           "citations": {
@@ -984,6 +1219,32 @@
         "title": "DataFreshnessResponse",
         "type": "object"
       },
+      "DemoInfo": {
+        "description": "Whether this deployment is the public demo, and how fresh its fixture data is.",
+        "properties": {
+          "data_as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data As Of"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "DemoInfo",
+        "type": "object"
+      },
       "DerivedMetricSource": {
         "properties": {
           "formula_id": {
@@ -1119,6 +1380,374 @@
         "title": "DiffPassage",
         "type": "object"
       },
+      "DraftKpi": {
+        "properties": {
+          "comparator": {
+            "enum": [
+              "gte",
+              "lte",
+              "gt",
+              "lt"
+            ],
+            "title": "Comparator",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "metric_label": {
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "FY",
+              "Q",
+              "TTM",
+              "LATEST"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "threshold": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Threshold",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "usd",
+              "usd_per_share",
+              "ratio",
+              "multiple",
+              "score",
+              "days"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "metric_label",
+          "unit",
+          "period_type",
+          "comparator",
+          "threshold",
+          "label",
+          "rationale"
+        ],
+        "title": "DraftKpi",
+        "type": "object"
+      },
+      "DraftRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "notes": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Notes",
+            "type": "string"
+          },
+          "ticker": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "notes"
+        ],
+        "title": "DraftRequest",
+        "type": "object"
+      },
+      "DraftResponse": {
+        "description": "Suggestions only: nothing is saved until the user accepts them. No stance is suggested.",
+        "properties": {
+          "dropped": {
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/DraftKpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "title",
+          "kpis",
+          "dropped",
+          "prompt_version",
+          "notice"
+        ],
+        "title": "DraftResponse",
+        "type": "object"
+      },
+      "EarningsBrief": {
+        "description": "What was reported and what changed, after a report (FR-EB-006).",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/BriefHeader"
+          },
+          "headline_table": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Missing"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Narrative"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "new_flags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RedFlagItem"
+            },
+            "title": "New Flags",
+            "type": "array"
+          },
+          "reaction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reaction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versus_guidance": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GuidanceRow"
+            },
+            "title": "Versus Guidance",
+            "type": "array"
+          },
+          "what_changed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WhatChanged"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "EarningsBrief",
+        "type": "object"
+      },
+      "EarningsBriefsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StoredBrief"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "items",
+          "scope"
+        ],
+        "title": "EarningsBriefsResponse",
+        "type": "object"
+      },
+      "EarningsCalendarResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "upcoming": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalendarEvent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ticker",
+          "upcoming",
+          "events",
+          "method"
+        ],
+        "title": "EarningsCalendarResponse",
+        "type": "object"
+      },
+      "EarningsPreview": {
+        "description": "What to watch before a report (FR-EB-004/005). Never what will happen.",
+        "properties": {
+          "guidance_for_period": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GuidanceRow"
+            },
+            "title": "Guidance For Period",
+            "type": "array"
+          },
+          "header": {
+            "$ref": "#/components/schemas/BriefHeader"
+          },
+          "last_quarter_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_reaction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reaction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Missing"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "open_flags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RedFlagItem"
+            },
+            "title": "Open Flags",
+            "type": "array"
+          },
+          "track_record": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GuidanceTrackRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "valuation_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValuationSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "watch_items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WatchItem"
+            },
+            "title": "Watch Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "header"
+        ],
+        "title": "EarningsPreview",
+        "type": "object"
+      },
       "EarningsQualityResponse": {
         "properties": {
           "fiscal_years": {
@@ -1185,6 +1814,30 @@
             ],
             "title": "Move"
           },
+          "move_5d": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move 5D"
+          },
+          "move_at_open": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move At Open"
+          },
           "post_close": {
             "anyOf": [
               {
@@ -1241,6 +1894,18 @@
               }
             ],
             "title": "Reason"
+          },
+          "volume_ratio": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Ratio"
           }
         },
         "required": [
@@ -2122,6 +2787,40 @@
           "freshness_status"
         ],
         "title": "Freshness",
+        "type": "object"
+      },
+      "GenerateBriefRequest": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "preview",
+              "brief"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "GenerateBriefRequest",
+        "type": "object"
+      },
+      "GenerateBriefResponse": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "item": {
+            "$ref": "#/components/schemas/StoredBrief"
+          }
+        },
+        "required": [
+          "created",
+          "item"
+        ],
+        "title": "GenerateBriefResponse",
         "type": "object"
       },
       "GovernanceField": {
@@ -3346,6 +4045,368 @@
         "title": "JobState",
         "type": "object"
       },
+      "Kpi": {
+        "properties": {
+          "comparator": {
+            "enum": [
+              "gte",
+              "lte",
+              "gt",
+              "lt"
+            ],
+            "title": "Comparator",
+            "type": "string"
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated At"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/KpiPoint"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Period"
+          },
+          "last_period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Period End"
+          },
+          "last_source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Last Source Ids",
+            "type": "array"
+          },
+          "last_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Value"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "metric_label": {
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "FY",
+              "Q",
+              "TTM",
+              "LATEST"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "state": {
+            "enum": [
+              "met",
+              "broken",
+              "no_data"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "threshold": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Threshold",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "usd",
+              "usd_per_share",
+              "ratio",
+              "multiple",
+              "score",
+              "days"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "metric",
+          "metric_label",
+          "unit",
+          "period_type",
+          "comparator",
+          "threshold",
+          "label",
+          "rationale",
+          "state",
+          "last_value",
+          "last_source_ids",
+          "last_period",
+          "last_period_end",
+          "evaluated_at",
+          "history"
+        ],
+        "title": "Kpi",
+        "type": "object"
+      },
+      "KpiCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "comparator": {
+            "enum": [
+              "gte",
+              "lte",
+              "gt",
+              "lt"
+            ],
+            "title": "Comparator",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Metric",
+            "type": "string"
+          },
+          "period_type": {
+            "enum": [
+              "FY",
+              "Q",
+              "TTM",
+              "LATEST"
+            ],
+            "title": "Period Type",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Threshold"
+          }
+        },
+        "required": [
+          "metric",
+          "period_type",
+          "comparator",
+          "threshold",
+          "label"
+        ],
+        "title": "KpiCreate",
+        "type": "object"
+      },
+      "KpiPoint": {
+        "properties": {
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "period_end",
+          "value",
+          "source_ids"
+        ],
+        "title": "KpiPoint",
+        "type": "object"
+      },
+      "KpiUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "comparator": {
+            "anyOf": [
+              {
+                "enum": [
+                  "gte",
+                  "lte",
+                  "gt",
+                  "lt"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparator"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "period_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FY",
+                  "Q",
+                  "TTM",
+                  "LATEST"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Type"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          }
+        },
+        "title": "KpiUpdate",
+        "type": "object"
+      },
       "LanguagePeriod": {
         "properties": {
           "filing_date": {
@@ -3695,6 +4756,106 @@
         "title": "MetricInput",
         "type": "object"
       },
+      "MetricRegistryEntry": {
+        "properties": {
+          "applicable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicable"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "period_types": {
+            "items": {
+              "enum": [
+                "FY",
+                "Q",
+                "TTM",
+                "LATEST"
+              ],
+              "type": "string"
+            },
+            "title": "Period Types",
+            "type": "array"
+          },
+          "unit": {
+            "enum": [
+              "usd",
+              "usd_per_share",
+              "ratio",
+              "multiple",
+              "score",
+              "days"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "group",
+          "unit",
+          "period_types",
+          "description",
+          "applicable"
+        ],
+        "title": "MetricRegistryEntry",
+        "type": "object"
+      },
+      "MetricRegistryResponse": {
+        "properties": {
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRegistryEntry"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "ticker",
+          "metrics"
+        ],
+        "title": "MetricRegistryResponse",
+        "type": "object"
+      },
       "MetricResult": {
         "description": "Deterministic metric output with lineage (DR-040).\n\nA `None` value means the metric could not be computed; `warnings` carries the reason code\n(`NEGATIVE_BASE`, `MISSING_INPUT`, `NOT_APPLICABLE_SECTOR`) per DR-041.",
         "properties": {
@@ -3752,6 +4913,140 @@
           "formula_id"
         ],
         "title": "MetricResult",
+        "type": "object"
+      },
+      "MetricRow": {
+        "description": "One reported figure against the prior quarter and the prior-year quarter. `change_*` is\ngrowth (a ratio) for money and per-share figures, a difference in ratio points for margins.",
+        "properties": {
+          "change_kind": {
+            "enum": [
+              "growth",
+              "points"
+            ],
+            "title": "Change Kind",
+            "type": "string"
+          },
+          "change_vs_prior_quarter": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Vs Prior Quarter"
+          },
+          "change_vs_prior_year": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Vs Prior Year"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "prior_quarter": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prior Quarter"
+          },
+          "prior_quarter_source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Prior Quarter Source Ids",
+            "type": "array"
+          },
+          "prior_year": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prior Year"
+          },
+          "prior_year_source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Prior Year Source Ids",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "unit": {
+            "enum": [
+              "usd",
+              "usd_per_share",
+              "ratio"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "metric",
+          "label",
+          "unit",
+          "change_kind",
+          "value"
+        ],
+        "title": "MetricRow",
         "type": "object"
       },
       "MetricSeries": {
@@ -3839,6 +5134,47 @@
         "title": "MetricSeriesPoint",
         "type": "object"
       },
+      "MetricTable": {
+        "properties": {
+          "fiscal_period": {
+            "title": "Fiscal Period",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "prior_quarter_label": {
+            "title": "Prior Quarter Label",
+            "type": "string"
+          },
+          "prior_year_label": {
+            "title": "Prior Year Label",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fiscal_year",
+          "fiscal_period",
+          "period_label",
+          "prior_quarter_label",
+          "prior_year_label",
+          "rows"
+        ],
+        "title": "MetricTable",
+        "type": "object"
+      },
       "MetricsCoverageResponse": {
         "properties": {
           "freshness": {
@@ -3870,6 +5206,78 @@
           "freshness"
         ],
         "title": "MetricsCoverageResponse",
+        "type": "object"
+      },
+      "Missing": {
+        "description": "A section left out because an input is missing: shown as \"Not available: {reason}\".",
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "reason"
+        ],
+        "title": "Missing",
+        "type": "object"
+      },
+      "Narrative": {
+        "properties": {
+          "dropped": {
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "sentences": {
+            "items": {
+              "$ref": "#/components/schemas/NarrativeSentence"
+            },
+            "title": "Sentences",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sentences",
+          "dropped",
+          "prompt_version",
+          "model"
+        ],
+        "title": "Narrative",
+        "type": "object"
+      },
+      "NarrativeSentence": {
+        "properties": {
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "source_ids"
+        ],
+        "title": "NarrativeSentence",
         "type": "object"
       },
       "NewsItem": {
@@ -4181,6 +5589,22 @@
           "paragraph_id"
         ],
         "title": "NoteBullet",
+        "type": "object"
+      },
+      "NoteCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "NoteCreate",
         "type": "object"
       },
       "NoteItem": {
@@ -5482,6 +6906,124 @@
         "title": "QualityPoint",
         "type": "object"
       },
+      "Reaction": {
+        "description": "The price move around the earnings 8-K, described, never interpreted.",
+        "properties": {
+          "filing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filing Date"
+          },
+          "filing_id": {
+            "title": "Filing Id",
+            "type": "integer"
+          },
+          "move": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move"
+          },
+          "move_5d": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move 5D"
+          },
+          "move_at_open": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move At Open"
+          },
+          "post_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Date"
+          },
+          "pre_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Date"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "volume_ratio": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Ratio"
+          }
+        },
+        "required": [
+          "filing_id",
+          "filing_date"
+        ],
+        "title": "Reaction",
+        "type": "object"
+      },
       "Readiness": {
         "properties": {
           "checks": {
@@ -6276,6 +7818,100 @@
         "title": "SourceDetail",
         "type": "object"
       },
+      "StateCounts": {
+        "properties": {
+          "broken": {
+            "default": 0,
+            "title": "Broken",
+            "type": "integer"
+          },
+          "met": {
+            "default": 0,
+            "title": "Met",
+            "type": "integer"
+          },
+          "no_data": {
+            "default": 0,
+            "title": "No Data",
+            "type": "integer"
+          }
+        },
+        "title": "StateCounts",
+        "type": "object"
+      },
+      "StoredBrief": {
+        "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fiscal_period": {
+            "title": "Fiscal Period",
+            "type": "string"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "inputs_label": {
+            "title": "Inputs Label",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "preview",
+              "brief"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "period_label": {
+            "title": "Period Label",
+            "type": "string"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarningsPreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "fiscal_year",
+          "fiscal_period",
+          "period_label",
+          "version",
+          "inputs_label",
+          "created_at"
+        ],
+        "title": "StoredBrief",
+        "type": "object"
+      },
       "TableChunkSource": {
         "properties": {
           "cell_refs": {
@@ -6454,6 +8090,371 @@
         "title": "TextChunkSource",
         "type": "object"
       },
+      "ThesisCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "body_md": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Body Md",
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "long",
+              "short",
+              "watch",
+              "avoid"
+            ],
+            "title": "Stance",
+            "type": "string"
+          },
+          "ticker": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Ticker",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "title",
+          "stance"
+        ],
+        "title": "ThesisCreate",
+        "type": "object"
+      },
+      "ThesisDetail": {
+        "properties": {
+          "body_md": {
+            "title": "Body Md",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kpi_states": {
+            "$ref": "#/components/schemas/StateCounts"
+          },
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/Kpi"
+            },
+            "title": "Kpis",
+            "type": "array"
+          },
+          "stance": {
+            "enum": [
+              "long",
+              "short",
+              "watch",
+              "avoid"
+            ],
+            "title": "Stance",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ticker",
+          "title",
+          "stance",
+          "status",
+          "created_at",
+          "updated_at",
+          "kpi_states",
+          "body_md",
+          "kpis"
+        ],
+        "title": "ThesisDetail",
+        "type": "object"
+      },
+      "ThesisEvent": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "kpi_met",
+              "kpi_broken",
+              "red_flag",
+              "brief_published",
+              "user_note",
+              "status_changed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "kpi_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kpi Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "ref_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Id"
+          },
+          "ref_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Type"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "occurred_at",
+          "kpi_id",
+          "ref_type",
+          "ref_id",
+          "note",
+          "payload"
+        ],
+        "title": "ThesisEvent",
+        "type": "object"
+      },
+      "ThesisRevision": {
+        "properties": {
+          "body_md": {
+            "title": "Body Md",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "word_diff": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DiffOp"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Word Diff"
+          }
+        },
+        "required": [
+          "revision",
+          "title",
+          "body_md",
+          "created_at",
+          "word_diff"
+        ],
+        "title": "ThesisRevision",
+        "type": "object"
+      },
+      "ThesisSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kpi_states": {
+            "$ref": "#/components/schemas/StateCounts"
+          },
+          "stance": {
+            "enum": [
+              "long",
+              "short",
+              "watch",
+              "avoid"
+            ],
+            "title": "Stance",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ticker",
+          "title",
+          "stance",
+          "status",
+          "created_at",
+          "updated_at",
+          "kpi_states"
+        ],
+        "title": "ThesisSummary",
+        "type": "object"
+      },
+      "ThesisUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "body_md": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Md"
+          },
+          "stance": {
+            "anyOf": [
+              {
+                "enum": [
+                  "long",
+                  "short",
+                  "watch",
+                  "avoid"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stance"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "closed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ThesisUpdate",
+        "type": "object"
+      },
       "TokenResponse": {
         "description": "Access token in the body; the refresh token is set as an httpOnly cookie (AUTH-002).",
         "properties": {
@@ -6500,6 +8501,42 @@
           "tool"
         ],
         "title": "ToolTraceEntry",
+        "type": "object"
+      },
+      "TopicShift": {
+        "properties": {
+          "after_per_1k": {
+            "title": "After Per 1K",
+            "type": "number"
+          },
+          "before_per_1k": {
+            "title": "Before Per 1K",
+            "type": "number"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "label",
+          "before_per_1k",
+          "after_per_1k",
+          "source_ids"
+        ],
+        "title": "TopicShift",
         "type": "object"
       },
       "TrackRecordQuarter": {
@@ -6755,6 +8792,70 @@
         "title": "ValuationBandsResponse",
         "type": "object"
       },
+      "ValuationLine": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "multiple": {
+            "title": "Multiple",
+            "type": "string"
+          },
+          "own_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Own Label"
+          },
+          "own_n": {
+            "default": 0,
+            "title": "Own N",
+            "type": "integer"
+          },
+          "peer_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peer Label"
+          },
+          "peer_n": {
+            "default": 0,
+            "title": "Peer N",
+            "type": "integer"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "multiple",
+          "label",
+          "value",
+          "source_ids"
+        ],
+        "title": "ValuationLine",
+        "type": "object"
+      },
       "ValuationResponse": {
         "properties": {
           "freshness": {
@@ -6778,6 +8879,35 @@
           "freshness"
         ],
         "title": "ValuationResponse",
+        "type": "object"
+      },
+      "ValuationSnapshot": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ValuationLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "lines"
+        ],
+        "title": "ValuationSnapshot",
         "type": "object"
       },
       "VerifiedClaim": {
@@ -6911,6 +9041,44 @@
         "title": "VerifiedOutput",
         "type": "object"
       },
+      "WatchItem": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "growth_deceleration",
+              "new_risk_factor",
+              "topic_rise",
+              "margin_reversal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reworded": {
+            "default": false,
+            "title": "Reworded",
+            "type": "boolean"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "source_ids"
+        ],
+        "title": "WatchItem",
+        "type": "object"
+      },
       "Watchlist": {
         "properties": {
           "id": {
@@ -7007,6 +9175,86 @@
           "coverage"
         ],
         "title": "WeightedMetric",
+        "type": "object"
+      },
+      "WhatChanged": {
+        "properties": {
+          "against_filing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Against Filing Date"
+          },
+          "against_filing_id": {
+            "title": "Against Filing Id",
+            "type": "integer"
+          },
+          "filing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filing Date"
+          },
+          "filing_id": {
+            "title": "Filing Id",
+            "type": "integer"
+          },
+          "filing_type": {
+            "title": "Filing Type",
+            "type": "string"
+          },
+          "new_risks": {
+            "title": "New Risks",
+            "type": "integer"
+          },
+          "removed_risks": {
+            "title": "Removed Risks",
+            "type": "integer"
+          },
+          "reworded_risks": {
+            "title": "Reworded Risks",
+            "type": "integer"
+          },
+          "top_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ChangedPassage"
+            },
+            "title": "Top Changes",
+            "type": "array"
+          },
+          "topic_shifts": {
+            "items": {
+              "$ref": "#/components/schemas/TopicShift"
+            },
+            "title": "Topic Shifts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "filing_id",
+          "filing_type",
+          "filing_date",
+          "against_filing_id",
+          "against_filing_date",
+          "new_risks",
+          "removed_risks",
+          "reworded_risks",
+          "top_changes",
+          "topic_shifts"
+        ],
+        "title": "WhatChanged",
         "type": "object"
       },
       "XbrlFactSource": {
@@ -7684,6 +9932,28 @@
         "summary": "Update Alert",
         "tags": [
           "Watchlist & Alerts"
+        ]
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "description": "Sign in as the shared demo user (demo mode only; NFR-ME-007, ADR-0050).",
+        "operationId": "demo_login_api_v1_auth_demo_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo Login",
+        "tags": [
+          "Auth"
         ]
       }
     },
@@ -8516,6 +10786,214 @@
         "summary": "Get Earnings Quality",
         "tags": [
           "Company"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/earnings/briefs": {
+      "get": {
+        "description": "Stored preview/brief versions, latest quarter first, then newest version (FR-EB-015).",
+        "operationId": "earnings_briefs_api_v1_companies__ticker__earnings_briefs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "preview",
+                    "brief"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 1990,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fiscal Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^Q[1-4]$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fiscal Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsBriefsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Earnings Briefs",
+        "tags": [
+          "Earnings"
+        ]
+      },
+      "post": {
+        "description": "Make (or return the unchanged) preview or brief for the company's current quarter.",
+        "operationId": "regenerate_earnings_brief_api_v1_companies__ticker__earnings_briefs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateBriefRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateBriefResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Earnings Brief",
+        "tags": [
+          "Earnings"
+        ]
+      }
+    },
+    "/api/v1/companies/{ticker}/earnings/calendar": {
+      "get": {
+        "description": "Reported and upcoming earnings dates, newest quarter first (FR-EB-001/002).",
+        "operationId": "earnings_calendar_api_v1_companies__ticker__earnings_calendar_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsCalendarResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Earnings Calendar",
+        "tags": [
+          "Earnings"
         ]
       }
     },
@@ -10632,6 +13110,29 @@
         ]
       }
     },
+    "/api/v1/meta/demo": {
+      "get": {
+        "description": "Demo banner data (NFR-ME-007): on in demo mode, with the fixtures' latest filing date.",
+        "operationId": "demo_info_api_v1_meta_demo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo Info",
+        "tags": [
+          "Health",
+          "Meta"
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "description": "The current user's in-app notifications, newest first (from the alert-dispatch job).",
@@ -11288,6 +13789,827 @@
         "summary": "Get Source",
         "tags": [
           "Sources"
+        ]
+      }
+    },
+    "/api/v1/theses": {
+      "get": {
+        "description": "The caller's theses, most recently updated first; `ticker` narrows to one company.",
+        "operationId": "list_theses_api_v1_theses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 12,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ThesisSummary"
+                  },
+                  "title": "Response List Theses Api V1 Theses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Theses",
+        "tags": [
+          "Theses"
+        ]
+      },
+      "post": {
+        "operationId": "create_thesis_api_v1_theses_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThesisCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesisDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Thesis",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/theses/draft": {
+      "post": {
+        "description": "Suggested title and KPIs from the caller's own notes; nothing is saved (FR-TH-010).",
+        "operationId": "draft_thesis_api_v1_theses_draft_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Thesis",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/theses/{thesis_id}": {
+      "delete": {
+        "description": "Hard delete: the thesis, its KPIs, events and revisions (FR-TH-014).",
+        "operationId": "delete_thesis_api_v1_theses__thesis_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Thesis",
+        "tags": [
+          "Theses"
+        ]
+      },
+      "get": {
+        "operationId": "get_thesis_api_v1_theses__thesis_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesisDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Thesis",
+        "tags": [
+          "Theses"
+        ]
+      },
+      "patch": {
+        "operationId": "update_thesis_api_v1_theses__thesis_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThesisUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesisDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Thesis",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/theses/{thesis_id}/events": {
+      "get": {
+        "description": "The timeline, newest first.",
+        "operationId": "list_events_api_v1_theses__thesis_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ThesisEvent"
+                  },
+                  "title": "Response List Events Api V1 Theses  Thesis Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "Theses"
+        ]
+      },
+      "post": {
+        "description": "A user note on the timeline.",
+        "operationId": "add_note_api_v1_theses__thesis_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesisEvent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Note",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/theses/{thesis_id}/kpis": {
+      "post": {
+        "operationId": "add_kpi_api_v1_theses__thesis_id__kpis_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KpiCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kpi"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Kpi",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/theses/{thesis_id}/kpis/{kpi_id}": {
+      "delete": {
+        "operationId": "delete_kpi_api_v1_theses__thesis_id__kpis__kpi_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kpi_id",
+            "required": true,
+            "schema": {
+              "title": "Kpi Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Kpi",
+        "tags": [
+          "Theses"
+        ]
+      },
+      "patch": {
+        "operationId": "update_kpi_api_v1_theses__thesis_id__kpis__kpi_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kpi_id",
+            "required": true,
+            "schema": {
+              "title": "Kpi Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KpiUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kpi"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Kpi",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/theses/{thesis_id}/revisions": {
+      "get": {
+        "description": "Every saved title and body, newest first, each with a word diff against the previous.",
+        "operationId": "list_revisions_api_v1_theses__thesis_id__revisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thesis_id",
+            "required": true,
+            "schema": {
+              "title": "Thesis Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ThesisRevision"
+                  },
+                  "title": "Response List Revisions Api V1 Theses  Thesis Id  Revisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Revisions",
+        "tags": [
+          "Theses"
+        ]
+      }
+    },
+    "/api/v1/thesis/metric-registry": {
+      "get": {
+        "description": "Trackable metrics with unit, periods and (for `ticker`) sector applicability.",
+        "operationId": "metric_registry_api_v1_thesis_metric_registry_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ticker",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 12,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricRegistryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Metric Registry",
+        "tags": [
+          "Theses"
         ]
       }
     },

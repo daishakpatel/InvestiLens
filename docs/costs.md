@@ -15,6 +15,12 @@ relying on them — they are estimates, not quotes.
   `DEFAULT_AI_BUDGET_MONTH_USD=$0.50`; reports are pre-generated with the deterministic FakeLLM
   (`make seed`), so steady-state LLM spend is ~$0.
 
+> **Current demo blueprint (Phase 7l, ADR-0050): about $30/mo.** `render.yaml` now runs the
+> trimmed shape: Starter API $7, one Starter worker with Beat in-process $7, Postgres Basic-256MB
+> about $6, Redis Starter about $10, static frontend $0. It uses no model or data-provider keys,
+> so provider spend is $0. The table below is the original five-service layout, kept for the
+> case where the demo outgrows one worker.
+
 ## Hosting (Render)
 
 | Service | Plan | Est. $/mo |

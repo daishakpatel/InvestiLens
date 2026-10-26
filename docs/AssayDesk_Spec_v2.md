@@ -1359,7 +1359,7 @@ Rules:
 - Report generation is recorded with `data_version` (hash of metric snapshot + document set IDs) for reproducibility.
 
 ## 17.3 Prompt inventory (owned by Research agent; see Appendix D)
-`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_{section}_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `claim_verifier_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `note_summary_v1`, `governance_v1`, `guidance_extract_v1`.
+`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_{section}_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `claim_verifier_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `note_summary_v1`, `governance_v1`, `guidance_extract_v1`, `earnings_narrative_v1`, `thesis_draft_v1`.
 
 ---
 
@@ -3264,7 +3264,7 @@ Intel's D&A is the sum of the parts they tag (`composite:depreciation_amortizati
 | Net interest margin | N/A | ✓ [P2] | N/A |
 
 ## Appendix D — Prompt inventory
-`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_executive_summary_v1`, `section_generator_company_overview_v1`, `section_generator_revenue_v1`, `section_generator_profitability_v1`, `section_generator_balance_sheet_v1`, `section_generator_cash_flow_v1`, `section_generator_valuation_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `bull_bear_generator_v1`, `claim_verifier_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `judge_faithfulness_v1`, `governance_v1` (Phase 7g: one proxy → `GovernanceFacts`, each field a verbatim quote with a backend `paragraph_id` or null; no computing; `app/governance/facts.py`), `note_summary_v1` (Phase 7f: one note → ≤5 bullets, each with a verbatim quote and the backend-issued `paragraph_id`; untrusted-data, no-advice, no-forecast and no-prior-year-change rules; `app/footnotes/summary.py`). `guidance_extract_v1` (Phase 7i: the outlook sentences of one EX-99.1 → `{items: [{metric, low, high, point, unit, basis, period_text, quote, paragraph_id}]}`, metric from `guidance_metric_v1`, money raw USD, ratios decimal, "plus or minus" left to code; untrusted data, no computing, no advice; every item checked in code; `app/guidance/extract.py`).
+`intent_classifier_v1`, `query_rewriter_v1`, `section_generator_executive_summary_v1`, `section_generator_company_overview_v1`, `section_generator_revenue_v1`, `section_generator_profitability_v1`, `section_generator_balance_sheet_v1`, `section_generator_cash_flow_v1`, `section_generator_valuation_v1`, `news_categorizer_v1`, `news_summarizer_v1`, `risk_extractor_v1`, `mgmt_topic_extractor_v1`, `bull_bear_generator_v1`, `claim_verifier_v1`, `filing_diff_explainer_v1`, `chat_answerer_v1`, `judge_faithfulness_v1`, `governance_v1` (Phase 7g: one proxy → `GovernanceFacts`, each field a verbatim quote with a backend `paragraph_id` or null; no computing; `app/governance/facts.py`), `note_summary_v1` (Phase 7f: one note → ≤5 bullets, each with a verbatim quote and the backend-issued `paragraph_id`; untrusted-data, no-advice, no-forecast and no-prior-year-change rules; `app/footnotes/summary.py`). `guidance_extract_v1` (Phase 7i: the outlook sentences of one EX-99.1 → `{items: [{metric, low, high, point, unit, basis, period_text, quote, paragraph_id}]}`, metric from `guidance_metric_v1`, money raw USD, ratios decimal, "plus or minus" left to code; untrusted data, no computing, no advice; every item checked in code; `app/guidance/extract.py`). `earnings_narrative_v1` (Phase 7j: the structured lines of one preview or brief, each with its backend source IDs, filing words wrapped as untrusted data → either `{items: [{id, text}]}`, one-sentence rewordings of the code-built watch items that must keep every number, or `{sentences: [{text, source_ids}]}`, at most 4 sentences and 120 words, each verified by the claim verifier; no forecasts, no advice, no new numbers; `app/earnings/prompt.py`). `thesis_draft_v1` (Phase 7k: the user's own notes, as untrusted data, plus the thesis metric registry → `{title, kpis: [{metric, period_type, comparator, threshold, label, rationale}]}`; metrics from the registry only, re-validated in code; never a stance, a verdict on the thesis, advice or a forecast; nothing saved until the user accepts; token counts only logged; `app/thesis/draft.py`).
 Each prompt file contains: purpose, inputs, output schema, safety rules (untrusted-content wrapper), examples, version, changelog, eval results link.
 
 ## Appendix E — Endpoint index (v1)
@@ -3515,6 +3515,76 @@ Added as each Phase 7 task lands (`Instructions/26_…` onward). Same RFC 2119 w
 | DR-GD-002 | A missing actual MUST be `actual_unavailable` with NULL values, never zero. |
 | DR-GD-003 | No consensus or analyst estimate MAY be stored, shown or approximated. |
 | AGT-GD-001 | The model MUST NOT compute a number (ranges from tolerances are computed in code), and an item whose quote comes from a sentence that reads as an instruction MUST be rejected. |
+
+
+**Earnings previews and briefs (Phase 7j, ADR-0048)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-EB-001 | Each fiscal quarter's report date MUST be stored in `earnings_events` (one row per company and fiscal quarter) with `report_time` (bmo, amc, unknown), `source` (sec_8k, announcement, estimated) and `status` (scheduled, reported, unknown); fiscal period is stored apart from the date. |
+| FR-EB-002 | The date MUST come, in order, from a filed Item 2.02 8-K (the reaction code's list, the latest quarter ended before it), a company sentence naming that quarter, a "will report"-type verb and exactly one later date (kept as the quote), or an estimate of last year's date plus 52 weeks. An estimate is shown with "~" and never triggers a preview or a notification. |
+| FR-EB-003 | The reaction code in `filings/earnings.py` MUST be reused for reported dates and reactions; it adds the move at the next open, the 5-session move and the first session's volume over the prior 20-session average. |
+| FR-EB-004 | A preview MUST hold the header, the last quarter's revenue, gross and operating margin, GAAP EPS and operating cash flow with changes and source IDs, the initial guidance for the quarter, the track record (when sufficient), P/E and EV/EBITDA with positional labels (when 7h data exists), red flags of the last 90 days, the last reaction and the watch items. |
+| FR-EB-005 | Watch items (at most 5) MUST come only from candidates built in code (YoY growth slowed by more than 5 points, a margin reversal held for two quarters, new risk factors in the latest 10-Q/10-K, the MD&A topic that rose most), each with its evidence IDs; with no candidate the list is empty and the page says so. |
+| FR-EB-006 | A brief MUST hold the headline table (vs prior quarter and prior-year quarter, with source IDs), outcomes against guidance, the reaction, what changed (risk counts and top 3 changes with old/new quotes against the previous 10-Q, topic shifts), red flags since the previous report, and a narrative of at most 4 sentences and 120 words. |
+| FR-EB-007 | A version MUST be keyed by (company, fiscal year, fiscal period, kind, inputs hash), where the hash covers the IDs and values of every input; the same inputs return the stored version, changed inputs add the next version and the old ones are kept. |
+| FR-EB-008 | A preview MUST be made 3 days before a non-estimated scheduled date; a brief once the Item 2.02 8-K and its EX-99.1 are stored, and a new version when the 10-Q lands. A version made before the 10-Q MUST say "10-Q not yet filed" for what changed. |
+| FR-EB-009 | The `brief_ready` alert MUST notify once per (company, period, kind), whatever the version, and link to the brief. |
+| FR-EB-010 | The single prompt `earnings_narrative_v1` MUST see only the brief's structured lines (filing words wrapped as untrusted data), never raw filing text beyond those quotes. |
+| FR-EB-011 | Brief text MUST NOT forecast ("expect", "likely to beat", "should rally", "outlook for the stock"…) or advise; every template and model output is checked by test. |
+| FR-EB-012 | Briefs MUST be made only for companies on a watchlist or in the seed set, at most `earnings_brief_daily_cap` new versions a day, logged when reached. |
+| FR-EB-013 | `GET /companies/{ticker}/earnings/calendar`, `GET /companies/{ticker}/earnings/briefs?kind=&fiscal_year=&fiscal_period=` (all versions) and a user-triggered, per-user rate-limited `POST /companies/{ticker}/earnings/briefs` MUST exist. |
+| FR-EB-014 | The Earnings view MUST show an Upcoming card (date with estimate flag), the latest brief or preview, figures that open the citation drawer, the narrative under the AI mark, "Not available: {reason}" for a section without inputs, and a print layout with no clipped tables. |
+| FR-EB-015 | When a quarter has several versions, a switcher MUST label each by what changed ("after 10-Q filed"). |
+| CIT-EB-001 | Every figure in a preview or brief MUST carry the backend source IDs of the stored rows it comes from. |
+| CIT-EB-002 | Every narrative sentence MUST cite at least one ID given to the model and pass the standard claim verifier; an uncited or unverified sentence is dropped. |
+| CIT-EB-003 | A dropped sentence MUST shorten the narrative; nothing is generated to replace it. |
+| AGT-EB-001 | The model MUST NOT produce a number: a watch-item rewording whose numbers differ from the candidate's is rejected and the candidate's own sentence is shown. |
+| AGT-EB-002 | A preview says what to watch, never what will happen; prediction language is rejected by the guard. |
+
+**Investment thesis tracker (Phase 7k, ADR-0049)**
+
+| ID | Requirement |
+|----|-------------|
+| FR-TH-001 | A thesis MUST be stored in `theses` (title, markdown body, `stance` long/short/watch/avoid as the user's own tag, `status` active/closed) with KPIs, an append-only `thesis_events` timeline and `thesis_revisions`, all owned through `theses.user_id`. |
+| FR-TH-002 | A KPI's `metric` MUST be a key of the thesis metric registry (stored FY/Q/TTM metrics, 7d scores, 7h multiples, quarterly margins, revenue YoY, revenue vs the 7i guided midpoint), validated at write with an allowed period type. |
+| FR-TH-003 | A user MUST have at most 20 active theses, a thesis at most 10 KPIs, and `body_md` at most 20,000 characters. |
+| FR-TH-004 | The evaluator MUST compare the metric's latest stored value with the threshold in Decimal (`gte` equal is met) and store `met`, `broken` or `no_data` on the KPI with the value and its source IDs, appending an event only when the state changes because the data changed; a first evaluation or one after the user edits the rule is a baseline without an event. |
+| FR-TH-005 | A threshold MUST be in the metric's canonical unit (ratios as decimals); the form converts a percent, and the API rejects a likely unit mistake (a ratio beyond ±5, a score outside its range) with a message saying what to enter. |
+| FR-TH-006 | A KPI on a metric not applicable to the company's sector (a bank's gross margin) MUST be rejected at creation. |
+| FR-TH-007 | KPIs MUST be re-evaluated after metrics are rebuilt and when a red flag or brief is stored for the company, never by polling. |
+| FR-TH-008 | A red flag or a quarter's first preview/brief arriving after a thesis was written MUST appear once on its timeline (`red_flag`, `brief_published`) and MUST NOT change any KPI state. |
+| FR-TH-009 | The `thesis_trigger` alert MUST fire only for the alert owner's theses, on transitions into `broken` (and `met` when chosen), keyed `thesis_kpi:{kpi_id}:{state}:{period_end}`, with the text "Your KPI '{label}' ({metric} {comparator} {threshold}) is now {state}: latest {value} ({source_id})." |
+| FR-TH-010 | "Draft from my notes" MUST return a suggested title and at most 5 KPIs drawn only from the registry, each re-validated in code, never a stance; nothing is saved until the user accepts. |
+| FR-TH-011 | The draft prompt MUST treat the notes as untrusted data and MUST NOT include any other user's data. |
+| FR-TH-012 | No generated text MAY say whether a thesis is right, wrong, playing out or at risk; verdict words are limited to KPI states. |
+| FR-TH-013 | The API MUST offer `GET/POST /theses`, `GET/PATCH/DELETE /theses/{id}`, `POST /theses/{id}/kpis`, `PATCH/DELETE /theses/{id}/kpis/{kpi_id}`, `GET /theses/{id}/events`, `GET /theses/{id}/revisions`, `POST /theses/draft` (rate-limited) and `GET /thesis/metric-registry`. |
+| FR-TH-014 | Deleting a thesis MUST hard-delete its KPIs, events and revisions; deleting the account MUST remove its theses. |
+| FR-TH-015 | The Thesis tab and Theses page MUST show the text as safe markdown, a KPI table with state chips in text and icon (never green/red), latest value with its source, threshold and a sparkline, and a timeline linking to each event's evidence. |
+| FR-TH-016 | Editing a thesis MUST add a revision; a History drawer MUST show each revision's word diff. |
+| FR-TH-017 | Empty states MUST explain how to start; the draft assist MUST state it only suggests metrics and thresholds and the user decides. |
+| FR-TH-018 | Markdown MUST be rendered without raw HTML or remote images, with only http(s) links (XSS test). |
+| SEC-TH-001 | Every thesis endpoint MUST answer 404 for another user's thesis, KPI, event or revision (tested per endpoint). |
+| SEC-TH-002 | Thesis text, labels, notes and draft notes MUST NOT appear in application logs, metric labels or error reports; `llm_calls` records token counts only. |
+| SEC-TH-003 | Thesis free text MUST be length-bounded at the API. |
+| AGT-TH-001 | The model MAY only suggest a thesis structure from the user's own notes; it MUST NOT set KPI states, compute values or choose a stance. |
+
+**Measured results and the public demo (Phase 7l, ADR-0050)**
+
+| ID | Requirement |
+|----|-------------|
+| NFR-ME-001 | `make eval-report` MUST write `docs/eval/latest.json` and `latest.md` with the date, git SHA, model name, prompt versions, dataset version and case count, from a throwaway database seeded from fixtures; the mock run MUST be deterministic and offline, and a live run (`EVAL_LIVE=1`) MAY be made by hand. |
+| NFR-ME-002 | The report MUST give citation validity, number match, correct abstention and false abstention (both, always), retrieval hit@5 and MRR, injection resistance, and p50/p95 latency for chat and report generation, each defined in the report. |
+| NFR-ME-003 | Every proportion MUST carry its count and a Wilson 95% interval; a sample under 100 MUST NOT be shown as a bare 100%. |
+| NFR-ME-004 | CI MUST fail when a metric breaches `docs/eval/thresholds.json` or when the report is stale against the current content of the chat, citation, retrieval, prompt, eval and golden-set code. Lowering a threshold requires an ADR line in the PR. |
+| NFR-ME-005 | The README MUST show a results table linked to `docs/eval/latest.md` with its date and MUST NOT contain a number absent from `latest.json` or `docs/generated/stats.json`. |
+| NFR-ME-006 | The report MUST state what the golden set and the mock run do not cover. |
+| NFR-ME-007 | `DEMO_MODE` MUST serve fixture data only, refuse registration, sign visitors into one shared sandbox account that is deleted nightly, and show "Demo: fixture data as of {date}. Not investment advice." on every page. |
+| NFR-ME-008 | The demo's hosting and monthly cost MUST be recorded in an ADR, with deploy steps in `docs/deploy-demo.md` and a reproducible `make deploy-demo`. |
+| NFR-ME-009 | The demo MUST rate-limit by client IP, refuse request bodies over `MAX_REQUEST_BYTES` (and of unknown length), keep the chat length cap, replay recorded LLM output only, keep secrets out of images, and pass a post-deploy smoke test. |
+| NFR-ME-010 | `/demo` MUST offer three one-click scenarios (company overview with red flags and earnings quality; a cited question with the citation drawer; a filing diff), each working from recorded data with no network. |
+| NFR-ME-011 | `docs/limitations.md` MUST cover data, coverage, models and heuristics, AI, security and privacy, and what is not built, with known issues and a validation plan; `scripts/check_docs_consistency.py` MUST run in `make check` with a failing-case test per rule; stats MUST be generated (`make stats`). |
+| NFR-ME-012 | A vertical-slice Playwright test MUST run the five-minute path against the demo build with no unexpected console errors, and the README's GIF MUST be generated from that run. |
 
 ---
 
