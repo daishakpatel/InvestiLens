@@ -12,6 +12,7 @@ frontend/dist/
 .storage/
 backups/
 .git/
-.env
-.env.*
-!.env.example
+# Secrets never enter an image, from any directory (NFR-ME-009, SEC-001).
+**/.env
+**/.env.*
+!**/.env.example

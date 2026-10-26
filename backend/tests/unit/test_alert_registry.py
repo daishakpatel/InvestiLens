@@ -25,8 +25,10 @@ def test_every_detector_sample_is_free_of_advice(event_type: registry.AlertEvent
     assert sample.source_ids, "every event carries backend-issued evidence ids"
     # Keys never collide across types: each is prefixed by its type, or is itself a
     # type-unique evidence ID (`red_flag` events use the flag's `redflag:` source ID, FR-RF-011),
-    # or a key the task fixed (`guidance_miss` keys `guidance_outcome:{id}`, FR-GD-013).
-    own_prefix = {"guidance_miss": "guidance_outcome:"}.get(event_type.key, f"{event_type.key}:")
+    # or a key the task fixed (`guidance_miss` keys `guidance_outcome:{id}`, FR-GD-013;
+    # `thesis_trigger` keys `thesis_kpi:{kpi}:{state}:{period_end}`, FR-TH-009).
+    fixed = {"guidance_miss": "guidance_outcome:", "thesis_trigger": "thesis_kpi:"}
+    own_prefix = fixed.get(event_type.key, f"{event_type.key}:")
     assert sample.event_key.startswith(own_prefix) or (sample.event_key in sample.source_ids)
 
 
