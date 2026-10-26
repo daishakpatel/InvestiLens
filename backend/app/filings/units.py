@@ -16,7 +16,8 @@ from typing import Literal
 from app.ingestion.documents.clean import clean_tree
 from app.models import DocumentChunk
 
-RISK_SECTION = "Item 1A"
+# A 10-K's Item 1A, or a 10-Q's Part II Item 1A (section keys are part-qualified since 7c).
+RISK_SECTIONS = frozenset({"Item 1A", "Part II, Item 1A"})
 _SUBHEADING_MAX_CHARS = 140  # same bound the chunker uses for sub-headings (CH-002)
 _RISK_HEADING_MAX_CHARS = 400
 _SENTENCE_BREAK = re.compile(r"[.!?]\s+[A-Z]")
@@ -152,7 +153,7 @@ def build_units(chunks: Iterable[DocumentChunk], emphasized: str | None = None) 
         # captions, which would otherwise double-report every change.
         if section is None or heading_only:
             return
-        if section == RISK_SECTION and is_label and all_bullets:
+        if section in RISK_SECTIONS and is_label and all_bullets:
             return
         units.append(
             Unit(
@@ -160,7 +161,7 @@ def build_units(chunks: Iterable[DocumentChunk], emphasized: str | None = None) 
                 heading=heading,
                 text="\n\n".join(body),
                 source_ids=tuple(dict.fromkeys(sources)),
-                kind="risk_factor" if section == RISK_SECTION else "section",
+                kind="risk_factor" if section in RISK_SECTIONS else "section",
             )
         )
 
@@ -169,7 +170,7 @@ def build_units(chunks: Iterable[DocumentChunk], emphasized: str | None = None) 
         subheading = not para.is_bullet and _is_subheading(para.text)
         starts_unit = subheading or (
             not para.is_bullet
-            and para.section == RISK_SECTION
+            and para.section in RISK_SECTIONS
             and _is_risk_heading(para.text, emphasized)
             # A one-sentence paragraph directly under a risk caption is its body, not a new one.
             and not (heading_only and section is not None and not is_label)

@@ -28,6 +28,7 @@ from app.eval.metrics import (
     recall_at_k,
     reciprocal_rank,
 )
+from app.eval.published import check_answer
 from app.eval.resolve import DocKeyResolver
 from app.providers.base import LLMClient
 from app.rag.pipeline import run_retrieval
@@ -104,7 +105,17 @@ def evaluate_question(
         "n_citations": len(turn.citations),
         "evidence_label": turn.evidence_label,
         "latency_ms": latency_ms,
+        "must_abstain": q.must_abstain,
     }
+    if answered:  # NFR-ME-002: checked on what the user sees, against the source resolver
+        m.update(
+            check_answer(
+                session,
+                turn.answer,
+                [(c.number, c.source_id) for c in turn.citations],
+                rel_tol=settings.citation_numeric_rel_tolerance,
+            )
+        )
 
     if q.expected_numeric is not None:
         m["numeric_correct"] = (

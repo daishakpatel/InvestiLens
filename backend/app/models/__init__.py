@@ -7,6 +7,7 @@ that builds the schema import from here so nothing is missed.
 from app.models.base import Base
 from app.models.company import Company, CompanyIdentifier, FiscalCalendar
 from app.models.document import Document, DocumentChunk, Filing
+from app.models.earnings import EarningsBrief, EarningsEvent
 from app.models.financial import (
     CorporateAction,
     FinancialFact,
@@ -31,6 +32,7 @@ from app.models.ops import (
 from app.models.peers import PeerSet, PeerSetMember, ValuationHistory
 from app.models.redflag import RedFlag
 from app.models.research import ClaimVerification, ResearchReport, ResearchSource
+from app.models.thesis import Thesis, ThesisEvent, ThesisKpi, ThesisRevision
 from app.models.user import (
     Alert,
     AuthToken,
@@ -58,6 +60,8 @@ __all__ = [
     "DataQualityIssue",
     "Document",
     "DocumentChunk",
+    "EarningsBrief",
+    "EarningsEvent",
     "EvalResult",
     "EvalRun",
     "ExecCompFact",
@@ -85,6 +89,10 @@ __all__ = [
     "ResearchReport",
     "ResearchSource",
     "RetrievalLog",
+    "Thesis",
+    "ThesisEvent",
+    "ThesisKpi",
+    "ThesisRevision",
     "User",
     "ValuationHistory",
     "Watchlist",

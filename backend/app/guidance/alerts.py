@@ -39,7 +39,7 @@ class GuidanceMissParams(BaseModel):
     )
 
 
-def _shown(value: Decimal | None, unit: str | None, metric: str) -> str:
+def shown_value(value: Decimal | None, unit: str | None, metric: str) -> str:
     if unit in ("ratio", "percent_of_revenue"):
         return format_metric_value(value, "ratio")
     return format_metric_value(value, "USD/shares" if metric.startswith("eps") else "USD")
@@ -61,12 +61,12 @@ def guidance_event(
 ) -> DetectedEvent:
     where = "below" if result == "below_range" else "above"
     guided = (
-        _shown(low, unit, metric)
+        shown_value(low, unit, metric)
         if low == high
-        else f"{_shown(low, unit, metric)}\u2013{_shown(high, unit, metric)}"
+        else f"{shown_value(low, unit, metric)}\u2013{shown_value(high, unit, metric)}"
     )
     body = (
-        f"{label(metric)} came in {where} the guided range ({_shown(actual, unit, metric)} vs "
+        f"{label(metric)} came in {where} the guided range ({shown_value(actual, unit, metric)} vs "
         f"{guided}). Source: {source_ids[0]}."
     )
     return DetectedEvent(
