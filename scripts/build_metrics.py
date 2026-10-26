@@ -22,6 +22,7 @@ from app.finance.valuation_builder import build_company_valuation
 from app.finance.valuation_history import build_valuation_history
 from app.guidance.builder import build_company_guidance
 from app.models import Company
+from app.thesis.links import refresh_company_theses
 
 
 def main() -> None:
@@ -35,10 +36,11 @@ def main() -> None:
             footnotes = build_company_footnotes(session, company)
             history = build_valuation_history(session, company)
             guided = build_company_guidance(session, company)  # outcomes against new actuals
+            theses = refresh_company_theses(session, company)  # KPIs on the rebuilt rows (7k)
             print(
                 f"{company.ticker}: {counts}, derived_ratios={ratios}, valuation={valuation}, "
                 f"earnings_quality={quality}, footnotes={footnotes}, valuation_history={history}, "
-                f"guidance_outcomes={guided}"
+                f"guidance_outcomes={guided}, thesis_events={theses}"
             )
         # Default peer sets compare market caps, so they are drawn once every company's is fresh.
         for company in companies:

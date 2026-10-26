@@ -31,8 +31,19 @@ def main() -> int:
     parser.add_argument(
         "--with-reports", action="store_true", help="also pre-generate FakeLLM research reports"
     )
+    parser.add_argument(
+        "--if-empty",
+        action="store_true",
+        help="do nothing when companies already exist (the demo's pre-deploy step, ADR-0050)",
+    )
     args = parser.parse_args()
     tickers = args.tickers or _SEED
+
+    if args.if_empty:
+        with session_scope() as session:
+            if company_repo.get_by_ticker(session, tickers[0]) is not None:
+                print("[seed] already seeded; nothing to do.")
+                return 0
 
     for ticker in tickers:
         print(f"[seed] ingesting {ticker} (mock pipeline)…")

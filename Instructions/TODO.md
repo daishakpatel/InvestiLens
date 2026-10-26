@@ -1,7 +1,9 @@
 # Assay Desk — Remaining Work
 
-Audited 2026-10-12 against `docs/AssayDesk_Spec_v2.md`; last updated 2026-10-15. All 25 task
-files and the 5 `UI_plan/` steps have been worked through; this is what is still open.
+Audited 2026-10-12 against `docs/AssayDesk_Spec_v2.md`; last updated 2026-10-25 (Phase 7l). All
+task files through `37_phase7l_measured_results_and_polish.md` and the 5 `UI_plan/` steps have
+been worked through; this is what is still open. `docs/limitations.md` keeps the reader-facing
+"known issues" table in step with this list.
 
 Tags: `[code]` = checked in the code, database or CI on the date shown in the item or, if none,
 the audit date. `[notes]` = carried from earlier session hand-offs, not re-checked.
@@ -21,6 +23,17 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   are from earlier the same day.
 
 ## 0. Broken right now
+
+- [ ] **"Diluted EPS" chat questions are declined** (found by the Phase 7l eval, 6 golden
+      questions): the metric lookup returns no structured source for "diluted EPS", so the chat
+      abstains although `eps_diluted` rows exist (NVDA FY2026 = 4.90). Map the phrase in the RAG
+      metric router. `[code]`
+- [ ] **Off-topic and not-applicable questions are answered** (Phase 7l eval): "write me a poem
+      about NVIDIA" and "what's the weather at HQ" get answers built from loosely related
+      passages, and JPMorgan's "gross profit" and "inventory turnover" get document answers
+      instead of "not applicable". Two of five golden injection questions get a cited,
+      non-complying answer rather than a refusal. Correct abstention is 14/24 in
+      `docs/eval/latest.md`. `[code]`
 
 - [ ] `GET /companies/{ticker}/research/latest` returns 500 when the stored report fails validation
       (`ResearchReport.model_validate` is unguarded in `backend/app/api/companies.py`). `[code]`
@@ -82,9 +95,11 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 
 ### Measured numbers (§36 #20)
 
-- [ ] **Publish** Recall@5, judge faithfulness, cost and latency per report/chat; they are
-      `_pending_` in `README.md`. Now unblocked (corpus embedded, billing on): needs a live eval
-      run of about 106 questions, roughly $1–2. `[code]`
+- [x] Mock-run numbers with Wilson intervals are published and gated → 37 (`make eval-report`,
+      `docs/eval/latest.md`, `thresholds.json`).
+- [ ] **Publish live-model numbers**: Recall@5 with real embeddings, judge faithfulness, cost
+      and latency per report/chat. `EVAL_LIVE=1 make eval-report OUT=live` exists and is
+      untried; about 106 questions, roughly $1–2. `[code]`
   - [ ] Judge calibration ≥ 0.85 against a 50-question human-labelled sample (none committed). `[notes]`
   - [ ] Re-tune `rag_sufficiency_min_score`, entailment and confidence thresholds on real
         embeddings; decide reranker (ADR-0014) and entailment verifier (ADR-0015). `[notes]`
@@ -157,10 +172,12 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 
 ### Deployment and tests
 
-- [ ] **Hosted demo** (§36 #23): never deployed. `render.yaml`, Dockerfiles and `deploy.yml` exist;
-      needs a Render account, repo secrets, branch protection. Tiingo's free plan is for personal
-      use, so a public demo must show sample prices or use a paid plan (ADR-0007, ADR-0035). The
-      Gemini key is on the paid tier now, so content is not used to improve Google's products. `[notes]`
+- [ ] **Hosted demo** (§36 #23): built but not deployed → 37 (ADR-0050). `DEMO_MODE` is wired
+      (fixtures, recorded answers, shared sandbox, IP limits, banner, `/demo`), `render.yaml` is
+      the ~$30/mo demo blueprint, and `scripts/vertical_slice.sh` passes on a local demo build.
+      Remaining owner steps: create the Render Blueprint, then set the `RENDER_DEPLOY_HOOK_URL`
+      secret and the `DEMO_API_URL` variable (docs/deploy-demo.md). The DoD's "deliberately
+      broken branch in the PR description" needs a PR. `[code]`
 - [ ] **E2E is manual-only** (`e2e.yml` is `workflow_dispatch`); Linux visual baselines are not
       committed; behavioural specs assume the dev DB, not the CI seed. `[code]` / `[notes]`
 - [ ] API has no response compression (prices ≈ 179 kB per company); mobile Lighthouse on the
@@ -168,9 +185,9 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 
 ### Before any public deploy
 
-- [ ] Unbounded free-text request fields — only chat `question` and compare `tickers` are capped.
-      `password` (unauthenticated), `FeedbackRequest.reason`, `WatchlistCreate.name`,
-      `ChatRequest.company`, `metrics`, search `q`. No request body size limit found. `[code]`
+- [x] Request bodies are capped (256 KiB, `413`/`411`) → 37; thesis text bounded → 36. Individual
+      fields (`password`, `FeedbackRequest.reason`, `WatchlistCreate.name`, search `q`) still have
+      no per-field `max_length`, but no body can exceed the cap. `[code]`
 - [ ] DB gate in `get_db` (10 slots) has no wait timeout → queues in memory, never 503s. `[notes]`
 - [ ] `HardenedHttpClient` retries every 4xx, not only 429/5xx, so a bad API key is retried
       three times before failing. `[code]`
@@ -245,6 +262,52 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       for the calls again; AAPL/JPM releases have no numeric outlook; `avg_delta_vs_mid` is
       returned at full Decimal precision (display rounds it); the track record covers revenue
       only. `[code]`
+
+- [ ] **Earnings brief leftovers** (Phase 7j, ADR-0048):
+  - The per-user regeneration limit is in-memory, per API process; it needs the Redis limiter
+    once the API runs on more than one process.
+  - Announced dates are read only from ingested 8-Ks and exhibits. Companies that post the date
+    only on their IR site get an estimate (all five dev companies do today).
+  - A price-driven input (the 5-session move filling in, the valuation date rolling) makes a new
+    version on the next user refresh or daily preview run.
+  - `scripts/build_metrics.py` does not make briefs (it would cost model calls).
+  - Transcripts and Q&A themes are out of scope (ADR-0011).
+  - The full e2e suite was not re-run, only `earnings.spec.ts`.
+  - Visual baselines were not updated for the new tab.
+  `[code]`
+
+- [ ] **Thesis tracker leftovers** (Phase 7k, ADR-0049):
+  - The draft limit is in-memory, per API process (the same caveat as briefs).
+  - The metric registry is curated, so a new trackable metric is a code change; there are no
+    user-defined formulas.
+  - The markdown subset has no tables or nested lists.
+  - A threshold edit that flips a KPI's state never notifies; it is a baseline by design.
+  - `revenue_vs_guidance` reads only revenue headline outcomes.
+  - The full e2e suite was not re-run, only `thesis.spec.ts` and `earnings.spec.ts`.
+  - Visual baselines were not updated for the new tab and page.
+  `[code]`
+
+- [ ] **Measured results and demo leftovers** (Phase 7l, ADR-0050):
+  - The live demo URL, its CI smoke run, and the "deliberately broken branch" PR demonstration
+    are owner steps (Render account, repo secrets, a PR). The gate's failing cases are covered by
+    `tests/unit/test_eval_published.py`.
+  - Demo answers replay recordings keyed by exact prompt; any prompt or seed-order change makes
+    them miss (honest "not enough evidence" fallback). `make record-demo` re-records them (live
+    calls, a few cents).
+  - The demo's banner date is the latest fixture filing; fixture prices run later than that.
+  - The API and frontend sit on different `onrender.com` subdomains, so a reload ends a demo
+    session (SameSite=Strict cookie); a custom domain fixes it.
+  - Latency in `latest.md` is single-user and mock-LLM; the locust load test is still unrun.
+  - README stats count test functions, not parametrized cases.
+  - Existing signed-in browsers see one extra sign-in after deploy (the new `il-session` hint
+    starts empty).
+  - The full e2e suite and visual baselines were not re-run; only `vertical-slice.spec.ts`.
+  - `filings/service._emphasized` always reads the default object store, not the store a caller
+    ingested into. That is harmless in production (one store), but it made
+    `test_brief_versions_follow_the_filings` pass only when `backend/.storage` was empty. The test
+    now pins its synthetic filing to guessed captions; passing the storage through would be the
+    real fix.
+  `[code]`
 
 ## 4. Never verified live
 
@@ -398,3 +461,37 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
   7 quarters), AMD 14 (5 of 6). Caught: an injected sentence produced a clean-looking quote (now
   the whole sentence is checked); NVIDIA's shared "respectively, plus or minus 50 basis points"
   and AMD's "plus or minus $300 million" needed their own tolerance rules.
+- 2026-10-24 — **Earnings previews and briefs** (Phase 7j, ADR-0048):
+  - **Calendar:** `earnings_events` and `earnings_briefs` (migration `f186174c8045`). Dates come
+    from Item 2.02 8-Ks, a strictly matched company announcement, or an estimate shown as "~"
+    that never notifies.
+  - **Previews** (snapshot, guidance, track record, bands, flags, last reaction, watch items) and
+    **briefs** (headline table, guidance outcomes, reaction with 5-day move and volume ratio,
+    10-Q diff and topic shifts, new flags, a ≤4-sentence verified narrative) are assembled from
+    stored data.
+  - **Versions** are keyed by an inputs hash; `earnings_narrative_v1`; `brief_ready` alert;
+    `generate_earnings_brief` / `generate_due_previews` tasks and a post-ingest hook;
+    watched/seed cost guard and daily cap; calendar/briefs/regenerate endpoints; Earnings tab
+    with version switcher and print layout.
+  - **Dev:** a real gemini-3.8-flash NVIDIA Q2 FY2027 brief kept all 4 narrative sentences; the
+    preview's 4 watch items were reworded with every number kept.
+  - **Caught:** 10-Q risk factors were never recognised by the filing diff since 7c's
+    part-qualified section keys (`"Part II, Item 1A"`), so 10-Q diffs and the `new_risk_factor`
+    alert silently saw no risk factors (fixed in `filings/units.py`).
+- 2026-10-25 — **Investment thesis tracker** (Phase 7k, ADR-0049):
+  - **Data:** `theses`, `thesis_kpis`, `thesis_events` and `thesis_revisions` (migration
+    `69ec64a10d9e`), owned through `user_id` and cascading on thesis and account deletion.
+  - **KPIs:** a curated metric registry (stored, Q/TTM, scores, multiples, quarterly margins,
+    revenue YoY, revenue vs guidance) with unit and sector checks at write. Decimal evaluation
+    appends events only on data transitions; edits are baselines. One idempotent
+    `refresh_company_theses` hook (after metrics, red-flag scans and briefs) links flags and
+    briefs to timelines without changing KPI state.
+  - **Alerts and AI:** a `thesis_trigger` alert scoped to the owner, once per (KPI, state,
+    period end). "Draft from my notes" (`thesis_draft_v1`) suggests only, with registry metrics
+    and no stance; a real model call ignored an injected instruction.
+  - **API:** CRUD, events, revisions with word diffs, draft and metric registry; 404 isolation
+    on every route.
+  - **UI:** Thesis tab and Theses page, safe markdown, neutral/warning state chips, neutral
+    sparklines, a History drawer.
+  - **Tests:** a test that keeps thesis text out of logs and `/metrics`; a Playwright run
+    against the dev stack on a throwaway company (`scripts/e2e_thesis.py`).

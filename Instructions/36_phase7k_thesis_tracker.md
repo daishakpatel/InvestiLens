@@ -114,22 +114,22 @@ on transitions; user text excluded from logs; no AI verdicts).
 
 ## Definition of Done
 
-- [ ] User A cannot read, edit, delete or list user B's theses, KPIs, events or revisions (404 on
+- [x] User A cannot read, edit, delete or list user B's theses, KPIs, events or revisions (404 on
       every endpoint, tested)
-- [ ] KPI creation rejects unknown metrics, `not_applicable` metrics, and unit-mistake
+- [x] KPI creation rejects unknown metrics, `not_applicable` metrics, and unit-mistake
       thresholds with clear errors
-- [ ] Evaluator marks `met`/`broken`/`no_data` correctly with Decimal comparisons (boundary case
+- [x] Evaluator marks `met`/`broken`/`no_data` correctly with Decimal comparisons (boundary case
       `gte` equal → met)
-- [ ] Events are appended only on state transitions; running the evaluator twice adds nothing
-- [ ] `thesis_trigger` fires once per `(kpi, state, period_end)` and its text contains only the
+- [x] Events are appended only on state transitions; running the evaluator twice adds nothing
+- [x] `thesis_trigger` fires once per `(kpi, state, period_end)` and its text contains only the
       user's label/threshold and the cited value (advice test)
-- [ ] Red-flag and brief events appear in the timeline and do not change KPI state
-- [ ] Editing a thesis creates a revision; history shows diffs; deleting hard-deletes all child
+- [x] Red-flag and brief events appear in the timeline and do not change KPI state
+- [x] Editing a thesis creates a revision; history shows diffs; deleting hard-deletes all child
       rows
-- [ ] AI draft: output restricted to registry metrics; suggestions unsaved until accepted;
+- [x] AI draft: output restricted to registry metrics; suggestions unsaved until accepted;
       injection test passes; no stance suggested
-- [ ] Thesis text is absent from application logs and Prometheus labels (log-capture test)
-- [ ] Markdown is sanitised (XSS test) and verdict colours avoid green/red
-- [ ] Playwright: create a thesis, add a KPI, simulate the metric crossing the threshold, see
+- [x] Thesis text is absent from application logs and Prometheus labels (log-capture test)
+- [x] Markdown is sanitised (XSS test) and verdict colours avoid green/red
+- [x] Playwright: create a thesis, add a KPI, simulate the metric crossing the threshold, see
       the timeline event and the in-app notification
-- [ ] Docs and ADR-0049 written; `make check` and `make openapi` clean
+- [x] Docs and ADR-0049 written; `make check` and `make openapi` clean

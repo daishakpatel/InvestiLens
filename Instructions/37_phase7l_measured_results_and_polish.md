@@ -125,19 +125,24 @@ README, `docs/limitations.md`, `docs/deploy-demo.md`, `docs/eval/*`, `docs/gener
 
 ## Definition of Done
 
-- [ ] `make eval-report` writes `docs/eval/latest.{json,md}` with date, SHA, model, prompt and
+- [x] `make eval-report` writes `docs/eval/latest.{json,md}` with date, SHA, model, prompt and
       dataset versions, and every metric above with Wilson 95% intervals
 - [ ] CI fails when a threshold in `docs/eval/thresholds.json` is breached (demonstrated with a
       deliberately broken branch recorded in the PR description)
-- [ ] False-abstention and correct-abstention rates are both reported
+      — *partial (2026-10-25): the gate runs in CI as a unit test and each breach is proven by a
+      failing-case test (`tests/unit/test_eval_published.py`); the broken-branch PR is an owner step.*
+- [x] False-abstention and correct-abstention rates are both reported
 - [ ] Public demo URL is live, uses recorded LLM responses only, shows the demo banner, and passes
       the post-deploy smoke test; monthly cost documented in ADR-0050
-- [ ] Rate limits and request-size caps are active in demo mode (test)
-- [ ] `docs/limitations.md` covers all six sections with concrete statements and is linked from the
+      — *partial (2026-10-25): everything but the deploy is done and passes locally (recorded-only
+      LLM, banner, `scripts/smoke_demo.sh`, ADR-0050 at ~$30/mo); going live needs the owner's
+      Render account (`docs/deploy-demo.md`).*
+- [x] Rate limits and request-size caps are active in demo mode (test)
+- [x] `docs/limitations.md` covers all six sections with concrete statements and is linked from the
       README
-- [ ] `scripts/check_docs_consistency.py` runs in `make check` and each rule has a failing-case test
-- [ ] No hand-typed numeric claim remains in the README (script proves it)
-- [ ] README ≤ ~120 lines, in the specified order, with the demo link, GIF and results table
-- [ ] The vertical-slice Playwright test passes against the demo build with no console errors
-- [ ] `TODO.md` updated to reflect what Phase 7 closed
-- [ ] `make check` clean
+- [x] `scripts/check_docs_consistency.py` runs in `make check` and each rule has a failing-case test
+- [x] No hand-typed numeric claim remains in the README (script proves it)
+- [x] README ≤ ~120 lines, in the specified order, with the demo link, GIF and results table
+- [x] The vertical-slice Playwright test passes against the demo build with no console errors
+- [x] `TODO.md` updated to reflect what Phase 7 closed
+- [x] `make check` clean
