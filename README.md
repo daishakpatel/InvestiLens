@@ -1,135 +1,92 @@
 # Assay Desk
 
-*Every claim, traced to its source.*
+**Investment research where every AI sentence is traced to a filing, and every figure is computed
+in code, not by a model.**
 
-AI-powered investment research platform. Deterministic financial data from SEC filings and
-market sources, combined with retrieval-grounded LLM analysis in which every claim is cited
-to a verifiable source.
+![The five-minute path on the demo: NVIDIA's overview, a cited answer and its source, the earnings brief, guidance vs actual, and a thesis KPI that breaks and notifies](docs/media/demo.gif)
 
-> **Status:** Phase 0 (contracts) in progress. Architecture and ADRs done.
+*Generated from the vertical-slice Playwright run (`scripts/vertical_slice.sh`), not recorded by
+hand.*
 
-## Project overview
+**Live demo:** not deployed yet. The demo build is ready and runs locally; deploying it needs a
+Render account ([deploy steps](docs/deploy-demo.md), [ADR-0050](docs/decisions/0050-public-demo-render-recorded-only.md)).
+Once it is up, start at `/demo` for three guided paths.
 
-Assay Desk is a full-stack financial intelligence application for researching public
-companies. It combines deterministic financial calculations with SEC filings, market data,
-news, retrieval-augmented generation, and citation validation so generated research can be
-traced back to its evidence.
+## What it does
 
-### Language profile
+- **Financials from SEC filings.** Annual, quarterly and trailing figures and ratios are built from
+  XBRL in Python `Decimal`. A value that can't be computed shows its reason instead of 0 (`GET /companies/{ticker}/financials`).
+- **Cited AI research and chat.** The model only explains retrieved passages. Each sentence must
+  cite a backend-issued source and match its numbers, or it is removed (`POST /chat/stream`, `GET /sources/{source_id}`).
+- **What changed in a filing.** New, removed and reworded risk factors against the prior filing,
+  by deterministic text matching (`GET /filings/{filing_id}/diff`).
+- **Red flags and earnings quality.** Reported events (auditor changes, late filings,
+  restatements) and screening scores, each linked to its evidence (`GET /companies/{ticker}/red-flags`).
+- **Earnings season.** A pre-earnings preview and a post-earnings brief assembled from stored data,
+  with the company's own guidance against what it reported (`GET /companies/{ticker}/earnings/briefs`).
+- **A thesis tracker.** Your thesis with measurable KPIs, checked with plain arithmetic as new data
+  arrives, with notifications when a KPI breaks (`POST /theses`).
 
-| Language | Approx. share of tracked source bytes | Main use |
-|----------|---------------------------------------|----------|
-| Python | 76.4% | FastAPI backend, finance, ingestion, RAG, evaluation, and tests |
-| TypeScript / TSX | 22.4% | React frontend, typed API client, and UI tests |
-| JavaScript, CSS, HTML, YAML | 1.2% | Tooling, styling, markup, configuration, and infrastructure |
+## Measured results
 
-The percentages above are a local source-size snapshot. The language bar shown by GitHub is
-calculated automatically by GitHub Linguist and may differ because it applies its own rules for
-generated files, fixtures, documentation, and vendored content.
+<!-- generated:results -->
+Mock-LLM run of 106 golden questions on 2026-10-25 ([full report](docs/eval/latest.md), with what it does not cover).
 
-### What is included
+| Metric | Measured | Wilson interval | n |
+|---|---|---|---|
+| Citation validity | 100.0% | 96.2% to 100.0% | 98 |
+| Number match | 100.0% | 90.1% to 100.0% | 35 |
+| Correct abstention | 58.3% | 38.8% to 75.5% | 24 |
+| False abstention (lower is better) | 7.3% | 3.4% to 15.1% | 82 |
+| Retrieval hit@5 | 64.6% | 53.8% to 74.1% | 82 |
+| Injection resistance | 81.8% | 52.3% to 94.9% | 11 |
+<!-- /generated:results -->
 
-- **Backend:** Python 3.12, FastAPI, Celery, PostgreSQL 16, pgvector, Redis, and deterministic
-	financial metrics.
-- **Frontend:** React, TypeScript, Vite, and a typed API client: a dark-first research interface
-	with a price hero, cited AI research, filing change detection, comparison and portfolio tools,
-	a watchlist with alerts, and an assistant that opens beside any company page.
-- **AI and data:** SEC EDGAR, Tiingo, Finnhub, Google Gemini, Voyage AI embeddings, hybrid
-	retrieval, and source-validated citations.
-- **Engineering focus:** contract-first APIs, offline mock providers, reproducible evaluation,
-	observability, security hardening, and an explicit educational-use disclaimer.
+These measure retrieval, verification and abstention, not a model's writing: the run uses a
+deterministic fake model and offline embeddings. The weak rows are real findings, written up in
+[limitations](docs/limitations.md#ai). CI fails if citation validity or number match drops below
+[`thresholds.json`](docs/eval/thresholds.json) or if the report is stale (`make eval-report`).
 
-## The interface
+## Architecture
 
-| Home | Company |
-|------|---------|
-| ![Home, dark theme: a search field under the line "Research you can verify"](docs/images/home-dark.png) | ![NVIDIA's company page, dark theme: the price, a one-year chart and key figures](docs/images/company-dark.png) |
-
-Dark by default, light by choice. Every figure can show the filing and formula behind it; every
-AI claim is a click away from the passage it cites. `docs/ui.md` describes the design system.
-
-## Core principle
-
-The LLM is not the source of truth. Financial numbers are computed in code. The LLM only
-summarizes and explains retrieved evidence, and the backend validates every citation before
-it is shown.
-
-## Repository guide
-
-| Path | Purpose |
-|------|---------|
-| `docs/architecture.md` | System design and the life of a research request |
-| `docs/agent-guide.md` | Where contracts live and how to change them |
-| `docs/AssayDesk_Spec_v2.md` | Full product & technical specification (reference) |
-| `docs/conventions.md` | Global rules for every change (money, dates, AI, external calls) |
-| `docs/ui.md` | The design principles, tokens, primitives, and how to add a screen |
-| `docs/decisions/` | Architecture Decision Records (ADRs) |
-| `Instructions/` | Sequential, agent-sized task files. Start at `00_START_HERE.md` |
-| `backend/` | FastAPI app, Celery workers, data pipeline (Python 3.12, uv) |
-| `frontend/` | React + TypeScript SPA (Vite) |
-| `infrastructure/` | Docker, Alembic migrations, Terraform |
-
-## How we build
-
-1. Work through `Instructions/` in order, one task file at a time.
-2. Each task's Definition of Done must be fully met before the next starts.
-3. Unmade decisions become a short ADR in `docs/decisions/`, not a blocker.
-4. Schema, API, and DB changes update their docs in the same PR.
-
-## Stack
-
-Python 3.12 · FastAPI · PostgreSQL 16 + pgvector · Redis · Celery · React + TypeScript ·
-Google Gemini · Voyage AI embeddings · SEC EDGAR · Tiingo · Finnhub. Rationale for each is in
-`docs/decisions/`.
-
-## Local setup
-
-Prerequisites: Python 3.12, [uv](https://docs.astral.sh/uv/), Node 22+, Docker.
-
-```bash
-cp .env.example .env    # fill in POSTGRES_PASSWORD and any API keys you have
-make install            # backend deps (uv) + frontend deps (npm)
-make up                 # full stack: Postgres, Redis, MinIO, API, workers, beat, frontend
-make seed               # mock-ingest the 3 seed companies + pre-generate demo reports
-make check              # lint, format, type-check, tests
+```mermaid
+flowchart LR
+  SEC[SEC EDGAR] --> ING[Ingestion<br/>Celery]
+  PX[Prices / news] --> ING
+  ING --> DB[(Postgres + pgvector)]
+  DB --> FIN[Finance<br/>Decimal metrics]
+  DB --> RAG[Hybrid retrieval]
+  RAG --> LLM[LLM drafts<br/>with source IDs]
+  LLM --> VER[Citation verifier<br/>IDs · numbers · entailment]
+  FIN --> API[FastAPI]
+  VER --> API
+  API --> UI[React SPA]
 ```
 
-API keys are optional for development. Every external provider has an offline mock (Phase 0d).
+The model never produces a number the user sees; it only writes prose around backend values,
+and the verifier drops any sentence it cannot tie to a source.
+[`docs/architecture.md`](docs/architecture.md) follows one request end to end.
 
-### Background jobs & deployment
+## Run it locally
 
-Celery runs the ingestion pipeline, EDGAR poller, alert dispatch, and report generation across
-three queues (`interactive`/`ingestion`/`batch`) with a Beat schedule (`app/tasks/`, ADR-0024).
-Locally: `make worker` + `make beat` (or the full `docker compose` stack). Redis backs the broker,
-the read-through cache (§25.3), and rate limiting (§25.4). Deployment targets Render via
-[`render.yaml`](render.yaml) (ADR-0023); see [`docs/costs.md`](docs/costs.md) for the itemized
-estimate and [`docs/observability.md`](docs/observability.md) for the ops runbook. Back up /
-restore the DB with `make backup` / `scripts/restore_db.sh`.
+```bash
+cp .env.example .env && make install   # keys are optional: every provider has an offline mock
+make up && make seed                   # Postgres, Redis, API, workers, frontend; fixture data
+# then open http://localhost:5173/demo for the guided paths
+```
 
-## Evaluation & quality
+`make check` runs lint, types, tests and the docs-consistency gate.
+<!-- generated:stats -->
+778 backend and 141 frontend test functions, 93 Playwright tests, 92 API operations and 50 ADRs ([generated](docs/generated/stats.json)).
+<!-- /generated:stats -->
 
-Quality is measured against a 100+ question golden set (`backend/tests/eval/golden_v0.jsonl`,
-categories per spec §18.1) by the harness in `backend/app/eval/`. CI fails a PR that regresses
-citation accuracy (> 1 pt), Recall@5 (> 2 pts), or hallucination rate (> 0.5 pts) vs the baseline
-(EVAL-002). See `docs/testing.md` and [ADR-0020](docs/decisions/0020-evaluation-framework.md).
+## Limits and method
 
-| Metric | Baseline | Mode |
-|--------|----------|------|
-| Citation accuracy | 1.00 | measured (deterministic, offline) |
-| Hallucination rate | 0.00 | measured (deterministic, offline) |
-| Abstention accuracy | 1.00 | measured (deterministic, offline) |
-| Numeric answer accuracy | 1.00 | measured (deterministic, offline) |
-| Recall@5 | _pending_ | needs live Voyage embeddings (ADR-0010) |
-| Qualitative faithfulness (LLM-judge ≥ 0.85 agreement) | _pending_ | needs an LLM key (ADR-0009) |
-| Cost / latency per report & chat | _pending_ | needs a live run |
+- [**Limitations**](docs/limitations.md): what the data, models and AI do not do, the known
+  issues, and how the results should be validated with a real analyst.
+- [**How it was built**](Instructions/00_START_HERE.md): sequential, agent-sized task files, each
+  with a Definition of Done, plus [ADRs](docs/decisions/) for every decision they left open.
 
-Deterministic metrics are measured in the default mock mode (hash embeddings + Fake LLM), so
-numeric accuracy, abstention, citation accuracy, and hallucination are real numbers; Recall@K and
-judge faithfulness only become meaningful with live Voyage + an LLM key and are marked _pending_
-until that run — the resume bullets should cite the measured rows, not the pending ones. Reproduce
-with `make coverage` (gates) and `uv run python ../scripts/run_eval.py` (full set).
+Python · FastAPI · PostgreSQL + pgvector · Redis · Celery · React + TypeScript · Gemini · SEC EDGAR.
 
-## Disclaimer
-
-Assay Desk provides research information for educational purposes only and is not
-investment, legal, or tax advice.
+*Educational research tool. Not investment, legal or tax advice.*

@@ -1,18 +1,17 @@
-# Render Blueprint (Phase 5d, ADR-0023). One-platform deploy: managed Postgres+pgvector, managed
-# Redis, the API web service, three queue workers, and the Beat scheduler — plus the frontend as
-# a Render static site. `render.yaml` is read on Blueprint sync; secrets (sync:false) are set once
-# in the dashboard. See docs/costs.md for the itemized monthly estimate.
+# Render Blueprint for the public demo (Phase 5d ADR-0023; trimmed to the cheapest always-on
+# shape by Phase 7l ADR-0050). Managed Postgres+pgvector, managed Redis, the API, ONE worker that
+# serves every queue and runs Beat in-process, and the frontend as a static site — about $30/mo
+# (docs/costs.md). Deploy steps: docs/deploy-demo.md (`make deploy-demo`).
 #
-# NOTE (ADR-0007): the public demo runs PROVIDER_MODE=mock so no Tiingo data is shown to others
-# (the free license forbids it); SEC filings/financials are real (keyless). DEMO_MODE caps AI
-# spend. Flip PROVIDER_MODE=live + add keys only under a license that permits public display.
+# DEMO_MODE (ADR-0050): fixture data only (PROVIDER_MODE=mock; ADR-0007 forbids showing licensed
+# prices publicly), recorded LLM answers only, no registration (one shared sandbox account wiped
+# nightly), and IP-keyed rate limits. No model or data-provider keys are set: none are needed.
 
 databases:
   - name: investilens-db
     plan: basic-256mb
     postgresMajorVersion: "16"
-    # pgvector ships with Render Postgres 16; enable it once with `CREATE EXTENSION vector;`
-    # (the initial Alembic migration also issues it).
+    # pgvector ships with Render Postgres 16; the initial Alembic migration enables it.
 
 services:
   - type: redis
@@ -28,8 +27,8 @@ services:
     dockerContext: .
     plan: starter
     healthCheckPath: /api/v1/health
-    # Migrations run as a deploy step before the new version takes traffic (spec §31.2).
-    preDeployCommand: alembic upgrade head
+    # Migrate, then seed the fixtures once (a no-op when already seeded) before taking traffic.
+    preDeployCommand: alembic upgrade head && python ../scripts/seed_demo.py --if-empty --with-reports
     envVars: &backend_env
       - key: DATABASE_URL
         fromDatabase: {name: investilens-db, property: connectionString}
@@ -39,65 +38,33 @@ services:
         fromService: {name: investilens-redis, type: redis, property: connectionString}
       - key: CELERY_RESULT_BACKEND
         fromService: {name: investilens-redis, type: redis, property: connectionString}
+      - key: DEMO_MODE
+        value: "true"
       - key: PROVIDER_MODE
-        value: mock # ADR-0007 public-display block → mock prices/news in the demo
+        value: mock
       - key: BACKGROUND_JOBS_ENABLED
         value: "true"
       - key: CACHE_ENABLED
         value: "true"
-      - key: RATE_LIMIT_ENABLED
-        value: "true"
       - key: RATE_LIMIT_BACKEND
-        value: redis
+        value: redis # shared across the API's processes
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "300" # per IP; one page fans out into ~20 calls, and 120 tripped the guided path
       - key: HSTS_ENABLED
         value: "true"
-      - key: DEMO_MODE
-        value: "true"
-      - key: DEFAULT_AI_BUDGET_MONTH_USD
-        value: "0.50" # restrictive demo quota (scope #12)
       - key: CORS_ALLOWED_ORIGINS
-        value: '["https://investilens.vercel.app"]'
+        value: '["https://investilens-frontend.onrender.com"]'
       - key: JWT_SECRET
         generateValue: true
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: VOYAGE_API_KEY
-        sync: false
 
   - type: worker
-    name: investilens-worker-interactive
+    name: investilens-worker
     runtime: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: .
     plan: starter
-    dockerCommand: celery -A app.tasks.celery_app worker -Q interactive -c 4 -n interactive@%h
-    envVars: *backend_env
-
-  - type: worker
-    name: investilens-worker-ingestion
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: .
-    plan: starter
-    dockerCommand: celery -A app.tasks.celery_app worker -Q ingestion -c 2 -n ingestion@%h
-    envVars: *backend_env
-
-  - type: worker
-    name: investilens-worker-batch
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: .
-    plan: starter
-    dockerCommand: celery -A app.tasks.celery_app worker -Q batch -c 1 -n batch@%h
-    envVars: *backend_env
-
-  - type: worker
-    name: investilens-beat
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: .
-    plan: starter
-    dockerCommand: celery -A app.tasks.celery_app beat --loglevel=info
+    # One process for all queues plus Beat (-B): the per-queue split only matters under load.
+    dockerCommand: celery -A app.tasks.celery_app worker -B -Q interactive,ingestion,batch -c 2 -n demo@%h
     envVars: *backend_env
 
   - type: web
@@ -108,8 +75,6 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://investilens-api.onrender.com/api/v1
-      - key: VITE_DEMO_MODE
-        value: "true"
     routes:
       - type: rewrite
         source: /*

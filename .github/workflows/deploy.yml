@@ -36,3 +36,15 @@ jobs:
           fi
           curl -fsS -X POST "$HOOK"
           echo "Render deploy triggered."
+
+      # Post-deploy smoke test (NFR-ME-009, ADR-0050): health, demo mode on, registration closed.
+      - uses: actions/checkout@v5
+      - name: Smoke-test the public demo
+        env:
+          DEMO_API_URL: ${{ vars.DEMO_API_URL }}
+        run: |
+          if [ -z "$DEMO_API_URL" ]; then
+            echo "DEMO_API_URL repository variable not set — skipping the smoke test."
+            exit 0
+          fi
+          scripts/smoke_demo.sh

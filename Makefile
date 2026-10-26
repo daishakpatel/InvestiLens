@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck test check coverage up down openapi seed eval worker beat backup reparse-8k redflags-backfill footnote-summaries governance-backfill guidance-backfill
+.PHONY: install lint typecheck test check docs-check coverage up down openapi seed eval eval-report eval-gate stats demo-db record-demo deploy-demo worker beat backup reparse-8k redflags-backfill footnote-summaries governance-backfill guidance-backfill
 
 install:
 	cd backend && uv sync
@@ -16,7 +16,13 @@ test:
 	cd backend && uv run pytest
 	cd frontend && npm run test
 
-check: lint typecheck test
+check: lint typecheck test docs-check
+
+# README/docs/code agreement + the committed eval report's gate (Phase 7l, NFR-ME-004/011).
+# Both also run as backend unit tests, so CI enforces them without a separate step.
+docs-check:
+	python3 scripts/check_docs_consistency.py
+	cd backend && uv run python ../scripts/check_eval.py
 
 # Coverage gate (DoD / NFR-013, ADR-0019): one measured run, two hard thresholds —
 # >=80% overall and 100% on the finance + citation modules. Needs Postgres for the
@@ -66,6 +72,34 @@ guidance-backfill:
 # Evaluation smoke run (§18.4, Phase 5b). Full/gate variants: see scripts/run_eval.py.
 eval:
 	cd backend && uv run python ../scripts/run_eval.py --smoke
+
+# The committed, published eval numbers (Phase 7l, NFR-ME-001): a throwaway DB seeded from
+# fixtures, the golden set through the real pipeline with the mock LLM. ~5 min; needs Postgres.
+# EVAL_LIVE=1 make eval-report OUT=live  → a manual run against the real model.
+eval-report:
+	cd backend && uv run python ../scripts/eval_report.py --out-name $(or $(OUT),latest)
+	python3 scripts/stats.py  # the README's results block reads latest.json
+
+eval-gate:
+	cd backend && uv run python ../scripts/check_eval.py
+
+# Generated counts for the README (NFR-ME-011): docs/generated/stats.json + README blocks.
+stats:
+	python3 scripts/stats.py
+
+# The public demo (ADR-0050, docs/deploy-demo.md). demo-db builds it locally as deploy does;
+# record-demo re-records the live answers it replays (needs an LLM key; a few cents).
+demo-db:
+	cd backend && uv run python ../scripts/demo_db.py
+
+record-demo:
+	cd backend && uv run python ../scripts/demo_db.py && uv run python ../scripts/record_demo_llm.py && uv run python ../scripts/demo_db.py
+
+deploy-demo:
+	@test -n "$$RENDER_DEPLOY_HOOK_URL" || { echo "Set RENDER_DEPLOY_HOOK_URL (Render → API service → Settings → Deploy Hook)."; exit 1; }
+	@test -n "$$DEMO_API_URL" || { echo "Set DEMO_API_URL to the API origin, e.g. https://investilens-api.onrender.com"; exit 1; }
+	curl -fsS -X POST "$$RENDER_DEPLOY_HOOK_URL" > /dev/null
+	scripts/smoke_demo.sh
 
 # Run all three Celery queues in one dev worker (prod runs one worker per queue — see compose).
 # --pool solo avoids the macOS prefork fork-safety crash in local dev; Linux containers

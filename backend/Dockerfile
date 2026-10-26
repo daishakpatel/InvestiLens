@@ -26,6 +26,8 @@ RUN uv sync --locked --no-install-project --no-dev
 # App code + migrations (migrations live one level up in the repo).
 COPY backend/ ./
 COPY infrastructure/ ../infrastructure/
+# The demo seed (scripts/seed_demo.py) runs as the demo's pre-deploy step (ADR-0050).
+COPY scripts/ ../scripts/
 RUN uv sync --locked --no-dev
 
 EXPOSE 8000

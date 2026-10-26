@@ -38,6 +38,7 @@ dev = [
     "uvicorn[standard]>=0.30",
     "pip-audit>=2.10.1",
     "fakeredis>=2.39.0",
+    "pillow>=11",                 # stitches the README demo GIF from Playwright frames (7l)
 ]
 
 [tool.uv]

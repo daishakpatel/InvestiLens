@@ -88,3 +88,34 @@ _CHARACTERISATION = re.compile(
 def characterises_guidance(text: str) -> bool:
     """True when `text` judges how a company guides (sandbagging, conservative, reliable...)."""
     return bool(_CHARACTERISATION.search(text))
+
+
+# Earnings briefs say what was reported and what to watch, never what will happen (Phase 7j,
+# AGT-EB-002). Brief-only: "expects" is fine when a report quotes management's own guidance.
+_PREDICTION = re.compile(
+    r"\b(expect(?:s|ed|ing|ations?)?|likely to (?:beat|miss|rise|fall|rally|drop)|"
+    r"should (?:rally|rise|fall|drop|climb|beat|miss|rebound)|outlook for the stock|"
+    r"will (?:likely )?(?:beat|miss|rally|rise|fall|drop|surge|soar|plunge|rebound)|"
+    r"poised to|set to (?:beat|miss|rally|rise|fall)|bound to)\b",
+    re.I,
+)
+
+
+def predicts(text: str) -> bool:
+    """True when `text` forecasts a result or the stock ("expect", "should rally"...)."""
+    return bool(_PREDICTION.search(text))
+
+
+# A thesis is the user's; the app records KPI states (met / broken / no data) and never says
+# whether the thesis itself holds (Phase 7k, AGT-TH-001, FR-TH-012).
+_THESIS_VERDICT = re.compile(
+    r"\b(playing out|at risk|on track|off track|vindicat\w*|invalidat\w*|"
+    r"(?:is|was|looks|seems|proves?|proved|turned out)\s+(?:to be\s+)?"
+    r"(?:right|wrong|correct|incorrect|broken|intact))\b",
+    re.I,
+)
+
+
+def judges_thesis(text: str) -> bool:
+    """True when `text` passes a verdict on a thesis ("playing out", "looks wrong"...)."""
+    return bool(_THESIS_VERDICT.search(text))
