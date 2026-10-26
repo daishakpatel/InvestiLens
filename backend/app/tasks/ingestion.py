@@ -14,6 +14,7 @@ from celery import Task
 
 from app.comparison.peers import refresh_default_peer_set
 from app.db import _session_factory, session_scope
+from app.earnings.service import after_filings
 from app.embeddings.pipeline import embed_pending
 from app.finance.builder import build_company_metrics
 from app.finance.footnote_builder import build_company_footnotes
@@ -35,6 +36,7 @@ from app.redflags.detect import scan_company
 from app.repositories import companies as company_repo
 from app.tasks.base import RETRY_KWARGS, job_task
 from app.tasks.celery_app import celery_app
+from app.thesis.links import refresh_company_theses
 from app.utils.storage import get_object_storage
 
 _SEED_TICKERS = ["NVDA", "AAPL", "JPM"]
@@ -95,6 +97,7 @@ def parse_documents(self: Task, ticker: str) -> int:
         extract_company_facts(session, company)  # cached once per proxy (FR-GV-010)
         extract_company_guidance(session, company)  # cached once per release (FR-GD-006)
         build_company_guidance(session, company)
+        refresh_company_theses(session, company)  # link new red flags (FR-TH-008)
         progress.update(progress=100, stage=f"parsed:{summary.parsed}")
     return summary.parsed
 
@@ -123,6 +126,8 @@ def update_financial_metrics(self: Task, ticker: str) -> dict[str, int]:
         build_company_earnings_quality(session, company)
         build_company_footnotes(session, company)
         build_company_guidance(session, company)  # a new quarter's actuals (FR-GD-007)
+        after_filings(session, company)  # a post-earnings brief, or its 10-Q version (FR-EB-008)
+        refresh_company_theses(session, company)  # KPIs against the new figures (FR-TH-007)
     return {"metrics": base.annual_metrics, "ratios": ratios}
 
 
@@ -176,6 +181,8 @@ def _refresh_one(ticker: str) -> None:
         extract_company_facts(session, company)
         extract_company_guidance(session, company)  # a new release's outlook (FR-GD-003)
         build_company_guidance(session, company)
+        after_filings(session, company)  # a post-earnings brief, or its 10-Q version (FR-EB-008)
+        refresh_company_theses(session, company)  # KPIs and evidence links (FR-TH-007)
 
 
 @celery_app.task(bind=True, queue="interactive", name="refresh_company_data", **RETRY_KWARGS)

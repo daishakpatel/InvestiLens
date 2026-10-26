@@ -83,9 +83,21 @@ celery_app.conf.beat_schedule = {
         "task": "scan_red_flags",
         "schedule": crontab(hour=5, minute=0),
     },
+    # Pre-earnings previews 3 days before a confirmed report date (FR-EB-008, Phase 7j).
+    "earnings-previews": {
+        "task": "generate_due_previews",
+        "schedule": crontab(hour=6, minute=0),
+    },
     # Chat-log retention purge, daily (SEC-014).
     "retention-purge": {
         "task": "purge_chat_history",
         "schedule": crontab(hour=4, minute=0),
     },
 }
+
+if settings.demo_mode:
+    # The public demo's shared sandbox resets at midnight ET (NFR-ME-007, ADR-0050).
+    celery_app.conf.beat_schedule["demo-reset"] = {
+        "task": "reset_demo_sandbox",
+        "schedule": crontab(hour=0, minute=0),
+    }

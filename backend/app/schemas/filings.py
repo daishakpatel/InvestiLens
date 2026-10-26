@@ -97,6 +97,9 @@ class EarningsReaction(BaseModel):
     post_close: Decimal | None = None
     move: Decimal | None = None  # ratio (0.05 = +5%); None => see `reason`
     reason: str | None = None
+    move_at_open: Decimal | None = None  # first session's open vs the prior close (Phase 7j)
+    move_5d: Decimal | None = None  # fifth session's close vs the prior close
+    volume_ratio: Decimal | None = None  # first session's volume / prior 20-session average
 
 
 class EarningsResponse(BaseModel):

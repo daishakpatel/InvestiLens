@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel
@@ -21,3 +22,10 @@ class Readiness(BaseModel):
 class DataFreshnessResponse(BaseModel):
     ticker: str
     sources: list[Freshness]
+
+
+class DemoInfo(BaseModel):
+    """Whether this deployment is the public demo, and how fresh its fixture data is."""
+
+    enabled: bool
+    data_as_of: date | None = None  # latest filing date in the seeded fixtures

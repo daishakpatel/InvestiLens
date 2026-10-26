@@ -46,7 +46,8 @@ def get_news_provider() -> NewsProvider:
 def get_llm_client() -> LLMClient:
     settings = get_settings()
     # LLM_PROVIDER picks the model on its own, so a real LLM can run over fixture data (ADR-0032).
-    if (settings.llm_provider or settings.provider_mode) == "mock":
+    # The public demo replays recorded responses only, whatever else is set (NFR-ME-009).
+    if settings.demo_mode or (settings.llm_provider or settings.provider_mode) == "mock":
         return MockLLMClient()
     from app.providers.gemini import GeminiLLMClient
 
@@ -59,6 +60,8 @@ def get_embedding_client() -> EmbeddingClient:
     provider = settings.embedding_provider or (
         "mock" if settings.provider_mode == "mock" else "voyage"
     )
+    if settings.demo_mode:  # the demo's fixtures are embedded with the offline embedder
+        provider = "mock"
     if provider == "mock":
         return MockEmbeddingClient()
     if provider == "gemini":
