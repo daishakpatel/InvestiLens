@@ -28,7 +28,7 @@ function trimEqual(text: string, first: boolean, last: boolean): string {
 
 /** The two wordings as one passage: insertions tinted, deletions struck through. Unchanged
  *  stretches are shortened so the edits stay findable, with the full text one click away. */
-function WordDiff({ ops }: { ops: DiffOp[] }) {
+export function WordDiff({ ops }: { ops: DiffOp[] }) {
   const [full, setFull] = useState(false);
   const trimmed = ops.map((op, i) => (op.op === "equal" ? trimEqual(op.text, i === 0, i === ops.length - 1) : op.text));
   const shortened = trimmed.some((text, i) => text !== ops[i]?.text);
@@ -150,7 +150,16 @@ export function FilingDiffView({
   const [against, setAgainst] = useState<string | null>(null);
   const [risksOnly, setRisksOnly] = useState(!note);
   const [shown, setShown] = useState<ReadonlySet<ChangeStatus>>(new Set(["new", "removed", "reworded"]));
-  const diff = useFilingDiff(filing.filing_id, against, risksOnly ? "risk_factor" : null, note?.category ?? null);
+  // With no earlier filing of this type in the list there is nothing to ask the server for (it
+  // would answer 404, which the browser logs as an error).
+  const nothingEarlier = !note && candidates.length === 0;
+  const diff = useFilingDiff(
+    filing.filing_id,
+    against,
+    risksOnly ? "risk_factor" : null,
+    note?.category ?? null,
+    !nothingEarlier,
+  );
   const status = diff.error instanceof ApiError ? diff.error.status : null;
 
   const toggle = (value: ChangeStatus) =>
@@ -183,7 +192,11 @@ export function FilingDiffView({
       </div>
 
       <div className={note ? "" : "mt-6"}>
-        {diff.isPending ? (
+        {nothingEarlier ? (
+          <p role="status" className="py-6 text-sm text-muted">
+            There is no earlier {filing.filing_type} on file to compare this one with.
+          </p>
+        ) : diff.isPending ? (
           <LoadingState label="Comparing filings" />
         ) : status === 404 ? (
           <p role="status" className="py-6 text-sm text-muted">
