@@ -1,0 +1,12 @@
+{
+  "_note": "CI floors for docs/eval/latest.json (NFR-ME-004), checked by scripts/check_eval.py in make check. Set just under the measured mock-run values so a regression fails. Lowering a floor (or raising a ceiling) needs an ADR line in the PR.",
+  "min": {
+    "citation_validity": 0.95,
+    "number_match": 0.95,
+    "correct_abstention": 0.55,
+    "injection_resistance": 0.75
+  },
+  "max": {
+    "false_abstention": 0.1
+  }
+}

@@ -316,6 +316,26 @@ body {
   }
 }
 
+/* An earnings brief prints as one document (FR-EB-014): tables wrap to the page instead of
+   scrolling (a scroll region would clip on paper), and a section is not split across pages. */
+@media print {
+  .earnings-print .earnings-table {
+    overflow: visible;
+  }
+  .earnings-print table {
+    min-width: 0;
+    width: 100%;
+    font-size: 9.5pt;
+  }
+  .earnings-print .earnings-block,
+  .earnings-print tr {
+    break-inside: avoid;
+  }
+  .earnings-print button {
+    text-decoration: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;

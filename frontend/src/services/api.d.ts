@@ -114,6 +114,26 @@ export interface paths {
         patch: operations["update_alert_api_v1_alerts__alert_id__patch"];
         trace?: never;
     };
+    "/api/v1/auth/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demo Login
+         * @description Sign in as the shared demo user (demo mode only; NFR-ME-007, ADR-0050).
+         */
+        post: operations["demo_login_api_v1_auth_demo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -416,6 +436,50 @@ export interface paths {
          *     fiscal year, each with its inputs' source IDs (FR-EQ-009).
          */
         get: operations["get_earnings_quality_api_v1_companies__ticker__earnings_quality_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/earnings/briefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Earnings Briefs
+         * @description Stored preview/brief versions, latest quarter first, then newest version (FR-EB-015).
+         */
+        get: operations["earnings_briefs_api_v1_companies__ticker__earnings_briefs_get"];
+        put?: never;
+        /**
+         * Regenerate Earnings Brief
+         * @description Make (or return the unchanged) preview or brief for the company's current quarter.
+         */
+        post: operations["regenerate_earnings_brief_api_v1_companies__ticker__earnings_briefs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{ticker}/earnings/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Earnings Calendar
+         * @description Reported and upcoming earnings dates, newest quarter first (FR-EB-001/002).
+         */
+        get: operations["earnings_calendar_api_v1_companies__ticker__earnings_calendar_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1005,6 +1069,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meta/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Demo Info
+         * @description Demo banner data (NFR-ME-007): on in demo mode, with the fixtures' latest filing date.
+         */
+        get: operations["demo_info_api_v1_meta_demo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications": {
         parameters: {
             query?: never;
@@ -1225,6 +1309,168 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/theses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Theses
+         * @description The caller's theses, most recently updated first; `ticker` narrows to one company.
+         */
+        get: operations["list_theses_api_v1_theses_get"];
+        put?: never;
+        /** Create Thesis */
+        post: operations["create_thesis_api_v1_theses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/theses/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft Thesis
+         * @description Suggested title and KPIs from the caller's own notes; nothing is saved (FR-TH-010).
+         */
+        post: operations["draft_thesis_api_v1_theses_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/theses/{thesis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Thesis */
+        get: operations["get_thesis_api_v1_theses__thesis_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Thesis
+         * @description Hard delete: the thesis, its KPIs, events and revisions (FR-TH-014).
+         */
+        delete: operations["delete_thesis_api_v1_theses__thesis_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Thesis */
+        patch: operations["update_thesis_api_v1_theses__thesis_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/theses/{thesis_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Events
+         * @description The timeline, newest first.
+         */
+        get: operations["list_events_api_v1_theses__thesis_id__events_get"];
+        put?: never;
+        /**
+         * Add Note
+         * @description A user note on the timeline.
+         */
+        post: operations["add_note_api_v1_theses__thesis_id__events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/theses/{thesis_id}/kpis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Kpi */
+        post: operations["add_kpi_api_v1_theses__thesis_id__kpis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/theses/{thesis_id}/kpis/{kpi_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Kpi */
+        delete: operations["delete_kpi_api_v1_theses__thesis_id__kpis__kpi_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Kpi */
+        patch: operations["update_kpi_api_v1_theses__thesis_id__kpis__kpi_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/theses/{thesis_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Revisions
+         * @description Every saved title and body, newest first, each with a word diff against the previous.
+         */
+        get: operations["list_revisions_api_v1_theses__thesis_id__revisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/thesis/metric-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metric Registry
+         * @description Trackable metrics with unit, periods and (for `ticker`) sector applicability.
+         */
+        get: operations["metric_registry_api_v1_thesis_metric_registry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/watchlists": {
         parameters: {
             query?: never;
@@ -1388,6 +1634,83 @@ export interface components {
              * @enum {string}
              */
             status: "extracted" | "pending" | "no_sections";
+        };
+        /** BriefHeader */
+        BriefHeader: {
+            /** Company Name */
+            company_name: string | null;
+            /** Date Estimated */
+            date_estimated: boolean;
+            /**
+             * Date Source
+             * @enum {string}
+             */
+            date_source: "sec_8k" | "announcement" | "estimated";
+            /** Date Source Id */
+            date_source_id?: string | null;
+            /** Fiscal Period */
+            fiscal_period: string;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Period Label */
+            period_label: string;
+            /** Report Date */
+            report_date: string | null;
+            /**
+             * Report Time
+             * @enum {string}
+             */
+            report_time: "bmo" | "amc" | "unknown";
+            /** Ticker */
+            ticker: string;
+        };
+        /** CalendarEvent */
+        CalendarEvent: {
+            /** Estimated */
+            estimated: boolean;
+            /** Fiscal Period */
+            fiscal_period: string;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Period Label */
+            period_label: string;
+            /** Quote */
+            quote?: string | null;
+            /** Report Date */
+            report_date: string | null;
+            /**
+             * Report Time
+             * @enum {string}
+             */
+            report_time: "bmo" | "amc" | "unknown";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "sec_8k" | "announcement" | "estimated";
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "reported" | "unknown";
+        };
+        /** ChangedPassage */
+        ChangedPassage: {
+            /** Heading */
+            heading: string;
+            /** New Quote */
+            new_quote?: string | null;
+            /** Old Quote */
+            old_quote?: string | null;
+            /** Source Ids */
+            source_ids: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "removed" | "reworded";
         };
         /** ChatMessage */
         ChatMessage: {
@@ -1652,6 +1975,16 @@ export interface components {
             /** Ticker */
             ticker: string;
         };
+        /**
+         * DemoInfo
+         * @description Whether this deployment is the public demo, and how fresh its fixture data is.
+         */
+        DemoInfo: {
+            /** Data As Of */
+            data_as_of?: string | null;
+            /** Enabled */
+            enabled: boolean;
+        };
         /** DerivedMetricSource */
         DerivedMetricSource: {
             /** Formula Id */
@@ -1704,6 +2037,133 @@ export interface components {
             /** Text */
             text?: string | null;
         };
+        /** DraftKpi */
+        DraftKpi: {
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "gte" | "lte" | "gt" | "lt";
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "FY" | "Q" | "TTM" | "LATEST";
+            /** Rationale */
+            rationale: string | null;
+            /** Threshold */
+            threshold: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "usd" | "usd_per_share" | "ratio" | "multiple" | "score" | "days";
+        };
+        /** DraftRequest */
+        DraftRequest: {
+            /** Notes */
+            notes: string;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * DraftResponse
+         * @description Suggestions only: nothing is saved until the user accepts them. No stance is suggested.
+         */
+        DraftResponse: {
+            /** Dropped */
+            dropped: number;
+            /** Kpis */
+            kpis: components["schemas"]["DraftKpi"][];
+            /** Notice */
+            notice: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Title */
+            title: string | null;
+        };
+        /**
+         * EarningsBrief
+         * @description What was reported and what changed, after a report (FR-EB-006).
+         */
+        EarningsBrief: {
+            header: components["schemas"]["BriefHeader"];
+            headline_table?: components["schemas"]["MetricTable"] | null;
+            /**
+             * Missing
+             * @default []
+             */
+            missing: components["schemas"]["Missing"][];
+            narrative?: components["schemas"]["Narrative"] | null;
+            /**
+             * New Flags
+             * @default []
+             */
+            new_flags: components["schemas"]["RedFlagItem"][];
+            reaction?: components["schemas"]["Reaction"] | null;
+            /**
+             * Versus Guidance
+             * @default []
+             */
+            versus_guidance: components["schemas"]["GuidanceRow"][];
+            what_changed?: components["schemas"]["WhatChanged"] | null;
+        };
+        /** EarningsBriefsResponse */
+        EarningsBriefsResponse: {
+            /** Items */
+            items: components["schemas"]["StoredBrief"][];
+            /** Scope */
+            scope: string;
+            /** Ticker */
+            ticker: string;
+        };
+        /** EarningsCalendarResponse */
+        EarningsCalendarResponse: {
+            /** Events */
+            events: components["schemas"]["CalendarEvent"][];
+            /** Method */
+            method: string;
+            /** Ticker */
+            ticker: string;
+            upcoming: components["schemas"]["CalendarEvent"] | null;
+        };
+        /**
+         * EarningsPreview
+         * @description What to watch before a report (FR-EB-004/005). Never what will happen.
+         */
+        EarningsPreview: {
+            /**
+             * Guidance For Period
+             * @default []
+             */
+            guidance_for_period: components["schemas"]["GuidanceRow"][];
+            header: components["schemas"]["BriefHeader"];
+            last_quarter_snapshot?: components["schemas"]["MetricTable"] | null;
+            last_reaction?: components["schemas"]["Reaction"] | null;
+            /**
+             * Missing
+             * @default []
+             */
+            missing: components["schemas"]["Missing"][];
+            /**
+             * Open Flags
+             * @default []
+             */
+            open_flags: components["schemas"]["RedFlagItem"][];
+            track_record?: components["schemas"]["GuidanceTrackRecord"] | null;
+            valuation_snapshot?: components["schemas"]["ValuationSnapshot"] | null;
+            /**
+             * Watch Items
+             * @default []
+             */
+            watch_items: components["schemas"]["WatchItem"][];
+        };
         /** EarningsQualityResponse */
         EarningsQualityResponse: {
             /** Fiscal Years */
@@ -1726,6 +2186,10 @@ export interface components {
             filing: components["schemas"]["FilingSummary"];
             /** Move */
             move?: string | null;
+            /** Move 5D */
+            move_5d?: string | null;
+            /** Move At Open */
+            move_at_open?: string | null;
             /** Post Close */
             post_close?: string | null;
             /** Post Date */
@@ -1736,6 +2200,8 @@ export interface components {
             pre_date?: string | null;
             /** Reason */
             reason?: string | null;
+            /** Volume Ratio */
+            volume_ratio?: string | null;
         };
         /**
          * EarningsReleaseSource
@@ -2036,6 +2502,20 @@ export interface components {
              * @description Provider or system that produced the data
              */
             source: string;
+        };
+        /** GenerateBriefRequest */
+        GenerateBriefRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "preview" | "brief";
+        };
+        /** GenerateBriefResponse */
+        GenerateBriefResponse: {
+            /** Created */
+            created: boolean;
+            item: components["schemas"]["StoredBrief"];
         };
         /**
          * GovernanceField
@@ -2394,6 +2874,100 @@ export interface components {
              */
             status: "queued" | "processing" | "done" | "failed";
         };
+        /** Kpi */
+        Kpi: {
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "gte" | "lte" | "gt" | "lt";
+            /** Evaluated At */
+            evaluated_at: string | null;
+            /** History */
+            history: components["schemas"]["KpiPoint"][];
+            /** Id */
+            id: number;
+            /** Label */
+            label: string;
+            /** Last Period */
+            last_period: string | null;
+            /** Last Period End */
+            last_period_end: string | null;
+            /** Last Source Ids */
+            last_source_ids: string[];
+            /** Last Value */
+            last_value: string | null;
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "FY" | "Q" | "TTM" | "LATEST";
+            /** Rationale */
+            rationale: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "met" | "broken" | "no_data";
+            /** Threshold */
+            threshold: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "usd" | "usd_per_share" | "ratio" | "multiple" | "score" | "days";
+        };
+        /** KpiCreate */
+        KpiCreate: {
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "gte" | "lte" | "gt" | "lt";
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "FY" | "Q" | "TTM" | "LATEST";
+            /** Rationale */
+            rationale?: string | null;
+            /** Threshold */
+            threshold: number | string;
+        };
+        /** KpiPoint */
+        KpiPoint: {
+            /** Period */
+            period: string;
+            /** Period End */
+            period_end: string | null;
+            /** Source Ids */
+            source_ids: string[];
+            /** Value */
+            value: string;
+        };
+        /** KpiUpdate */
+        KpiUpdate: {
+            /** Comparator */
+            comparator?: ("gte" | "lte" | "gt" | "lt") | null;
+            /** Label */
+            label?: string | null;
+            /** Metric */
+            metric?: string | null;
+            /** Period Type */
+            period_type?: ("FY" | "Q" | "TTM" | "LATEST") | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Threshold */
+            threshold?: number | string | null;
+        };
         /** LanguagePeriod */
         LanguagePeriod: {
             /** Filing Date */
@@ -2513,6 +3087,35 @@ export interface components {
             /** Value */
             value?: string | null;
         };
+        /** MetricRegistryEntry */
+        MetricRegistryEntry: {
+            /** Applicable */
+            applicable: boolean | null;
+            /** Description */
+            description: string;
+            /** Group */
+            group: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Period Types */
+            period_types: ("FY" | "Q" | "TTM" | "LATEST")[];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "usd" | "usd_per_share" | "ratio" | "multiple" | "score" | "days";
+        };
+        /** MetricRegistryResponse */
+        MetricRegistryResponse: {
+            /** Metrics */
+            metrics: components["schemas"]["MetricRegistryEntry"][];
+            /** Ticker */
+            ticker: string | null;
+            /** Version */
+            version: string;
+        };
         /**
          * MetricResult
          * @description Deterministic metric output with lineage (DR-040).
@@ -2540,6 +3143,54 @@ export interface components {
              */
             warnings: string[];
         };
+        /**
+         * MetricRow
+         * @description One reported figure against the prior quarter and the prior-year quarter. `change_*` is
+         *     growth (a ratio) for money and per-share figures, a difference in ratio points for margins.
+         */
+        MetricRow: {
+            /**
+             * Change Kind
+             * @enum {string}
+             */
+            change_kind: "growth" | "points";
+            /** Change Vs Prior Quarter */
+            change_vs_prior_quarter?: string | null;
+            /** Change Vs Prior Year */
+            change_vs_prior_year?: string | null;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** Prior Quarter */
+            prior_quarter?: string | null;
+            /**
+             * Prior Quarter Source Ids
+             * @default []
+             */
+            prior_quarter_source_ids: string[];
+            /** Prior Year */
+            prior_year?: string | null;
+            /**
+             * Prior Year Source Ids
+             * @default []
+             */
+            prior_year_source_ids: string[];
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Source Ids
+             * @default []
+             */
+            source_ids: string[];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "usd" | "usd_per_share" | "ratio";
+            /** Value */
+            value: string | null;
+        };
         /** MetricSeries */
         MetricSeries: {
             /** Metric Name */
@@ -2562,6 +3213,21 @@ export interface components {
             /** Value */
             value: string | null;
         };
+        /** MetricTable */
+        MetricTable: {
+            /** Fiscal Period */
+            fiscal_period: string;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Period Label */
+            period_label: string;
+            /** Prior Quarter Label */
+            prior_quarter_label: string;
+            /** Prior Year Label */
+            prior_year_label: string;
+            /** Rows */
+            rows: components["schemas"]["MetricRow"][];
+        };
         /** MetricsCoverageResponse */
         MetricsCoverageResponse: {
             freshness: components["schemas"]["Freshness"];
@@ -2571,6 +3237,34 @@ export interface components {
             quarters: string[];
             /** Ticker */
             ticker: string;
+        };
+        /**
+         * Missing
+         * @description A section left out because an input is missing: shown as "Not available: {reason}".
+         */
+        Missing: {
+            /** Reason */
+            reason: string;
+            /** Section */
+            section: string;
+        };
+        /** Narrative */
+        Narrative: {
+            /** Dropped */
+            dropped: number;
+            /** Model */
+            model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Sentences */
+            sentences: components["schemas"]["NarrativeSentence"][];
+        };
+        /** NarrativeSentence */
+        NarrativeSentence: {
+            /** Source Ids */
+            source_ids: string[];
+            /** Text */
+            text: string;
         };
         /** NewsItem */
         NewsItem: {
@@ -2663,6 +3357,11 @@ export interface components {
             quote: string;
             /** Text */
             text: string;
+        };
+        /** NoteCreate */
+        NoteCreate: {
+            /** Note */
+            note: string;
         };
         /** NoteItem */
         NoteItem: {
@@ -3092,6 +3791,35 @@ export interface components {
             /** Value */
             value: string | null;
         };
+        /**
+         * Reaction
+         * @description The price move around the earnings 8-K, described, never interpreted.
+         */
+        Reaction: {
+            /** Filing Date */
+            filing_date: string | null;
+            /** Filing Id */
+            filing_id: number;
+            /** Move */
+            move?: string | null;
+            /** Move 5D */
+            move_5d?: string | null;
+            /** Move At Open */
+            move_at_open?: string | null;
+            /** Post Date */
+            post_date?: string | null;
+            /** Pre Date */
+            pre_date?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Source Ids
+             * @default []
+             */
+            source_ids: string[];
+            /** Volume Ratio */
+            volume_ratio?: string | null;
+        };
         /** Readiness */
         Readiness: {
             /** Checks */
@@ -3367,6 +4095,51 @@ export interface components {
             /** Text */
             text?: string | null;
         };
+        /** StateCounts */
+        StateCounts: {
+            /**
+             * Broken
+             * @default 0
+             */
+            broken: number;
+            /**
+             * Met
+             * @default 0
+             */
+            met: number;
+            /**
+             * No Data
+             * @default 0
+             */
+            no_data: number;
+        };
+        /** StoredBrief */
+        StoredBrief: {
+            brief?: components["schemas"]["EarningsBrief"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Fiscal Period */
+            fiscal_period: string;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /** Id */
+            id: number;
+            /** Inputs Label */
+            inputs_label: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "preview" | "brief";
+            /** Period Label */
+            period_label: string;
+            preview?: components["schemas"]["EarningsPreview"] | null;
+            /** Version */
+            version: number;
+        };
         /** TableChunkSource */
         TableChunkSource: {
             /**
@@ -3437,6 +4210,141 @@ export interface components {
             /** Url */
             url?: string | null;
         };
+        /** ThesisCreate */
+        ThesisCreate: {
+            /**
+             * Body Md
+             * @default
+             */
+            body_md: string;
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "long" | "short" | "watch" | "avoid";
+            /** Ticker */
+            ticker: string;
+            /** Title */
+            title: string;
+        };
+        /** ThesisDetail */
+        ThesisDetail: {
+            /** Body Md */
+            body_md: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            kpi_states: components["schemas"]["StateCounts"];
+            /** Kpis */
+            kpis: components["schemas"]["Kpi"][];
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "long" | "short" | "watch" | "avoid";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "closed";
+            /** Ticker */
+            ticker: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ThesisEvent */
+        ThesisEvent: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "kpi_met" | "kpi_broken" | "red_flag" | "brief_published" | "user_note" | "status_changed";
+            /** Kpi Id */
+            kpi_id: number | null;
+            /** Note */
+            note: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Ref Id */
+            ref_id: string | null;
+            /** Ref Type */
+            ref_type: string | null;
+        };
+        /** ThesisRevision */
+        ThesisRevision: {
+            /** Body Md */
+            body_md: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revision */
+            revision: number;
+            /** Title */
+            title: string;
+            /** Word Diff */
+            word_diff: components["schemas"]["DiffOp"][] | null;
+        };
+        /** ThesisSummary */
+        ThesisSummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            kpi_states: components["schemas"]["StateCounts"];
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "long" | "short" | "watch" | "avoid";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "closed";
+            /** Ticker */
+            ticker: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ThesisUpdate */
+        ThesisUpdate: {
+            /** Body Md */
+            body_md?: string | null;
+            /** Stance */
+            stance?: ("long" | "short" | "watch" | "avoid") | null;
+            /** Status */
+            status?: ("active" | "closed") | null;
+            /** Title */
+            title?: string | null;
+        };
         /**
          * TokenResponse
          * @description Access token in the body; the refresh token is set as an httpOnly cookie (AUTH-002).
@@ -3461,6 +4369,19 @@ export interface components {
             latency_ms?: number | null;
             /** Tool */
             tool: string;
+        };
+        /** TopicShift */
+        TopicShift: {
+            /** After Per 1K */
+            after_per_1k: number;
+            /** Before Per 1K */
+            before_per_1k: number;
+            /** Label */
+            label: string;
+            /** Source Ids */
+            source_ids: string[];
+            /** Topic */
+            topic: string;
         };
         /** TrackRecordQuarter */
         TrackRecordQuarter: {
@@ -3547,6 +4468,31 @@ export interface components {
             disclaimer: string;
             peer_set: components["schemas"]["PeerSetOut"] | null;
         };
+        /** ValuationLine */
+        ValuationLine: {
+            /** Label */
+            label: string;
+            /** Multiple */
+            multiple: string;
+            /** Own Label */
+            own_label?: string | null;
+            /**
+             * Own N
+             * @default 0
+             */
+            own_n: number;
+            /** Peer Label */
+            peer_label?: string | null;
+            /**
+             * Peer N
+             * @default 0
+             */
+            peer_n: number;
+            /** Source Ids */
+            source_ids: string[];
+            /** Value */
+            value: string;
+        };
         /** ValuationResponse */
         ValuationResponse: {
             freshness: components["schemas"]["Freshness"];
@@ -3554,6 +4500,13 @@ export interface components {
             metrics: components["schemas"]["MetricResult"][];
             /** Ticker */
             ticker: string;
+        };
+        /** ValuationSnapshot */
+        ValuationSnapshot: {
+            /** As Of */
+            as_of: string | null;
+            /** Lines */
+            lines: components["schemas"]["ValuationLine"][];
         };
         /**
          * VerifiedClaim
@@ -3612,6 +4565,23 @@ export interface components {
              */
             sufficient: boolean;
         };
+        /** WatchItem */
+        WatchItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "growth_deceleration" | "new_risk_factor" | "topic_rise" | "margin_reversal";
+            /**
+             * Reworded
+             * @default false
+             */
+            reworded: boolean;
+            /** Source Ids */
+            source_ids: string[];
+            /** Text */
+            text: string;
+        };
         /** Watchlist */
         Watchlist: {
             /** Id */
@@ -3653,6 +4623,29 @@ export interface components {
              * @default []
              */
             warnings: string[];
+        };
+        /** WhatChanged */
+        WhatChanged: {
+            /** Against Filing Date */
+            against_filing_date: string | null;
+            /** Against Filing Id */
+            against_filing_id: number;
+            /** Filing Date */
+            filing_date: string | null;
+            /** Filing Id */
+            filing_id: number;
+            /** Filing Type */
+            filing_type: string;
+            /** New Risks */
+            new_risks: number;
+            /** Removed Risks */
+            removed_risks: number;
+            /** Reworded Risks */
+            reworded_risks: number;
+            /** Top Changes */
+            top_changes: components["schemas"]["ChangedPassage"][];
+            /** Topic Shifts */
+            topic_shifts: components["schemas"]["TopicShift"][];
         };
         /** XbrlFactSource */
         XbrlFactSource: {
@@ -3980,6 +4973,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_login_api_v1_auth_demo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
         };
@@ -4530,6 +5543,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EarningsQualityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    earnings_briefs_api_v1_companies__ticker__earnings_briefs_get: {
+        parameters: {
+            query?: {
+                kind?: ("preview" | "brief") | null;
+                fiscal_year?: number | null;
+                fiscal_period?: string | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsBriefsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_earnings_brief_api_v1_companies__ticker__earnings_briefs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateBriefRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateBriefResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    earnings_calendar_api_v1_companies__ticker__earnings_calendar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsCalendarResponse"];
                 };
             };
             /** @description Validation Error */
@@ -5640,6 +6756,26 @@ export interface operations {
             };
         };
     };
+    demo_info_api_v1_meta_demo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoInfo"];
+                };
+            };
+        };
+    };
     list_notifications_api_v1_notifications_get: {
         parameters: {
             query?: {
@@ -6010,6 +7146,453 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourceDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_theses_api_v1_theses_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_thesis_api_v1_theses_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThesisCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_thesis_api_v1_theses_draft_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thesis_api_v1_theses__thesis_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_thesis_api_v1_theses__thesis_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_thesis_api_v1_theses__thesis_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThesisUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_api_v1_theses__thesis_id__events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisEvent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note_api_v1_theses__thesis_id__events_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisEvent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_kpi_api_v1_theses__thesis_id__kpis_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KpiCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Kpi"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_kpi_api_v1_theses__thesis_id__kpis__kpi_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+                kpi_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_kpi_api_v1_theses__thesis_id__kpis__kpi_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+                kpi_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KpiUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Kpi"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_revisions_api_v1_theses__thesis_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                thesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThesisRevision"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    metric_registry_api_v1_thesis_metric_registry_get: {
+        parameters: {
+            query?: {
+                ticker?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricRegistryResponse"];
                 };
             };
             /** @description Validation Error */

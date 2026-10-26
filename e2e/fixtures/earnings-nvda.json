@@ -1,0 +1,1504 @@
+{
+ "ticker": "NVDA",
+ "items": [
+  {
+   "id": 3,
+   "kind": "preview",
+   "fiscal_year": 2027,
+   "fiscal_period": "Q3",
+   "period_label": "Q3 FY2027",
+   "version": 2,
+   "inputs_label": "updated: watch items",
+   "created_at": "2026-10-25T02:29:46.073382Z",
+   "preview": {
+    "header": {
+     "ticker": "NVDA",
+     "company_name": "NVIDIA CORP",
+     "fiscal_year": 2027,
+     "fiscal_period": "Q3",
+     "period_label": "Q3 FY2027",
+     "report_date": "2026-11-18",
+     "report_time": "unknown",
+     "date_source": "estimated",
+     "date_estimated": true,
+     "date_source_id": null
+    },
+    "last_quarter_snapshot": {
+     "fiscal_year": 2027,
+     "fiscal_period": "Q2",
+     "period_label": "Q2 FY2027",
+     "prior_quarter_label": "Q1 FY2027",
+     "prior_year_label": "Q2 FY2026",
+     "rows": [
+      {
+       "metric": "revenue",
+       "label": "Revenue",
+       "unit": "usd",
+       "change_kind": "growth",
+       "value": "96221000000.00000000",
+       "source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "81615000000.00000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.178962",
+       "prior_year": "46743000000.00000000",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "1.058511",
+       "reason": null
+      },
+      {
+       "metric": "gross_margin",
+       "label": "Gross margin",
+       "unit": "ratio",
+       "change_kind": "points",
+       "value": "0.7497531723844067303395308716",
+       "source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "0.7493352937572750107210684310",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:gross_profit:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.000418",
+       "prior_year": "0.7242367841174079541321695227",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.025516",
+       "reason": null
+      },
+      {
+       "metric": "operating_margin",
+       "label": "Operating margin",
+       "unit": "ratio",
+       "change_kind": "points",
+       "value": "0.6623710000935346753827127134",
+       "source_ids": [
+        "xbrl:NVDA:operating_income:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "0.6559578508852539361636953991",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:operating_income:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.006413",
+       "prior_year": "0.6084333483088376869263846993",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:operating_income:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.053938",
+       "reason": null
+      },
+      {
+       "metric": "eps_gaap",
+       "label": "EPS (GAAP, diluted)",
+       "unit": "usd_per_share",
+       "change_kind": "growth",
+       "value": "2.46000000",
+       "source_ids": [
+        "xbrl:NVDA:eps_diluted:Q2-FY2027"
+       ],
+       "prior_quarter": "2.39000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:eps_diluted:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.029289",
+       "prior_year": "1.08000000",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:eps_diluted:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "1.277778",
+       "reason": null
+      },
+      {
+       "metric": "operating_cash_flow",
+       "label": "Operating cash flow",
+       "unit": "usd",
+       "change_kind": "growth",
+       "value": "24077000000.00000000",
+       "source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2027"
+       ],
+       "prior_quarter": "50344000000.00000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:operating_cash_flow:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "-0.521750",
+       "prior_year": "15365000000.00000000",
+       "prior_year_source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.567003",
+       "reason": null
+      }
+     ]
+    },
+    "guidance_for_period": [
+     {
+      "id": 73,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": "0.73500000",
+      "high": "0.74500000",
+      "point": null,
+      "midpoint": "0.74000000",
+      "derived_range": true,
+      "quote": "GAAP and non-GAAP gross margins are expected to be 74.0%, plus or minus 50 basis points.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "actual_unavailable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "actual_not_reported",
+       "explanation": "Actual not reported yet.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "gross_margin",
+      "metric_label": "Gross margin",
+      "basis": "gaap",
+      "unit": "ratio",
+      "revisions": []
+     },
+     {
+      "id": 74,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": "0.73500000",
+      "high": "0.74500000",
+      "point": null,
+      "midpoint": "0.74000000",
+      "derived_range": true,
+      "quote": "GAAP and non-GAAP gross margins are expected to be 74.0%, plus or minus 50 basis points.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "not_comparable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "non_gaap_basis",
+       "explanation": "Guided on a non-GAAP basis; GAAP actual not comparable.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "gross_margin",
+      "metric_label": "Gross margin",
+      "basis": "non_gaap",
+      "unit": "ratio",
+      "revisions": []
+     },
+     {
+      "id": 75,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": null,
+      "high": null,
+      "point": "9200000000.00000000",
+      "midpoint": "9200000000.00000000",
+      "derived_range": false,
+      "quote": "GAAP and non-GAAP operating expenses are expected to be approximately $9.2 billion and $9.0 billion, respectively.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "actual_unavailable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "actual_not_reported",
+       "explanation": "Actual not reported yet.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "operating_expenses",
+      "metric_label": "Operating expenses",
+      "basis": "gaap",
+      "unit": "usd",
+      "revisions": []
+     },
+     {
+      "id": 76,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": null,
+      "high": null,
+      "point": "9000000000.00000000",
+      "midpoint": "9000000000.00000000",
+      "derived_range": false,
+      "quote": "GAAP and non-GAAP operating expenses are expected to be approximately $9.2 billion and $9.0 billion, respectively.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "not_comparable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "non_gaap_basis",
+       "explanation": "Guided on a non-GAAP basis; GAAP actual not comparable.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "operating_expenses",
+      "metric_label": "Operating expenses",
+      "basis": "non_gaap",
+      "unit": "usd",
+      "revisions": []
+     },
+     {
+      "id": 72,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": "105840000000.00000000",
+      "high": "110160000000.00000000",
+      "point": null,
+      "midpoint": "108000000000.00000000",
+      "derived_range": true,
+      "quote": "Revenue is expected to be $108.0 billion, plus or minus 2%.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "actual_unavailable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "actual_not_reported",
+       "explanation": "Actual not reported yet.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "revenue",
+      "metric_label": "Revenue",
+      "basis": "unspecified",
+      "unit": "usd",
+      "revisions": []
+     }
+    ],
+    "track_record": {
+     "ticker": "NVDA",
+     "metric": "revenue",
+     "metric_label": "Revenue",
+     "n_quarters": 8,
+     "n_comparable": 7,
+     "n_above": 7,
+     "n_within": 0,
+     "n_below": 0,
+     "avg_delta_vs_mid": "2800714285.714285714285714286",
+     "avg_delta_vs_mid_pct": "0.04567883",
+     "sufficient": true,
+     "label": "Revenue came in above the guided range in 7 of 7 quarters, within it in 0 and below it in 0.",
+     "quarters": [
+      {
+       "period_label": "Q3 FY2027",
+       "low": "105840000000.00000000",
+       "high": "110160000000.00000000",
+       "actual_value": null,
+       "result": "actual_unavailable",
+       "delta_vs_mid_pct": null,
+       "source_id": "2716_0_5"
+      },
+      {
+       "period_label": "Q2 FY2027",
+       "low": "89180000000.00000000",
+       "high": "92820000000.00000000",
+       "actual_value": "96221000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.05737363",
+       "source_id": "2719_0_5"
+      },
+      {
+       "period_label": "Q1 FY2027",
+       "low": "76440000000.00000000",
+       "high": "79560000000.00000000",
+       "actual_value": "81615000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.04634615",
+       "source_id": "2723_0_9"
+      },
+      {
+       "period_label": "Q4 FY2026",
+       "low": "63700000000.00000000",
+       "high": "66300000000.00000000",
+       "actual_value": "68127000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.04810769",
+       "source_id": "2725_0_4"
+      },
+      {
+       "period_label": "Q3 FY2026",
+       "low": "52920000000.00000000",
+       "high": "55080000000.00000000",
+       "actual_value": "57006000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.05566667",
+       "source_id": "2727_0_5"
+      },
+      {
+       "period_label": "Q2 FY2026",
+       "low": "44100000000.00000000",
+       "high": "45900000000.00000000",
+       "actual_value": "46743000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.03873333",
+       "source_id": "2729_0_5"
+      },
+      {
+       "period_label": "Q1 FY2026",
+       "low": "42140000000.00000000",
+       "high": "43860000000.00000000",
+       "actual_value": "44062000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.02469767",
+       "source_id": "2733_0_9"
+      },
+      {
+       "period_label": "Q4 FY2025",
+       "low": "36750000000.00000000",
+       "high": "38250000000.00000000",
+       "actual_value": "39331000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.04882667",
+       "source_id": "2735_0_4"
+      }
+     ]
+    },
+    "valuation_snapshot": {
+     "as_of": "2026-10-23",
+     "lines": [
+      {
+       "multiple": "pe_ratio",
+       "label": "P/E (TTM)",
+       "value": "26.35906263",
+       "source_ids": [
+        "derived:NVDA:pe_ratio:2026-10-23"
+       ],
+       "own_label": "in the bottom quartile of its 5-year range",
+       "own_n": 6,
+       "peer_label": null,
+       "peer_n": 0
+      },
+      {
+       "multiple": "ev_ebitda",
+       "label": "EV/EBITDA (TTM)",
+       "value": "25.14540956",
+       "source_ids": [
+        "derived:NVDA:ev_ebitda:2026-10-23"
+       ],
+       "own_label": "in the bottom quartile of its 5-year range",
+       "own_n": 6,
+       "peer_label": null,
+       "peer_n": 0
+      }
+     ]
+    },
+    "open_flags": [],
+    "last_reaction": {
+     "filing_id": 22,
+     "filing_date": "2026-08-26",
+     "pre_date": "2026-08-25",
+     "post_date": "2026-08-27",
+     "move_at_open": "0.046045",
+     "move": "0.070077",
+     "move_5d": "0.053321",
+     "volume_ratio": "2.598474",
+     "source_ids": [
+      "filing:22",
+      "price:NVDA:2026-08-25:2026-08-27"
+     ],
+     "reason": null
+    },
+    "watch_items": [
+     {
+      "kind": "growth_deceleration",
+      "text": "Operating income growth slowed to 124.1% year over year in Q2 FY2027 from 147.42% in Q1 FY2027.",
+      "source_ids": [
+       "xbrl:NVDA:operating_income:Q2-FY2027",
+       "xbrl:NVDA:operating_income:Q2-FY2026",
+       "xbrl:NVDA:operating_income:Q1-FY2027",
+       "xbrl:NVDA:operating_income:Q1-FY2026"
+      ],
+      "reworded": true
+     },
+     {
+      "kind": "growth_deceleration",
+      "text": "Net income growth slowed to 125.9% year over year in Q2 FY2027 from 210.63% in Q1 FY2027.",
+      "source_ids": [
+       "xbrl:NVDA:net_income:Q2-FY2027",
+       "xbrl:NVDA:net_income:Q2-FY2026",
+       "xbrl:NVDA:net_income:Q1-FY2027",
+       "xbrl:NVDA:net_income:Q1-FY2026"
+      ],
+      "reworded": true
+     },
+     {
+      "kind": "new_risk_factor",
+      "text": "The 10-Q filed 2026-08-26 adds a risk factor not in the prior 10-Q stating, \u201cCommitments, guarantees, and other commercial arrangements expose us to financial, counterparty and execution risks and may not provide\u2026\u201d.",
+      "source_ids": [
+       "14_P2-1A_478"
+      ],
+      "reworded": true
+     },
+     {
+      "kind": "new_risk_factor",
+      "text": "The 10-Q filed 2026-08-26 includes an added risk factor not seen in the prior 10-Q stating, \u201cTo support our customers\u2019 and partners\u2019 buildout of AI infrastructure, we enter into commercial arrangements, including financial\u2026\u201d.",
+      "source_ids": [
+       "14_P2-1A_479",
+       "14_P2-1A_480"
+      ],
+      "reworded": true
+     }
+    ],
+    "missing": []
+   },
+   "brief": null
+  },
+  {
+   "id": 2,
+   "kind": "preview",
+   "fiscal_year": 2027,
+   "fiscal_period": "Q3",
+   "period_label": "Q3 FY2027",
+   "version": 1,
+   "inputs_label": "first preview",
+   "created_at": "2026-10-25T02:28:42.867751Z",
+   "preview": {
+    "header": {
+     "ticker": "NVDA",
+     "company_name": "NVIDIA CORP",
+     "fiscal_year": 2027,
+     "fiscal_period": "Q3",
+     "period_label": "Q3 FY2027",
+     "report_date": "2026-11-18",
+     "report_time": "unknown",
+     "date_source": "estimated",
+     "date_estimated": true,
+     "date_source_id": null
+    },
+    "last_quarter_snapshot": {
+     "fiscal_year": 2027,
+     "fiscal_period": "Q2",
+     "period_label": "Q2 FY2027",
+     "prior_quarter_label": "Q1 FY2027",
+     "prior_year_label": "Q2 FY2026",
+     "rows": [
+      {
+       "metric": "revenue",
+       "label": "Revenue",
+       "unit": "usd",
+       "change_kind": "growth",
+       "value": "96221000000.00000000",
+       "source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "81615000000.00000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.178962",
+       "prior_year": "46743000000.00000000",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "1.058511",
+       "reason": null
+      },
+      {
+       "metric": "gross_margin",
+       "label": "Gross margin",
+       "unit": "ratio",
+       "change_kind": "points",
+       "value": "0.7497531723844067303395308716",
+       "source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "0.7493352937572750107210684310",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:gross_profit:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.000418",
+       "prior_year": "0.7242367841174079541321695227",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.025516",
+       "reason": null
+      },
+      {
+       "metric": "operating_margin",
+       "label": "Operating margin",
+       "unit": "ratio",
+       "change_kind": "points",
+       "value": "0.6623710000935346753827127134",
+       "source_ids": [
+        "xbrl:NVDA:operating_income:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "0.6559578508852539361636953991",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:operating_income:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.006413",
+       "prior_year": "0.6084333483088376869263846993",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:operating_income:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.053938",
+       "reason": null
+      },
+      {
+       "metric": "eps_gaap",
+       "label": "EPS (GAAP, diluted)",
+       "unit": "usd_per_share",
+       "change_kind": "growth",
+       "value": "2.46000000",
+       "source_ids": [
+        "xbrl:NVDA:eps_diluted:Q2-FY2027"
+       ],
+       "prior_quarter": "2.39000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:eps_diluted:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.029289",
+       "prior_year": "1.08000000",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:eps_diluted:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "1.277778",
+       "reason": null
+      },
+      {
+       "metric": "operating_cash_flow",
+       "label": "Operating cash flow",
+       "unit": "usd",
+       "change_kind": "growth",
+       "value": "24077000000.00000000",
+       "source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2027"
+       ],
+       "prior_quarter": "50344000000.00000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:operating_cash_flow:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "-0.521750",
+       "prior_year": "15365000000.00000000",
+       "prior_year_source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.567003",
+       "reason": null
+      }
+     ]
+    },
+    "guidance_for_period": [
+     {
+      "id": 73,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": "0.73500000",
+      "high": "0.74500000",
+      "point": null,
+      "midpoint": "0.74000000",
+      "derived_range": true,
+      "quote": "GAAP and non-GAAP gross margins are expected to be 74.0%, plus or minus 50 basis points.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "actual_unavailable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "actual_not_reported",
+       "explanation": "Actual not reported yet.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "gross_margin",
+      "metric_label": "Gross margin",
+      "basis": "gaap",
+      "unit": "ratio",
+      "revisions": []
+     },
+     {
+      "id": 74,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": "0.73500000",
+      "high": "0.74500000",
+      "point": null,
+      "midpoint": "0.74000000",
+      "derived_range": true,
+      "quote": "GAAP and non-GAAP gross margins are expected to be 74.0%, plus or minus 50 basis points.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "not_comparable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "non_gaap_basis",
+       "explanation": "Guided on a non-GAAP basis; GAAP actual not comparable.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "gross_margin",
+      "metric_label": "Gross margin",
+      "basis": "non_gaap",
+      "unit": "ratio",
+      "revisions": []
+     },
+     {
+      "id": 75,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": null,
+      "high": null,
+      "point": "9200000000.00000000",
+      "midpoint": "9200000000.00000000",
+      "derived_range": false,
+      "quote": "GAAP and non-GAAP operating expenses are expected to be approximately $9.2 billion and $9.0 billion, respectively.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "actual_unavailable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "actual_not_reported",
+       "explanation": "Actual not reported yet.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "operating_expenses",
+      "metric_label": "Operating expenses",
+      "basis": "gaap",
+      "unit": "usd",
+      "revisions": []
+     },
+     {
+      "id": 76,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": null,
+      "high": null,
+      "point": "9000000000.00000000",
+      "midpoint": "9000000000.00000000",
+      "derived_range": false,
+      "quote": "GAAP and non-GAAP operating expenses are expected to be approximately $9.2 billion and $9.0 billion, respectively.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "not_comparable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "non_gaap_basis",
+       "explanation": "Guided on a non-GAAP basis; GAAP actual not comparable.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "operating_expenses",
+      "metric_label": "Operating expenses",
+      "basis": "non_gaap",
+      "unit": "usd",
+      "revisions": []
+     },
+     {
+      "id": 72,
+      "issued_at": "2026-08-27T00:21:19Z",
+      "low": "105840000000.00000000",
+      "high": "110160000000.00000000",
+      "point": null,
+      "midpoint": "108000000000.00000000",
+      "derived_range": true,
+      "quote": "Revenue is expected to be $108.0 billion, plus or minus 2%.",
+      "source_id": "2716_0_5",
+      "release": {
+       "document_id": 2716,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27pr.htm"
+      },
+      "outcome": {
+       "result": "actual_unavailable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "actual_not_reported",
+       "explanation": "Actual not reported yet.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q3",
+      "period_label": "Q3 FY2027",
+      "metric": "revenue",
+      "metric_label": "Revenue",
+      "basis": "unspecified",
+      "unit": "usd",
+      "revisions": []
+     }
+    ],
+    "track_record": {
+     "ticker": "NVDA",
+     "metric": "revenue",
+     "metric_label": "Revenue",
+     "n_quarters": 8,
+     "n_comparable": 7,
+     "n_above": 7,
+     "n_within": 0,
+     "n_below": 0,
+     "avg_delta_vs_mid": "2800714285.714285714285714286",
+     "avg_delta_vs_mid_pct": "0.04567883",
+     "sufficient": true,
+     "label": "Revenue came in above the guided range in 7 of 7 quarters, within it in 0 and below it in 0.",
+     "quarters": [
+      {
+       "period_label": "Q3 FY2027",
+       "low": "105840000000.00000000",
+       "high": "110160000000.00000000",
+       "actual_value": null,
+       "result": "actual_unavailable",
+       "delta_vs_mid_pct": null,
+       "source_id": "2716_0_5"
+      },
+      {
+       "period_label": "Q2 FY2027",
+       "low": "89180000000.00000000",
+       "high": "92820000000.00000000",
+       "actual_value": "96221000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.05737363",
+       "source_id": "2719_0_5"
+      },
+      {
+       "period_label": "Q1 FY2027",
+       "low": "76440000000.00000000",
+       "high": "79560000000.00000000",
+       "actual_value": "81615000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.04634615",
+       "source_id": "2723_0_9"
+      },
+      {
+       "period_label": "Q4 FY2026",
+       "low": "63700000000.00000000",
+       "high": "66300000000.00000000",
+       "actual_value": "68127000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.04810769",
+       "source_id": "2725_0_4"
+      },
+      {
+       "period_label": "Q3 FY2026",
+       "low": "52920000000.00000000",
+       "high": "55080000000.00000000",
+       "actual_value": "57006000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.05566667",
+       "source_id": "2727_0_5"
+      },
+      {
+       "period_label": "Q2 FY2026",
+       "low": "44100000000.00000000",
+       "high": "45900000000.00000000",
+       "actual_value": "46743000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.03873333",
+       "source_id": "2729_0_5"
+      },
+      {
+       "period_label": "Q1 FY2026",
+       "low": "42140000000.00000000",
+       "high": "43860000000.00000000",
+       "actual_value": "44062000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.02469767",
+       "source_id": "2733_0_9"
+      },
+      {
+       "period_label": "Q4 FY2025",
+       "low": "36750000000.00000000",
+       "high": "38250000000.00000000",
+       "actual_value": "39331000000.00000000",
+       "result": "above_range",
+       "delta_vs_mid_pct": "0.04882667",
+       "source_id": "2735_0_4"
+      }
+     ]
+    },
+    "valuation_snapshot": {
+     "as_of": "2026-10-23",
+     "lines": [
+      {
+       "multiple": "pe_ratio",
+       "label": "P/E (TTM)",
+       "value": "26.35906263",
+       "source_ids": [
+        "derived:NVDA:pe_ratio:2026-10-23"
+       ],
+       "own_label": "in the bottom quartile of its 5-year range",
+       "own_n": 6,
+       "peer_label": null,
+       "peer_n": 0
+      },
+      {
+       "multiple": "ev_ebitda",
+       "label": "EV/EBITDA (TTM)",
+       "value": "25.14540956",
+       "source_ids": [
+        "derived:NVDA:ev_ebitda:2026-10-23"
+       ],
+       "own_label": "in the bottom quartile of its 5-year range",
+       "own_n": 6,
+       "peer_label": null,
+       "peer_n": 0
+      }
+     ]
+    },
+    "open_flags": [],
+    "last_reaction": {
+     "filing_id": 22,
+     "filing_date": "2026-08-26",
+     "pre_date": "2026-08-25",
+     "post_date": "2026-08-27",
+     "move_at_open": "0.046045",
+     "move": "0.070077",
+     "move_5d": "0.053321",
+     "volume_ratio": "2.598474",
+     "source_ids": [
+      "filing:22",
+      "price:NVDA:2026-08-25:2026-08-27"
+     ],
+     "reason": null
+    },
+    "watch_items": [
+     {
+      "kind": "growth_deceleration",
+      "text": "Operating income growth slowed to 124.1% year over year in Q2 FY2027 from 147.42% in Q1 FY2027.",
+      "source_ids": [
+       "xbrl:NVDA:operating_income:Q2-FY2027",
+       "xbrl:NVDA:operating_income:Q2-FY2026",
+       "xbrl:NVDA:operating_income:Q1-FY2027",
+       "xbrl:NVDA:operating_income:Q1-FY2026"
+      ],
+      "reworded": true
+     },
+     {
+      "kind": "growth_deceleration",
+      "text": "Net income growth slowed to 125.9% year over year in Q2 FY2027 from 210.63% in Q1 FY2027.",
+      "source_ids": [
+       "xbrl:NVDA:net_income:Q2-FY2027",
+       "xbrl:NVDA:net_income:Q2-FY2026",
+       "xbrl:NVDA:net_income:Q1-FY2027",
+       "xbrl:NVDA:net_income:Q1-FY2026"
+      ],
+      "reworded": true
+     },
+     {
+      "kind": "new_risk_factor",
+      "text": "Watch the risk factor added to the 10-Q filed 2026-08-26 that was not in the prior 10-Q stating, \u201cCommitments, guarantees, and other commercial arrangements expose us to financial, counterparty and execution risks and may not provide anti\u201d.",
+      "source_ids": [
+       "14_P2-1A_478"
+      ],
+      "reworded": true
+     },
+     {
+      "kind": "new_risk_factor",
+      "text": "Watch the risk factor added to the 10-Q filed 2026-08-26 that was not in the prior 10-Q stating, \u201cTo support our customers\u2019 and partners\u2019 buildout of AI infrastructure, we enter into commercial arrangements, including financial guarantees\u201d.",
+      "source_ids": [
+       "14_P2-1A_479",
+       "14_P2-1A_480"
+      ],
+      "reworded": true
+     }
+    ],
+    "missing": []
+   },
+   "brief": null
+  },
+  {
+   "id": 1,
+   "kind": "brief",
+   "fiscal_year": 2027,
+   "fiscal_period": "Q2",
+   "period_label": "Q2 FY2027",
+   "version": 1,
+   "inputs_label": "after 10-Q filed",
+   "created_at": "2026-10-25T02:28:38.756872Z",
+   "preview": null,
+   "brief": {
+    "header": {
+     "ticker": "NVDA",
+     "company_name": "NVIDIA CORP",
+     "fiscal_year": 2027,
+     "fiscal_period": "Q2",
+     "period_label": "Q2 FY2027",
+     "report_date": "2026-08-26",
+     "report_time": "unknown",
+     "date_source": "sec_8k",
+     "date_estimated": false,
+     "date_source_id": "filing:22"
+    },
+    "headline_table": {
+     "fiscal_year": 2027,
+     "fiscal_period": "Q2",
+     "period_label": "Q2 FY2027",
+     "prior_quarter_label": "Q1 FY2027",
+     "prior_year_label": "Q2 FY2026",
+     "rows": [
+      {
+       "metric": "revenue",
+       "label": "Revenue",
+       "unit": "usd",
+       "change_kind": "growth",
+       "value": "96221000000.00000000",
+       "source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "81615000000.00000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.178962",
+       "prior_year": "46743000000.00000000",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "1.058511",
+       "reason": null
+      },
+      {
+       "metric": "gross_margin",
+       "label": "Gross margin",
+       "unit": "ratio",
+       "change_kind": "points",
+       "value": "0.7497531723844067303395308716",
+       "source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "0.7493352937572750107210684310",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:gross_profit:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.000418",
+       "prior_year": "0.7242367841174079541321695227",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.025516",
+       "reason": null
+      },
+      {
+       "metric": "operating_margin",
+       "label": "Operating margin",
+       "unit": "ratio",
+       "change_kind": "points",
+       "value": "0.6623710000935346753827127134",
+       "source_ids": [
+        "xbrl:NVDA:operating_income:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "prior_quarter": "0.6559578508852539361636953991",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:operating_income:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.006413",
+       "prior_year": "0.6084333483088376869263846993",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:operating_income:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.053938",
+       "reason": null
+      },
+      {
+       "metric": "eps_gaap",
+       "label": "EPS (GAAP, diluted)",
+       "unit": "usd_per_share",
+       "change_kind": "growth",
+       "value": "2.46000000",
+       "source_ids": [
+        "xbrl:NVDA:eps_diluted:Q2-FY2027"
+       ],
+       "prior_quarter": "2.39000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:eps_diluted:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "0.029289",
+       "prior_year": "1.08000000",
+       "prior_year_source_ids": [
+        "xbrl:NVDA:eps_diluted:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "1.277778",
+       "reason": null
+      },
+      {
+       "metric": "operating_cash_flow",
+       "label": "Operating cash flow",
+       "unit": "usd",
+       "change_kind": "growth",
+       "value": "24077000000.00000000",
+       "source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2027"
+       ],
+       "prior_quarter": "50344000000.00000000",
+       "prior_quarter_source_ids": [
+        "xbrl:NVDA:operating_cash_flow:Q1-FY2027"
+       ],
+       "change_vs_prior_quarter": "-0.521750",
+       "prior_year": "15365000000.00000000",
+       "prior_year_source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2026"
+       ],
+       "change_vs_prior_year": "0.567003",
+       "reason": null
+      }
+     ]
+    },
+    "versus_guidance": [
+     {
+      "id": 80,
+      "issued_at": "2026-05-21T00:21:19Z",
+      "low": "0.74400000",
+      "high": "0.75400000",
+      "point": null,
+      "midpoint": "0.74900000",
+      "derived_range": true,
+      "quote": "GAAP and non-GAAP gross margins are expected to be 74.9% and 75.0%, respectively, plus or minus 50 basis points.",
+      "source_id": "2719_0_5",
+      "release": {
+       "document_id": 2719,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm"
+      },
+      "outcome": {
+       "result": "within_range",
+       "actual_value": "0.74975317",
+       "actual_source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "delta_vs_low": "0.00575317",
+       "delta_vs_high": "-0.00424683",
+       "delta_vs_mid": "0.00075317",
+       "delta_vs_mid_pct": "0.00100557",
+       "reason_code": null,
+       "explanation": null,
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q2",
+      "period_label": "Q2 FY2027",
+      "metric": "gross_margin",
+      "metric_label": "Gross margin",
+      "basis": "gaap",
+      "unit": "ratio",
+      "revisions": []
+     },
+     {
+      "id": 81,
+      "issued_at": "2026-05-21T00:21:19Z",
+      "low": "0.74500000",
+      "high": "0.75500000",
+      "point": null,
+      "midpoint": "0.75000000",
+      "derived_range": true,
+      "quote": "GAAP and non-GAAP gross margins are expected to be 74.9% and 75.0%, respectively, plus or minus 50 basis points.",
+      "source_id": "2719_0_5",
+      "release": {
+       "document_id": 2719,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm"
+      },
+      "outcome": {
+       "result": "not_comparable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "non_gaap_basis",
+       "explanation": "Guided on a non-GAAP basis; GAAP actual not comparable.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q2",
+      "period_label": "Q2 FY2027",
+      "metric": "gross_margin",
+      "metric_label": "Gross margin",
+      "basis": "non_gaap",
+      "unit": "ratio",
+      "revisions": []
+     },
+     {
+      "id": 82,
+      "issued_at": "2026-05-21T00:21:19Z",
+      "low": null,
+      "high": null,
+      "point": "8500000000.00000000",
+      "midpoint": "8500000000.00000000",
+      "derived_range": false,
+      "quote": "GAAP and non-GAAP operating expenses are expected to be approximately $8.5 billion and $8.3 billion, respectively.",
+      "source_id": "2719_0_5",
+      "release": {
+       "document_id": 2719,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm"
+      },
+      "outcome": {
+       "result": "below_range",
+       "actual_value": "8408000000.00000000",
+       "actual_source_ids": [
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:operating_income:Q2-FY2027"
+       ],
+       "delta_vs_low": "-92000000.00000000",
+       "delta_vs_high": "-92000000.00000000",
+       "delta_vs_mid": "-92000000.00000000",
+       "delta_vs_mid_pct": "-0.01082353",
+       "reason_code": null,
+       "explanation": null,
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q2",
+      "period_label": "Q2 FY2027",
+      "metric": "operating_expenses",
+      "metric_label": "Operating expenses",
+      "basis": "gaap",
+      "unit": "usd",
+      "revisions": []
+     },
+     {
+      "id": 83,
+      "issued_at": "2026-05-21T00:21:19Z",
+      "low": null,
+      "high": null,
+      "point": "8300000000.00000000",
+      "midpoint": "8300000000.00000000",
+      "derived_range": false,
+      "quote": "GAAP and non-GAAP operating expenses are expected to be approximately $8.5 billion and $8.3 billion, respectively.",
+      "source_id": "2719_0_5",
+      "release": {
+       "document_id": 2719,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm"
+      },
+      "outcome": {
+       "result": "not_comparable",
+       "actual_value": null,
+       "actual_source_ids": [],
+       "delta_vs_low": null,
+       "delta_vs_high": null,
+       "delta_vs_mid": null,
+       "delta_vs_mid_pct": null,
+       "reason_code": "non_gaap_basis",
+       "explanation": "Guided on a non-GAAP basis; GAAP actual not comparable.",
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q2",
+      "period_label": "Q2 FY2027",
+      "metric": "operating_expenses",
+      "metric_label": "Operating expenses",
+      "basis": "non_gaap",
+      "unit": "usd",
+      "revisions": []
+     },
+     {
+      "id": 79,
+      "issued_at": "2026-05-21T00:21:19Z",
+      "low": "89180000000.00000000",
+      "high": "92820000000.00000000",
+      "point": null,
+      "midpoint": "91000000000.00000000",
+      "derived_range": true,
+      "quote": "Revenue is expected to be $91.0 billion, plus or minus 2%.",
+      "source_id": "2719_0_5",
+      "release": {
+       "document_id": 2719,
+       "title": "NVDA 8-K EX-99.1",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm"
+      },
+      "outcome": {
+       "result": "above_range",
+       "actual_value": "96221000000.00000000",
+       "actual_source_ids": [
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ],
+       "delta_vs_low": "7041000000.00000000",
+       "delta_vs_high": "3401000000.00000000",
+       "delta_vs_mid": "5221000000.00000000",
+       "delta_vs_mid_pct": "0.05737363",
+       "reason_code": null,
+       "explanation": null,
+       "computed_at": "2026-10-24T21:03:22.334844Z"
+      },
+      "fiscal_year": 2027,
+      "fiscal_period": "Q2",
+      "period_label": "Q2 FY2027",
+      "metric": "revenue",
+      "metric_label": "Revenue",
+      "basis": "unspecified",
+      "unit": "usd",
+      "revisions": []
+     }
+    ],
+    "reaction": {
+     "filing_id": 22,
+     "filing_date": "2026-08-26",
+     "pre_date": "2026-08-25",
+     "post_date": "2026-08-27",
+     "move_at_open": "0.046045",
+     "move": "0.070077",
+     "move_5d": "0.053321",
+     "volume_ratio": "2.598474",
+     "source_ids": [
+      "filing:22",
+      "price:NVDA:2026-08-25:2026-08-27"
+     ],
+     "reason": null
+    },
+    "what_changed": {
+     "filing_id": 14,
+     "filing_type": "10-Q",
+     "filing_date": "2026-08-26",
+     "against_filing_id": 27,
+     "against_filing_date": "2026-05-20",
+     "new_risks": 3,
+     "removed_risks": 2,
+     "reworded_risks": 4,
+     "top_changes": [
+      {
+       "status": "new",
+       "heading": "Commitments, guarantees, and other commercial arrangements expose us to financial, counterparty and execution risks and may not provide anticipated benefits.",
+       "old_quote": null,
+       "new_quote": "Commitments, guarantees, and other commercial arrangements expose us to financial, counterparty and execution risks and may not provide anticipated benefits.\n\nTo support our operations and growth, we commit capital to secure supply and capacity, obtain cloud services, and lease\u2026",
+       "source_ids": [
+        "14_P2-1A_478"
+       ]
+      },
+      {
+       "status": "new",
+       "heading": "To support our customers\u2019 and partners\u2019 buildout of AI infrastructure, we enter into commercial arrangements, including financial guarantees and other forms of credit support, financing arrangements, and data center leases.",
+       "old_quote": null,
+       "new_quote": "To support our customers\u2019 and partners\u2019 buildout of AI infrastructure, we enter into commercial arrangements, including financial guarantees and other forms of credit support, financing arrangements, and data center leases.\n\nCustomers or partners may fail to fulfill their financ\u2026",
+       "source_ids": [
+        "14_P2-1A_479",
+        "14_P2-1A_480"
+       ]
+      },
+      {
+       "status": "new",
+       "heading": "Our indebtedness may adversely affect our financial condition and cash flows from operations.",
+       "old_quote": null,
+       "new_quote": "Our indebtedness may adversely affect our financial condition and cash flows from operations.\n\nAs of July 26, 2026, we had $33.5 billion aggregate principal amount of senior notes outstanding. As each series of senior notes matures, unless redeemed or repurchased, we must either\u2026",
+       "source_ids": [
+        "14_P2-1A_493"
+       ]
+      }
+     ],
+     "topic_shifts": [
+      {
+       "topic": "capital_returns",
+       "label": "Capital Returns",
+       "before_per_1k": 2.99,
+       "after_per_1k": 2.257,
+       "source_ids": [
+        "14_P1-2_468",
+        "14_P1-2_469",
+        "14_P1-2_470"
+       ]
+      },
+      {
+       "topic": "macro",
+       "label": "Macro",
+       "before_per_1k": 1.495,
+       "after_per_1k": 1.129,
+       "source_ids": [
+        "14_P1-2_445",
+        "14_P1-2_458",
+        "14_P1-2_470"
+       ]
+      },
+      {
+       "topic": "china_exposure",
+       "label": "China Exposure",
+       "before_per_1k": 0.747,
+       "after_per_1k": 0.564,
+       "source_ids": [
+        "14_P1-2_444",
+        "14_P1-2_449"
+       ]
+      }
+     ]
+    },
+    "new_flags": [
+     {
+      "source_id": "redflag:NVDA:exec_change_unspecified:0001045810-26-000060",
+      "ticker": "NVDA",
+      "rule_key": "exec_change_unspecified",
+      "label": "Leadership change reported",
+      "severity": "info",
+      "explanation": "Item 5.02 describes a departure without naming one of the principal roles we track. Read the item for who is affected.",
+      "rule_source": "SEC Form 8-K (SEC 873, 02-25), Item 5.02",
+      "event_date": "2026-07-02",
+      "snippet": "(b) On June 28, 2026, Ajay K. Puri, Executive Vice President, Worldwide Field Operations of NVIDIA Corporation, or the Company, notified the Company of his intention to retire from his role effective upon the employment commencement date of his successor.",
+      "filing": {
+       "id": 24,
+       "filing_type": "8-K",
+       "accession_number": "0001045810-26-000060",
+       "filing_date": "2026-07-02",
+       "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000060/nvda-20260628.htm"
+      },
+      "details": {
+       "item": "5.02",
+       "roles": []
+      }
+     }
+    ],
+    "narrative": {
+     "sentences": [
+      {
+       "text": "For Q2 FY2027, revenue was $96.22 billion, up from $81.62 billion in Q1 FY2027 and $46.74 billion in Q2 FY2026, coming in above the guided range of $89.18 billion to $92.82 billion.",
+       "source_ids": [
+        "2719_0_5",
+        "xbrl:NVDA:revenue:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ]
+      },
+      {
+       "text": "Gross margin was 74.98%, coming in within the guided range of 74.4% to 75.4%, compared to 74.93% in the prior quarter and 72.42% in Q2 FY2026.",
+       "source_ids": [
+        "2719_0_5",
+        "xbrl:NVDA:gross_profit:Q1-FY2027",
+        "xbrl:NVDA:gross_profit:Q2-FY2026",
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q1-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2026",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ]
+      },
+      {
+       "text": "Operating margin was 66.24%, operating cash flow reached $24.08 billion, and diluted GAAP EPS was $2.46 per share.",
+       "source_ids": [
+        "derived:NVDA:operating_cash_flow:Q2-FY2027",
+        "xbrl:NVDA:eps_diluted:Q2-FY2027",
+        "xbrl:NVDA:operating_income:Q2-FY2027",
+        "xbrl:NVDA:revenue:Q2-FY2027"
+       ]
+      },
+      {
+       "text": "Operating expenses were $8.41 billion, below the guided $8.5 billion.",
+       "source_ids": [
+        "2719_0_5",
+        "xbrl:NVDA:gross_profit:Q2-FY2027",
+        "xbrl:NVDA:operating_income:Q2-FY2027"
+       ]
+      }
+     ],
+     "dropped": 0,
+     "prompt_version": "earnings_narrative_v1",
+     "model": "gemini-3.8-flash"
+    },
+    "missing": []
+   }
+  }
+ ],
+ "scope": "Figures are the company's reported numbers and its own guidance; no analyst estimates are used. A preview lists what to watch, never what will happen."
+}

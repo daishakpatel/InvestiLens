@@ -136,6 +136,32 @@ Only the deterministic metrics (numeric accuracy, abstention, citation accuracy,
 meaningful in mock mode; Recall@K and judge faithfulness need live Voyage + an LLM key
 (ADR-0009/0010/0020). The README benchmark table marks those _pending_.
 
+### Published numbers and their gate (Phase 7l, NFR-ME-001 … 006)
+
+`make eval-report` builds a throwaway database (`assay_desk_eval`), ingests the seed companies
+from fixtures, runs `golden_v0` and the injection corpus through the real chat pipeline with the
+deterministic FakeLLM, times report generation, and writes `docs/eval/latest.{json,md}`. Every
+proportion has its count and a Wilson 95% interval (`app/eval/published.py`). Citation validity
+and number match are re-checked on the rendered answer against the source resolver, not by
+re-running the verifier being measured. `docs/eval/thresholds.json` holds the floors.
+`test_the_committed_report_passes_its_own_gate` (and `make eval-gate`) fails CI on a breach, or
+when the report's `inputs_hash` no longer matches the chat, citation, retrieval, prompt, eval
+and golden-set files it measured. The hash is over content, not commits, so a report committed
+alongside its code stays fresh. `EVAL_LIVE=1 make eval-report OUT=live` is the manual live-model
+run.
+
+### Docs consistency (Phase 7l, NFR-ME-011)
+
+`scripts/check_docs_consistency.py` runs in `make check` (and as a unit test). It fails on:
+- a requirement ID cited in tests or docs that is missing from the spec;
+- a README route missing from `openapi.json`;
+- a README number that is in neither `latest.json` nor `docs/generated/stats.json`;
+- a duplicated or skipped ADR number;
+- a task file in `00_START_HERE.md` that does not exist;
+- stale generated stats or README blocks (`make stats`).
+
+Each rule has a failing-case test in `tests/unit/test_docs_consistency.py`.
+
 ## Tier 2 — E2E + accessibility (`e2e/`)
 
 The §30.3 happy path: **search NVDA → load dashboard → generate report → ask question → receive
@@ -165,6 +191,19 @@ Run one spec with `npx playwright test tests/shell.spec.ts`.
 
 The suites run in parallel (Playwright's default workers). They used to need one worker because
 overlapping requests could stall the API; ADR-0029 fixed that, and a stall here is now a bug.
+
+### Vertical slice (Phase 7l, NFR-ME-012)
+
+`scripts/vertical_slice.sh` rebuilds the demo database (`make demo-db`) and serves the demo build
+on ports 8010 and 5180, leaving a dev stack on 8000/5173 alone: a `DEMO_MODE` API and the
+production frontend build. It smoke-tests the API, then runs `e2e/tests/vertical-slice.spec.ts`:
+1. NVIDIA's overview (quarterly/TTM, red flags, earnings quality);
+2. the recorded cited answer and its source;
+3. the earnings brief and guidance vs actual;
+4. a thesis KPI that breaks and notifies.
+
+The spec fails on any console error. Its frames become `docs/media/demo.gif`
+(`scripts/make_demo_gif.py`).
 
 ### Lighthouse (UI-004)
 

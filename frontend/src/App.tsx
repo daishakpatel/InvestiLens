@@ -16,6 +16,7 @@ const CompanyDashboard = lazy(() => import("./pages/CompanyDashboard"));
 // Overview draws charts, so it is lazy too: Recharts must stay out of the entry bundle.
 const OverviewTab = lazy(() => import("./pages/tabs/OverviewTab"));
 const FinancialsTab = lazy(() => import("./pages/tabs/FinancialsTab"));
+const EarningsTab = lazy(() => import("./pages/tabs/EarningsTab"));
 const EarningsQualityTab = lazy(() => import("./pages/tabs/EarningsQualityTab"));
 const FootnotesTab = lazy(() => import("./pages/tabs/FootnotesTab"));
 const GovernanceTab = lazy(() => import("./pages/tabs/GovernanceTab"));
@@ -26,6 +27,9 @@ const OpenAssistant = lazy(() => import("./components/panel/OpenAssistant"));
 const ComparePage = lazy(() => import("./pages/ComparePage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
 const AlertsPage = lazy(() => import("./pages/AlertsPage"));
+const ThesesPage = lazy(() => import("./pages/ThesesPage"));
+const ThesisTab = lazy(() => import("./pages/tabs/ThesisTab"));
+const DemoPage = lazy(() => import("./pages/DemoPage"));
 // Design-system review surface: dev server only, so it never ships in the production bundle.
 const UiGallery = import.meta.env.DEV ? lazy(() => import("./pages/UiGallery")) : null;
 
@@ -72,9 +76,13 @@ export function App() {
           <Route path="compare" element={<ComparePage />} />
           <Route path="portfolio" element={<PortfolioPage />} />
           <Route path="alerts" element={<AlertsPage />} />
+          <Route path="theses" element={<ThesesPage />} />
+          <Route path="demo" element={<DemoPage />} />
           <Route path="company/:ticker" element={<CompanyDashboard />}>
             <Route index element={<OverviewTab />} />
             <Route path="financials" element={<FinancialsTab />} />
+            <Route path="earnings" element={<EarningsTab />} />
+            <Route path="thesis" element={<ThesisTab />} />
             <Route path="quality" element={<EarningsQualityTab />} />
             <Route path="footnotes" element={<FootnotesTab />} />
             <Route path="governance" element={<GovernanceTab />} />

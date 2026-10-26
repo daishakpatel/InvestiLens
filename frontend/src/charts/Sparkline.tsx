@@ -1,7 +1,16 @@
 /** A price trend in a table row: one line, no axes, coloured by whether the period ended up or
  *  down. Decorative: the figures beside it carry the information, so it is hidden from assistive
  *  tech. Plain SVG, so a list of these does not pull in the chart library. */
-export function Sparkline({ values, className = "" }: { values: readonly number[]; className?: string }) {
+export function Sparkline({
+  values,
+  className = "",
+  tone = "trend",
+}: {
+  values: readonly number[];
+  className?: string;
+  // "neutral" where up/down is not gain/loss (a thesis KPI: FR-TH-015)
+  tone?: "trend" | "neutral";
+}) {
   if (values.length < 2) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -22,7 +31,7 @@ export function Sparkline({ values, className = "" }: { values: readonly number[
       aria-hidden
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
-      className={`h-7 ${up ? "text-positive" : "text-negative"} ${className}`}
+      className={`h-7 ${tone === "neutral" ? "text-muted" : up ? "text-positive" : "text-negative"} ${className}`}
     >
       <polyline
         points={points}

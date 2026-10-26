@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { Footer } from "./chrome";
+import { DemoBanner } from "./DemoBanner";
 import { PageSkeleton } from "./PageSkeleton";
 import { SearchTrigger } from "./SearchTrigger";
 import { Container } from "./ui/Container";
@@ -13,6 +14,7 @@ const AccountMenu = lazy(() => import("./AccountMenu"));
 const NAV = [
   { to: "/compare", label: "Compare" },
   { to: "/portfolio", label: "Portfolio" },
+  { to: "/theses", label: "Theses" },
 ];
 
 export function Wordmark() {
@@ -75,6 +77,7 @@ export function AppShell() {
       >
         Skip to content
       </a>
+      <DemoBanner />
       <TopBar />
       {/* At least a screenful: the footer then starts below the fold on every page, instead of
           being visible under a loading state and pushed away when the content arrives. */}

@@ -202,6 +202,83 @@ if they match the release's words):
 - States: loading/error from `AsyncContent`; empty "No guidance has been read from this company's
   earnings releases yet."
 
+## Earnings tab (Phase 7j)
+
+`/company/:ticker/earnings` (`pages/tabs/EarningsTab.tsx`, `components/earnings/BriefSections.tsx`,
+`lib/earnings.ts`), after Financials:
+- **Upcoming card:** the next quarter and its date. An estimate is prefixed "~" and says it is
+  estimated and never triggers a preview; an announced date shows the company's quoted sentence,
+  which opens its source. "Date not known yet" when there is no year-ago date.
+- **Controls:** a segmented control (Post-earnings brief / Pre-earnings preview, brief first, or
+  the kind of a `?brief=<id>` link from a `brief_ready` notification). A version switcher appears
+  when the quarter has more than one version, each option labelled by what changed ("v2 · after
+  10-Q filed"); choosing one sets `?brief=<id>`. "Refresh brief/preview" appears for signed-in
+  users and says when nothing changed. There is also a Print button.
+- **Document:** a title (kind, ticker, quarter, report date, version), then sections built on
+  `Section`:
+  - Brief: Summary (AI mark; each sentence with citation chips, plus "N proposed sentences failed
+    verification and were left out"), Reported figures, Against company guidance, Price
+    reaction, What changed (risk counts, top changes with before/now quotes, MD&A topic table),
+    and New red flags since the last report.
+  - Preview: What to watch (AI mark only when a rewording was used; each item cites its
+    evidence), Last quarter, Company guidance for the quarter, Guidance track record, Valuation,
+    Red flags in the last 90 days, and Reaction to the last report.
+- **Figures:** every figure is a button that opens its first source in the citation drawer.
+  Growth prints `+17.9%`, margin changes `+64 bps`, multiples `26.4×`. A section whose input is
+  missing shows "Not available: {reason}" (e.g. "10-Q not yet filed.") instead of being hidden.
+- **Print** (`@media print` in `index.css`, scoped to `.earnings-print`): the card, controls and
+  app chrome hide; tables lose their scroll region and fit the page width; a section and a row
+  never split across pages. `e2e/tests/earnings.spec.ts` checks that no table overflows under
+  print media and writes a PDF.
+- **States:** loading/error from `AsyncContent`; empty "No post-earnings brief yet. One is made
+  once the earnings 8-K and its press release are filed." / "No preview yet. One is made three
+  days before a confirmed (not estimated) report date."
+
+## Thesis tab and Theses page (Phase 7k)
+
+`/company/:ticker/thesis` (`pages/tabs/ThesisTab.tsx`) and `/theses` (`pages/ThesesPage.tsx`,
+"Theses" in the header). Components are in `components/thesis/`; helpers in `lib/thesis.ts`,
+`lib/markdown.tsx` and `lib/thesisQueries.ts`.
+- **Signed out:** a sign-in hint. **Empty:** how to start (write in your own words, add KPIs, or
+  start from notes).
+- **Thesis:** your title, stance tag, status and the text as safe markdown. Headings, lists,
+  bold, italic, code, quotes and http(s) links are supported; raw HTML shows as text and images
+  are never loaded. Edit (adds a revision), History (a side drawer with each revision's word diff,
+  reusing the filing diff's `WordDiff`), Close/Reopen, and Delete (with a confirm).
+- **KPIs:** one row each. Your label; the rule ("Gross margin (TTM) ≥ 70.00%"); a state chip
+  with text and icon; the latest value, which opens its source in the citation drawer, with its
+  period; a neutral sparkline of stored history; and Edit/Remove.
+  - The chips are `Met` (neutral, check icon), `Broken` (warning token, triangle icon) and
+    `No data` (subtle, dashed circle). They are never green or red, which mean gain and loss.
+  - The add/edit form takes a registry metric, grouped, with metrics not reported for the sector
+    disabled. It then takes the period, the comparator and a threshold in the metric's unit; a
+    ratio is typed as a percent and converted exactly to a decimal.
+- **Timeline:** newest first, with a note field. A KPI change or red flag opens its source in
+  the drawer; a brief opens on the Earnings tab.
+- **Draft from my notes** (when creating):
+  - It says it only suggests metrics and thresholds, never a stance, and that nothing is saved
+    until accepted.
+  - Suggestions are a "+" review list with checkboxes; accepted KPIs are added when you save the
+    thesis.
+
+## The public demo (Phase 7l, ADR-0050)
+
+- **Banner.** `DemoBanner` puts one line above the top bar, and above the sign-in page:
+  "Demo: fixture data as of {date}. Not investment advice." The date comes from
+  `GET /meta/demo` (the latest fixture filing). The banner is absent outside demo mode and hidden
+  in print.
+- **Sign-in.** In demo mode the sign-in page swaps "Create an account" for **Enter the demo**,
+  which signs into the shared sandbox account and says it resets nightly.
+- **`/demo`.** Three numbered rows (title, one-line description, **Open**): NVIDIA at a glance,
+  ask a cited question, see what changed in a filing. Opening one signs into the sandbox first on
+  the public demo, so the question can be asked. The list lives in `lib/demo.ts`.
+- **`/company/:ticker/chat?ask=…`.** Opens the assistant and asks the question, for a signed-in
+  reader. The guided path's question uses it; the length is capped like typed input.
+- **Filing diff.** With no earlier filing of the same type in the list, the view says so without
+  asking the server, which would answer 404 and log a console error.
+- **Session restore.** The silent refresh runs only when this browser has signed in before (a
+  non-secret `il-session` flag), so an anonymous first visit makes no failing request.
+
 ## Adding a screen
 
 1. Add the route in `App.tsx` as a `lazy` import, so it is its own chunk.
