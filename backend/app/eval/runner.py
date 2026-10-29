@@ -66,6 +66,8 @@ def _retrieval_metrics(
         result = run_retrieval(session, question=q.question, ticker=q.company, settings=settings)
     except Exception:
         return {}, ""
+    if result.structured_source_ids:  # answered from stored metrics: no document search to score
+        return {}, result.assembled_context
     ranked = _dedupe([resolver.key_for(e.document_id) for e in result.evidence])
     relevant = set(q.expected_sources)
     return (

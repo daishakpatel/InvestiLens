@@ -25,7 +25,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.billing.cost import estimate_blended_cost
+from app.billing.cost import estimate_cost
 from app.config import Settings, get_settings
 from app.filings.units import paragraphs
 from app.footnotes.summary import model_label
@@ -219,14 +219,19 @@ def _call(session: Session, messages: list[LLMMessage], llm: LLMClient, settings
     except Exception as exc:
         status = "error"
         log_event(logger, logging.WARNING, "guidance.extract_failed", error=str(exc))
+    tokens_in, tokens_out = llm_repo.call_tokens(
+        llm,
+        input_estimate=input_tokens,
+        output_estimate=estimate_tokens(json.dumps(raw)) if raw is not None else None,
+    )
     llm_repo.record_call(
         session,
         purpose=PURPOSE,
         model=model,
-        input_tokens=input_tokens,
-        output_tokens=estimate_tokens(json.dumps(raw)) if raw is not None else None,
+        input_tokens=tokens_in,
+        output_tokens=tokens_out,
         latency_ms=int((time.monotonic() - started) * 1000),
-        cost_usd=estimate_blended_cost(model=model, total_tokens=input_tokens),
+        cost_usd=estimate_cost(model=model, input_tokens=tokens_in, output_tokens=tokens_out or 0),
         status=status,
         prompt_version=GUIDANCE_PROMPT_VERSION,
     )

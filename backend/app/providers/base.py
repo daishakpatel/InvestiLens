@@ -106,6 +106,11 @@ class LLMClient(ABC):
     ) -> dict[str, Any]:
         """Return a JSON object validated against `schema` (structured output)."""
 
+    def last_usage(self) -> tuple[int, int] | None:
+        """(input, output) tokens the provider billed for this thread's last call, or None when
+        it reports none (mocks), so callers log their own estimate instead."""
+        return None
+
 
 class EmbeddingClient(ABC):
     """Text embeddings behind a provider-agnostic interface (ADR-0010)."""

@@ -18,7 +18,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.billing.cost import estimate_blended_cost
+from app.billing.cost import estimate_cost
 from app.config import Settings
 from app.footnotes.summary import model_label
 from app.ingestion.documents.tokens import estimate_tokens
@@ -85,14 +85,19 @@ def call(
     except Exception as exc:
         status = "error"
         log_event(logger, logging.WARNING, "earnings.llm_failed", error=str(exc))
+    tokens_in, tokens_out = llm_repo.call_tokens(
+        llm,
+        input_estimate=input_tokens,
+        output_estimate=estimate_tokens(json.dumps(raw)) if raw is not None else None,
+    )
     llm_repo.record_call(
         session,
         purpose=PURPOSE,
         model=model,
-        input_tokens=input_tokens,
-        output_tokens=estimate_tokens(json.dumps(raw)) if raw is not None else None,
+        input_tokens=tokens_in,
+        output_tokens=tokens_out,
         latency_ms=int((time.monotonic() - started) * 1000),
-        cost_usd=estimate_blended_cost(model=model, total_tokens=input_tokens),
+        cost_usd=estimate_cost(model=model, input_tokens=tokens_in, output_tokens=tokens_out or 0),
         status=status,
         prompt_version=PROMPT_VERSION,
         user_id=user_id,

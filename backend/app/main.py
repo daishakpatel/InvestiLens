@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from app.api import (
@@ -81,6 +82,8 @@ def create_app() -> FastAPI:
     # Middleware order matters: the LAST `add_middleware`/`@app.middleware` call is outermost
     # (runs first on the way in, last on the way out), so a response gets every layer's headers
     # and even a rate-limited/erroring request still gets a request id and CORS headers.
+    # Large JSON (a company's prices ≈ 179 kB) goes compressed; Starlette leaves SSE streams alone.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(RateLimitMiddleware)  # ADR-0018/0022
     app.middleware("http")(request_size_middleware)  # NFR-ME-009
 

@@ -16,7 +16,7 @@ from typing import Literal
 
 from sqlalchemy.orm import Session
 
-from app.billing.cost import estimate_blended_cost
+from app.billing.cost import estimate_cost
 from app.config import Settings, get_settings
 from app.filings.diff import (
     Adjudicator,
@@ -123,13 +123,19 @@ def llm_adjudicator(
         except Exception as exc:
             status = "error"
             log_event(logger, logging.WARNING, "filing_diff.adjudicate.failed", error=str(exc))
+        tokens_in, tokens_out = llm_repo.call_tokens(
+            llm, input_estimate=input_tokens, output_estimate=None
+        )
         llm_repo.record_call(
             session,
             purpose="filing_diff",
             model=model,
-            input_tokens=input_tokens,
+            input_tokens=tokens_in,
+            output_tokens=tokens_out,
             latency_ms=int((time.monotonic() - started) * 1000),
-            cost_usd=estimate_blended_cost(model=model, total_tokens=input_tokens),
+            cost_usd=estimate_cost(
+                model=model, input_tokens=tokens_in, output_tokens=tokens_out or 0
+            ),
             status=status,
             prompt_version=DIFF_PROMPT_VERSION,
             user_id=user_id,
