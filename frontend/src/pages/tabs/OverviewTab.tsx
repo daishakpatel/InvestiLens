@@ -170,66 +170,70 @@ function About({ ticker }: { ticker: string }) {
   );
 }
 
-function Latest({ ticker }: { ticker: string }) {
+const ROW = "-mx-2 block rounded-control px-2 py-2 transition-colors hover:bg-surface pointer-coarse:py-2.5";
+
+function LatestFilings({ ticker }: { ticker: string }) {
   // The filings list is paged by id, not date: fetch enough to be sure the newest are in it.
   const filings = useFilings(ticker, 200);
-  const news = useNews(ticker);
   const recentFilings = [...(filings.data ?? [])]
     .sort((a, b) => (b.filing_date ?? "").localeCompare(a.filing_date ?? ""))
     .slice(0, LATEST_COUNT);
-  const headlines = (news.data?.items ?? []).slice(0, LATEST_COUNT);
-  const row = "-mx-2 block rounded-control px-2 py-2 transition-colors hover:bg-surface pointer-coarse:py-2.5";
 
   return (
-    <Section title="Latest">
-      {filings.isPending || news.isPending ? (
-        <Lines count={5} />
-      ) : recentFilings.length === 0 && headlines.length === 0 ? (
-        <p className="pt-4 text-sm text-muted">No filings or news have been ingested yet.</p>
+    <Section title="Latest filings">
+      {filings.isPending ? (
+        <Lines count={3} />
+      ) : recentFilings.length === 0 ? (
+        <p className="pt-4 text-sm text-muted">No filings have been ingested yet.</p>
       ) : (
-        <div className="space-y-5 pt-3">
-          {recentFilings.length > 0 && (
-            <div>
-              <h3 className="text-label text-muted">Filings</h3>
-              <ul>
-                {recentFilings.map((filing) => (
-                  <li key={filing.filing_id}>
-                    <Link to={`/company/${ticker}/filings`} className={`${row} flex justify-between gap-4 text-sm`}>
-                      <span className="font-medium">{filing.filing_type}</span>
-                      <span className="text-muted">Filed {formatDate(filing.filing_date)}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {headlines.length > 0 && (
-            <div>
-              <h3 className="text-label text-muted">News</h3>
-              <ul>
-                {headlines.map((item) => (
-                  <li key={item.news_id}>
-                    <Link to={`/company/${ticker}/news`} className={`${row} text-sm`}>
-                      <span className="line-clamp-2">{item.title}</span>
-                      <span className="text-caption text-subtle">
-                        {[item.publisher, item.published_at && formatDate(item.published_at)]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        <ul className="pt-3">
+          {recentFilings.map((filing) => (
+            <li key={filing.filing_id}>
+              <Link to={`/company/${ticker}/filings`} className={`${ROW} flex justify-between gap-4 text-sm`}>
+                <span className="font-medium">{filing.filing_type}</span>
+                <span className="text-muted">Filed {formatDate(filing.filing_date)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+function LatestNews({ ticker }: { ticker: string }) {
+  const news = useNews(ticker);
+  const headlines = (news.data?.items ?? []).slice(0, LATEST_COUNT);
+
+  return (
+    <Section title="News">
+      {news.isPending ? (
+        <Lines count={3} />
+      ) : headlines.length === 0 ? (
+        <p className="pt-4 text-sm text-muted">No news has been ingested yet.</p>
+      ) : (
+        <ul className="pt-3">
+          {headlines.map((item) => (
+            <li key={item.news_id}>
+              <Link to={`/company/${ticker}/news`} className={`${ROW} text-sm`}>
+                <span className="line-clamp-2">{item.title}</span>
+                <span className="text-caption text-subtle">
+                  {[item.publisher, item.published_at && formatDate(item.published_at)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </Section>
   );
 }
 
 /** The first screen of a company: the price and how it has moved, the headline figures, then
- *  how the business has performed beside what it is and what has happened lately. */
+ *  how the business has performed beside its red flags, and a row of what has happened lately
+ *  and what the company is. */
 export default function OverviewTab() {
   const { ticker = "" } = useParams();
   return (
@@ -241,11 +245,12 @@ export default function OverviewTab() {
           <Performance ticker={ticker} />
           <ResearchTeaser ticker={ticker} />
         </div>
-        <div className="space-y-12">
-          <RedFlagsSection ticker={ticker} />
-          <About ticker={ticker} />
-          <Latest ticker={ticker} />
-        </div>
+        <RedFlagsSection ticker={ticker} />
+      </div>
+      <div className="grid gap-x-10 gap-y-12 md:grid-cols-3">
+        <LatestNews ticker={ticker} />
+        <LatestFilings ticker={ticker} />
+        <About ticker={ticker} />
       </div>
     </div>
   );
