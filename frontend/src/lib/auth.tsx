@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 
 import { apiRequest } from "./apiClient";
-import { hasSessionHint, setAccessToken, setSessionHint } from "./authStore";
+import { getAccessToken, hasSessionHint, setAccessToken, setSessionHint, subscribe } from "./authStore";
 import { parse } from "./schemas";
 import type { UserProfile } from "../types";
 
@@ -88,6 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessionHint(false);
     setUser(null);
   }, []);
+
+  // The API client clears the token when a renewal finds the session over; reflect that here.
+  useEffect(() => subscribe(() => getAccessToken() === null && setUser(null)), []);
 
   useEffect(() => {
     let cancelled = false;
