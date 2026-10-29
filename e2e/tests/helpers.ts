@@ -42,3 +42,25 @@ export async function settled(page: Page): Promise<void> {
     ),
   );
 }
+
+/** Serve `ticker` as a company with no price history: every seeded company has prices now, so
+ *  the no-price case is set up here rather than relied on in the dev data. Real responses pass
+ *  through with only the price-derived parts emptied. */
+export async function withoutPrices(page: Page, ticker: string): Promise<void> {
+  await page.route(`**/api/v1/companies/${ticker}/prices**`, async (route) => {
+    const response = await route.fetch();
+    route.fulfill({ response, json: { ...(await response.json()), points: [] } });
+  });
+  await page.route(`**/api/v1/companies/${ticker}/valuation`, async (route) => {
+    const response = await route.fetch();
+    route.fulfill({ response, json: { ...(await response.json()), metrics: [] } });
+  });
+  await page.route("**/api/v1/portfolio/analyze", async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    for (const holding of body.risk_stats?.holding_volatility ?? []) {
+      if (holding.ticker === ticker) holding.annualized_volatility = null;
+    }
+    route.fulfill({ response, json: body });
+  });
+}

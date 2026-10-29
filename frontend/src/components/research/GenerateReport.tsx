@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -29,21 +29,13 @@ function DataStillAvailable({ ticker, failed }: { ticker: string; failed: boolea
   );
 }
 
-/** No report yet: say what one is and offer to make it (§10.16). Generation needs an account
- *  (ADR-0006) and runs as a background job, whose progress is shown while it runs. When it
- *  finishes, the page's "latest report" query is refreshed and the document takes its place. */
-export function GenerateReport({
-  ticker,
-  unreadable,
-}: {
-  ticker: string;
-  unreadable: boolean; // a saved report exists but could not be loaded
-}) {
+/** Start a report job and follow it. When it finishes, the page's "latest report" query is
+ *  refreshed, so whatever shows the report picks up the new one. */
+export function useReportJob(ticker: string) {
   const queryClient = useQueryClient();
-  const { user, ready } = useAuth();
   const start = useStartResearch();
-  const [job, setJob] = useState<{ jobId: string } | null>(null);
-  const state = useJob(job?.jobId ?? null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const state = useJob(jobId);
   const status = state.data?.status;
 
   useEffect(() => {
@@ -52,10 +44,26 @@ export function GenerateReport({
 
   const generate = async () => {
     const accepted = await start.mutateAsync(ticker);
-    setJob({ jobId: accepted.job_id });
+    setJobId(accepted.job_id);
   };
 
-  if (job && status !== "failed") {
+  return { start, state, status, started: jobId !== null, generate };
+}
+
+/** No report yet: say what one is and offer to make it (§10.16). Generation needs an account
+ *  (ADR-0006) and runs as a background job, whose progress is shown while it runs. When it
+ *  finishes, the document takes this page's place. */
+export function GenerateReport({
+  ticker,
+  unreadable,
+}: {
+  ticker: string;
+  unreadable: boolean; // a saved report exists but could not be loaded
+}) {
+  const { user, ready } = useAuth();
+  const { start, state, status, started, generate } = useReportJob(ticker);
+
+  if (started && status !== "failed") {
     const progress = state.data?.progress ?? 0;
     return (
       <div className="mx-auto max-w-md space-y-4 py-10 text-center">
@@ -115,5 +123,35 @@ export function GenerateReport({
         {(status === "failed" || start.isError) && <DataStillAvailable ticker={ticker} failed />}
       </div>
     </div>
+  );
+}
+
+/** A report exists: write a fresh one from the current data (each run is a paid model job). The
+ *  report on screen stays until the new one is ready, then is replaced. */
+export function RegenerateReport({ ticker }: { ticker: string }) {
+  const { user } = useAuth();
+  const { start, status, started, generate } = useReportJob(ticker);
+  if (!user) return null;
+
+  const running = start.isPending || (started && status !== "done" && status !== "failed");
+  const failed = start.isError || status === "failed";
+  return (
+    <>
+      <Button variant="ghost" size="sm" loading={running} onClick={() => void generate()}>
+        {!running && <RefreshCw aria-hidden className="size-3.5" />}
+        {running ? "Regenerating" : "Regenerate"}
+      </Button>
+      {running && (
+        <p role="status" className="basis-full text-right text-caption text-muted">
+          Writing a new report in the background. This one stays until it is ready.
+        </p>
+      )}
+      {failed && (
+        <p role="alert" className="basis-full text-right text-caption text-negative">
+          {start.error instanceof Error ? start.error.message : "The new report could not be written."} This
+          report is unchanged.
+        </p>
+      )}
+    </>
   );
 }

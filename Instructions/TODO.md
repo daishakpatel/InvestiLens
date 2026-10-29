@@ -1,6 +1,6 @@
 # Assay Desk — Remaining Work
 
-Audited 2026-10-12 against `docs/AssayDesk_Spec_v2.md`; last updated 2026-10-25 (Phase 7l). All
+Audited 2026-10-12 against `docs/AssayDesk_Spec_v2.md`; last updated 2026-10-29 (backlog pass). All
 task files through `37_phase7l_measured_results_and_polish.md` and the 5 `UI_plan/` steps have
 been worked through; this is what is still open. `docs/limitations.md` keeps the reader-facing
 "known issues" table in step with this list.
@@ -24,38 +24,15 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 
 ## 0. Broken right now
 
-- [ ] **"Diluted EPS" chat questions are declined** (found by the Phase 7l eval, 6 golden
-      questions): the metric lookup returns no structured source for "diluted EPS", so the chat
-      abstains although `eps_diluted` rows exist (NVDA FY2026 = 4.90). Map the phrase in the RAG
-      metric router. `[code]`
-- [ ] **Off-topic and not-applicable questions are answered** (Phase 7l eval): "write me a poem
-      about NVIDIA" and "what's the weather at HQ" get answers built from loosely related
-      passages, and JPMorgan's "gross profit" and "inventory turnover" get document answers
-      instead of "not applicable". Two of five golden injection questions get a cited,
-      non-complying answer rather than a refusal. Correct abstention is 14/24 in
-      `docs/eval/latest.md`. `[code]`
-
-- [ ] `GET /companies/{ticker}/research/latest` returns 500 when the stored report fails validation
-      (`ResearchReport.model_validate` is unguarded in `backend/app/api/companies.py`). `[code]`
-- [ ] Filings list pages by `id desc`, not filing date (`backend/app/repositories/filings.py`);
-      the Filings tab works around it by fetching 200 and sorting. `[code]`
 - [ ] **Intel's filings have no sections**: its 10-K has no "Item N" headings (annual-report layout,
       headings likely images), so it is kept as one flagged "Filing text" section. Chat and reports
       work; section-aware features (management language, filing diff by section) do not. `[code]`
 - [ ] **JPM's 10-K is mis-sectioned**: 1,523 of its 2,463 passages are labelled "Item 15. Exhibits",
       because JPM binds its annual report (MD&A, financials) after that heading. Answers still work,
       but section-aware features (management commentary, language tracking) miss it. `[code]`
-- [ ] **Older submission pages are re-read on every ingest**: since Phase 7c `list_filings`
-      pages through `filings.files[]` back to the longest backfill window (JPM: dozens of pages
-      per run). The pages are immutable history; caching them would save SEC requests. `[code]`
 - [ ] **JPM's 10-Q has no Part I item headings** (cross-reference layout): its financial
       statements and MD&A are kept as one "Part I" section (`10q_part1_unitemized`) and flagged
       low-confidence, not split into Item 1 / Item 2. `[code]`
-- [ ] **Table figures in millions fail the answer checker**: a claim quoting "$19,827 million" from
-      a table whose cells read "19,827" (in millions) is rejected as a mismatch. `[code]`
-- [ ] **Browser tests assume AMD has no prices**: `e2e/tests/company.spec.ts`, `tools.spec.ts`
-      and `screenshots.spec.ts` use AMD for the "no price history" case, which is no longer true
-      in the dev DB. The visual suite replays recorded responses and is unaffected. `[code]`
 
 ## 1. Decisions waiting on the project owner
 
@@ -75,8 +52,6 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       management sections empty where `gemini-3.8-flash` filled them, writes Markdown although told
       not to (stripped before checking), and varies its citation syntax (the client normalises four
       styles). `[code]`
-- [ ] **No way to regenerate a report from the UI** when one already exists; the Research tab only
-      offers "Generate" on a 404. Generating one costs about $0.05–0.10 on the paid tier. `[code]`
 - [ ] **News summary is empty in every report**: news is still sample data. `[code]`
 - [ ] **Report sections search with fixed keywords and no preference for recent filings**
       (`_SECTION_QUERY` in `backend/app/research/report.py`): NVDA's bull case picked up crypto
@@ -86,8 +61,6 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       today" are not answered from `price_history` (prices have no citable source type yet). One
       such question sent 23k tokens of context, well over the 6,000-token budget. Plain "margins"
       is not in the metric lexicon, so "how did margins trend?" goes to the filings. `[code]`
-- [ ] **`llm_calls` logs estimated tokens**, not Gemini's reported usage (that goes to the
-      application log only), so cost tracking and budgets run on estimates. `[code]`
 - [ ] **Report speed**: about 70 s on `gemini-3.5-flash-lite` (18 calls), 171 s on `gemini-3.8-flash`
       with free-tier pacing, against a 90 s target (NFR-003). `LLM_RATE_LIMIT_PER_SEC` (0.25) can be
       raised now that billing is on. `[code]`
@@ -160,7 +133,7 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
 - [ ] Alerts (Phase 7a leftovers): `filing:<id>` / `price:…` evidence ids don't resolve via
       `GET /sources/{id}` (the UI maps them to routes); email is sent before the dispatch job
       commits, so a crash in that window can resend one (ADR-0039); `price_move` checks only the
-      newest bar per company; the generic form shows the price threshold as a raw fraction. `[code]`
+      newest bar per company. `[code]`
 
 ### Report-level features (§10.16)
 
@@ -180,17 +153,12 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
       broken branch in the PR description" needs a PR. `[code]`
 - [ ] **E2E is manual-only** (`e2e.yml` is `workflow_dispatch`); Linux visual baselines are not
       committed; behavioural specs assume the dev DB, not the CI seed. `[code]` / `[notes]`
-- [ ] API has no response compression (prices ≈ 179 kB per company); mobile Lighthouse on the
-      company page is 76–79 against a target of 90. `[code]` / `[notes]`
 
 ### Before any public deploy
 
 - [x] Request bodies are capped (256 KiB, `413`/`411`) → 37; thesis text bounded → 36. Individual
       fields (`password`, `FeedbackRequest.reason`, `WatchlistCreate.name`, search `q`) still have
       no per-field `max_length`, but no body can exceed the cap. `[code]`
-- [ ] DB gate in `get_db` (10 slots) has no wait timeout → queues in memory, never 503s. `[notes]`
-- [ ] `HardenedHttpClient` retries every 4xx, not only 429/5xx, so a bad API key is retried
-      three times before failing. `[code]`
 
 ## 3. Spec features not built (P2)
 
@@ -495,3 +463,45 @@ the audit date. `[notes]` = carried from earlier session hand-offs, not re-check
     sparklines, a History drawer.
   - **Tests:** a test that keeps thesis text out of logs and `/metrics`; a Playwright run
     against the dev stack on a throwaway company (`scripts/e2e_thesis.py`).
+- 2026-10-29 — **Chat abstention and EPS** (found by the 7l eval): "diluted EPS" / "earnings per
+  share" map to `eps_diluted` (it was falling to `net_income` or to document search); terse
+  lookups ("NVIDIA revenue, latest annual figure?") are metric lookups; "gross profit" maps to
+  `gross_profit` (a bank has none, so it declines); "inventory turnover" (not stored) declines
+  instead of answering from loose passages; poems, live weather and five more injection phrasings
+  are refused. Mock eval: correct abstention 14/24 → 24/24, false abstention 6/82 → 0/82,
+  injection resistance 9/11 → 11/11 (the rules were written against these golden questions, so
+  new phrasings can still slip through). Retrieval hit@5 now scores only questions that search
+  documents (it counted stored-metric answers as misses); floors in `thresholds.json` raised.
+  A bank's "gross profit" declines with the generic message, not "not applicable to banks".
+- 2026-10-29 — **API**: a stored report that no longer validates is a logged 409 ("generate a new
+  one") from both `/companies/{t}/research/latest` and `/research/{id}`, not a 500 (the Research
+  tab already shows "a saved report could not be read" with a Generate button for it); the filings
+  list pages by filing date (undated last), keeping the id cursor.
+- 2026-10-29 — **Number check, SEC client, browser tests**: a claim's "$19,827 million" or "$19.8
+  billion" now matches a table cell of 19,827 under an "(in millions)" header (thousands and
+  billions too); `HardenedHttpClient` fails at once on a 4xx other than 429 (a bad key is no
+  longer retried three times, and it no longer trips the breaker); older submission pages
+  (`filings.files[]`) are stored in the object store keyed by name, range and count, so later
+  ingests skip them and a page SEC re-cuts is fetched again; the company and portfolio browser
+  tests serve AMD without prices (`withoutPrices` in `e2e/tests/helpers.ts`) and no longer
+  depend on the dev data.
+- 2026-10-29 — **API hardening**: responses over 1 KiB are gzipped (`GZipMiddleware`; SSE streams
+  are left alone), which shrinks a company's ≈179 kB price history; the Lighthouse score was not
+  re-measured. A request that waits 10 s for a `get_db` slot gets a logged 503 with
+  `Retry-After: 1` instead of queueing in memory.
+- 2026-10-29 — **Regenerate a report from the UI**: signed-in readers get "Regenerate" beside
+  Export and Print; the report on screen stays until the new one is ready, then is replaced.
+  The job flow is shared with "Generate" (`useReportJob`). Checked in the browser that the button
+  shows only when signed in; a real regeneration run (about $0.05–0.10, needs the worker) was not
+  clicked through.
+- 2026-10-29 — **`llm_calls` records Gemini's reported tokens**: the client keeps each thread's
+  last `usageMetadata` (thinking counted as output) and every caller (report sections, chat,
+  guidance, briefs, governance, footnotes, theses, filing diff) logs it through
+  `llm_calls.call_tokens`, falling back to the estimate for mocks. Cost is now priced from the
+  input/output split with each rate; it was input tokens only at a blended rate (chat logged
+  input + output as input), so recorded costs and budget spend will read higher, and closer to
+  the bill. `estimate_blended_cost` was removed.
+- 2026-10-29 — **Alert form shows the price threshold as a percent**: `PriceMoveParams.threshold`
+  carries `"x-unit": "ratio"` in its schema; the generic form labels it "Move threshold (%)",
+  takes 5 for 0.05 (bounds checked in percent), sends the fraction, and lists rules as
+  "Move threshold: 5%".

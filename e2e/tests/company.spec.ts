@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 
-import { TICKER } from "./helpers";
+import { TICKER, withoutPrices } from "./helpers";
 
 // UI plan Step 3 (Instructions/UI_plan/03_company_overview_and_data.md): the price hero, key
-// figures, Overview, and Financials. Needs the dev stack with the seed companies, plus one company
-// without prices (AMD) for the no-price case.
+// figures, Overview, and Financials. Needs the dev stack with the seed companies; AMD is served
+// without prices for the no-price case (`withoutPrices`).
 // Spec refs: §9.4, §10.2-§10.8, §12 (DR-040 to DR-042), FR-011, FR-013, UI-003, UI-006.
 
 const company = `/company/${TICKER}`;
@@ -128,6 +128,7 @@ test.describe("price hero (§9.4, FR-011)", () => {
 
 test.describe("overview", () => {
   test("a company with no prices gets a clean page: no empty chart, no dashes", async ({ page }) => {
+    await withoutPrices(page, NO_PRICES);
     await loaded(page, `/company/${NO_PRICES}`);
     await expect(page.getByText(`No price data is available for ${NO_PRICES} yet.`)).toBeVisible();
     await expect(page.getByRole("slider")).toHaveCount(0);

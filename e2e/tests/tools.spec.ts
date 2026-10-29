@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 
 import report from "../fixtures/research-nvda.json" with { type: "json" };
-import { settled, signUp } from "./helpers";
+import { settled, signUp, withoutPrices } from "./helpers";
 
 // UI plan Step 5: the tools (Compare, Portfolio), the personal features (watchlist, alerts,
 // notifications), and the cross-cutting promises (keyboard-only use, reduced motion, axe).
@@ -109,6 +109,7 @@ test.describe("portfolio (§37.2)", () => {
   test("weights recompute the results with no request; a new company asks the server once", async ({
     page,
   }) => {
+    await withoutPrices(page, "AMD");
     await page.goto("/portfolio");
     await expect(page.getByText("Hypothetical portfolio. Not investment advice.")).toBeVisible(); // LGL-006
     const effective = page.getByText("Effective holdings").locator("xpath=..");
@@ -141,7 +142,7 @@ test.describe("portfolio (§37.2)", () => {
     await palette.getByRole("combobox").fill("amd");
     await palette.getByRole("option", { name: /AMD/ }).first().click();
     await expect(page.getByRole("spinbutton", { name: "AMD weight, percent" })).toHaveValue("10");
-    // AMD has no price history in the dev data: said in a sentence, not hidden.
+    // AMD is served without price history: said in a sentence, not hidden.
     await expect(page.getByText(/There is no price history for AMD/)).toBeVisible();
     expect(requests.filter((r) => r === "POST /api/v1/portfolio/analyze")).toHaveLength(1);
 
@@ -283,7 +284,14 @@ test.describe("watchlist, alerts and notifications (§26.2, FR-007)", () => {
         params_schema: {
           type: "object",
           properties: {
-            threshold: { type: "number", title: "Move threshold", default: 0.05, exclusiveMinimum: 0, maximum: 1 },
+            threshold: {
+              type: "number",
+              title: "Move threshold",
+              default: 0.05,
+              exclusiveMinimum: 0,
+              maximum: 1,
+              "x-unit": "ratio",
+            },
           },
         },
       },
@@ -339,14 +347,14 @@ test.describe("watchlist, alerts and notifications (§26.2, FR-007)", () => {
     const form = page.getByRole("region", { name: "New alert" });
     await form.getByLabel("Notify me about").selectOption("price_move");
     await form.getByLabel("Company").fill("nvda");
-    await form.getByLabel("Move threshold").fill("5");
+    await form.getByLabel("Move threshold").fill("500"); // typed as a percent, at most 100
     await form.getByRole("button", { name: "Create alert" }).click();
     await expect(form.getByLabel("Move threshold")).toHaveAttribute("aria-invalid", "true");
     expect(posted).toHaveLength(0);
 
-    await form.getByLabel("Move threshold").fill("0.08");
+    await form.getByLabel("Move threshold").fill("8");
     await form.getByRole("button", { name: "Create alert" }).click();
-    await expect(list.getByText("Move threshold: 0.08")).toBeVisible();
+    await expect(list.getByText("Move threshold: 8%")).toBeVisible();
     expect(posted).toEqual([
       { event_type: "price_move", ticker: "NVDA", params: { threshold: 0.08 }, channels: ["in_app"] },
     ]);
