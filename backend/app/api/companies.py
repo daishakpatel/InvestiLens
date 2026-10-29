@@ -25,6 +25,7 @@ from app.filings.earnings import earnings_reactions
 from app.finance.concept_map import load_concept_map
 from app.finance.metrics import NOT_APPLICABLE_SECTOR
 from app.finance.quarterly_builder import coverage_metrics
+from app.finance.splits import PER_SHARE_UNIT, SHARES_UNIT, company_splits, filed_dates, restate
 from app.ingestion.documents.chunker import PARSER_VERSION
 from app.models import Company as CompanyModel
 from app.models import DocumentChunk, FinancialMetric, MetricGap
@@ -191,16 +192,35 @@ def get_financials(
         from_year=from_,
         to_year=to,
     )
+    # Per-share figures and share counts are put on today's share basis, so years before and
+    # after a stock split compare (DR-026, ADR-0051). Stored rows stay as filed.
+    per_share = [
+        r for r in rows if r.unit in (PER_SHARE_UNIT, SHARES_UNIT) and r.metric_value is not None
+    ]
+    splits = company_splits(db, company.id) if per_share else []
+    filed = (
+        filed_dates(
+            db, company.id, {r.as_reported_accession for r in per_share if r.as_reported_accession}
+        )
+        if splits
+        else {}
+    )
     by_name: dict[str, list[MetricSeriesPoint]] = {name: [] for name in names}
     for row in rows:
+        value, formula = row.metric_value, _formula(row)
+        if value is not None and splits:
+            restated = restate(value, row.unit, filed.get(row.as_reported_accession or ""), splits)
+            value = restated.value
+            if restated.note:
+                formula = f"{formula} · {restated.note}" if formula else restated.note
         by_name.setdefault(row.metric_name, []).append(
             MetricSeriesPoint(
                 period=row.period,
                 period_end=row.period_end.isoformat() if row.period_end else None,
-                value=row.metric_value,
+                value=value,
                 unit=row.unit,
                 source_id=row.source_id,
-                formula=_formula(row),
+                formula=formula,
             )
         )
     series = [
