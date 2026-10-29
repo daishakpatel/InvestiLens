@@ -17,7 +17,6 @@ const CompanyDashboard = lazy(() => import("./pages/CompanyDashboard"));
 const OverviewTab = lazy(() => import("./pages/tabs/OverviewTab"));
 const FinancialsTab = lazy(() => import("./pages/tabs/FinancialsTab"));
 const EarningsTab = lazy(() => import("./pages/tabs/EarningsTab"));
-const EarningsQualityTab = lazy(() => import("./pages/tabs/EarningsQualityTab"));
 const FootnotesTab = lazy(() => import("./pages/tabs/FootnotesTab"));
 const GovernanceTab = lazy(() => import("./pages/tabs/GovernanceTab"));
 const ResearchTab = lazy(() => import("./pages/tabs/ResearchTab"));
@@ -83,7 +82,6 @@ export function App() {
             <Route path="financials" element={<FinancialsTab />} />
             <Route path="earnings" element={<EarningsTab />} />
             <Route path="thesis" element={<ThesisTab />} />
-            <Route path="quality" element={<EarningsQualityTab />} />
             <Route path="footnotes" element={<FootnotesTab />} />
             <Route path="governance" element={<GovernanceTab />} />
             <Route path="research" element={<ResearchTab />} />
@@ -94,6 +92,10 @@ export function App() {
 
             {/* Pre-rebuild tab URLs keep working: each redirects to where its content now lives. */}
             <Route path="overview" element={<Navigate to=".." replace />} />
+            <Route
+              path="quality"
+              element={<Navigate to={{ pathname: "../earnings", hash: "#quality" }} replace />}
+            />
             <Route
               path="valuation"
               element={<Navigate to={{ pathname: "../financials", hash: "#valuation" }} replace />}
