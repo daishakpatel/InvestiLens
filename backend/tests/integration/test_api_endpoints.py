@@ -29,6 +29,7 @@ from app.models import (
     Document,
     DocumentChunk,
     Filing,
+    FinancialFact,
     FinancialMetric,
     IngestionRun,
     News,
@@ -210,6 +211,62 @@ def test_financials_real_values(client: TestClient, seed: dict[str, int]) -> Non
     assert series["metric_name"] == "revenue"
     values = [Decimal(p["value"]) for p in series["points"]]
     assert Decimal("130497000000") in values  # exact Decimal, not faked
+
+
+def test_financials_split_adjust_per_share_history(
+    client: TestClient, seed: dict[str, int], session: Session
+) -> None:
+    """DR-026 / ADR-0051: EPS filed before a 10:1 split is served on today's basis, with a note;
+    the stored row keeps the as-filed figure its citation points at."""
+    company_id = seed["company"]
+    split = FinancialFact(
+        company_id=company_id,
+        accession_number="0000000011-24-000050",
+        concept_tag="us-gaap:StockholdersEquityNoteStockSplitConversionRatio1",
+        period_end=date(2024, 6, 10),
+        value=Decimal(10),
+        filed_date=date(2024, 8, 28),
+    )
+    session.add(split)
+    for fy, eps, accession, filed in (
+        (2024, "11.93", "0000000011-24-000010", date(2024, 2, 21)),
+        (2025, "2.94", "0000000011-25-000010", date(2025, 2, 26)),
+    ):
+        session.add_all(
+            [
+                FinancialFact(
+                    company_id=company_id,
+                    accession_number=accession,
+                    concept_tag="us-gaap:EarningsPerShareDiluted",
+                    period_end=date(fy, 1, 31),
+                    value=Decimal(eps),
+                    filed_date=filed,
+                ),
+                FinancialMetric(
+                    company_id=company_id,
+                    period=f"FY{fy}",
+                    fiscal_year=fy,
+                    period_type="FY",
+                    period_end=date(fy, 1, 31),
+                    metric_name="eps_diluted",
+                    metric_value=Decimal(eps),
+                    unit="USD/shares",
+                    source_id=f"xbrl:TST:eps_diluted:FY{fy}",
+                    as_reported_accession=accession,
+                    is_latest=True,
+                ),
+            ]
+        )
+    session.flush()
+
+    points = client.get(f"{_P}/companies/TST/financials", params={"metrics": "eps_diluted"}).json()[
+        "series"
+    ][0]["points"]
+    fy2024, fy2025 = points
+    assert Decimal(fy2024["value"]) == Decimal("1.193")
+    assert "as filed 11.93, divided by 10" in fy2024["formula"]
+    assert fy2024["source_id"] == "xbrl:TST:eps_diluted:FY2024"  # still cites the filing
+    assert Decimal(fy2025["value"]) == Decimal("2.94") and fy2025["formula"] is None
 
 
 def test_metric_lineage(client: TestClient, seed: dict[str, int]) -> None:

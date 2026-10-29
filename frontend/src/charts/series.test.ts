@@ -7,6 +7,7 @@ import {
   formatCell,
   formatTick,
   formatValue,
+  growthSplit,
   pickScale,
   pickTableScale,
   shortPeriod,
@@ -161,5 +162,28 @@ describe("scales and formatting", () => {
     expect(shortPeriod("FY2026")).toBe("FY26");
     expect(shortPeriod("Q4-FY2026")).toBe("Q4 FY26");
     expect(shortPeriod("TTM-Q4-FY2026")).toBe("TTM Q4 FY26");
+  });
+});
+
+// "Show growth" caps (FR-FIN growth view): a bar is the prior period's level plus what it added,
+// or its own level with the amount lost outlined above it, on the same axis.
+describe("growthSplit", () => {
+  it("stacks the amount added on the prior period's level", () => {
+    expect(growthSplit(215.9, 130.5)).toEqual({ prior: 130.5, base: 130.5, added: 215.9 - 130.5, lost: null });
+  });
+
+  it("outlines the amount lost above a bar that shrank", () => {
+    expect(growthSplit(2.94, 11.93)).toEqual({ prior: 11.93, base: 2.94, added: null, lost: 11.93 - 2.94 });
+  });
+
+  it("keeps the bar whole with no prior period, or when either period is not positive", () => {
+    expect(growthSplit(3.4, null)).toEqual({ prior: null, base: 3.4, added: null, lost: null });
+    expect(growthSplit(0.3, -0.1)).toEqual({ prior: -0.1, base: 0.3, added: null, lost: null });
+    expect(growthSplit(-0.1, 0.3)).toEqual({ prior: 0.3, base: -0.1, added: null, lost: null });
+    expect(growthSplit(null, 4)).toEqual({ prior: 4, base: null, added: null, lost: null });
+  });
+
+  it("adds nothing when the value is unchanged", () => {
+    expect(growthSplit(5, 5)).toEqual({ prior: 5, base: 5, added: null, lost: null });
   });
 });

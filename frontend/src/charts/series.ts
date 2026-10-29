@@ -54,6 +54,29 @@ export function toRows(points: readonly MetricSeriesPoint[], display: Display): 
   });
 }
 
+export interface GrowthSplit {
+  prior: number | null;
+  base: number | null; // the part of the bar both periods share
+  added: number | null; // grown since the prior period, stacked on the base
+  lost: number | null; // shrunk since the prior period, drawn as an outline above the bar
+}
+
+/** Splits a bar into what it shares with the prior period and what it added or lost, for the
+ *  "Show growth" caps. Both values must be positive: a stack crossing zero would misstate both
+ *  parts, so such a bar stays whole (shortcut: no caps for loss years; fine while the change is
+ *  still in the tooltip and table). */
+export function growthSplit(value: number | null, prior: number | null): GrowthSplit {
+  if (value === null || prior === null || value <= 0 || prior <= 0) {
+    return { prior, base: value, added: null, lost: null };
+  }
+  return {
+    prior,
+    base: Math.min(value, prior),
+    added: value > prior ? value - prior : null,
+    lost: value < prior ? prior - value : null,
+  };
+}
+
 /** TTM points keyed by the quarter they end with: "TTM-Q2-FY2026" → "Q2-FY2026", so a TTM line
  *  sits on the bar of its last quarter. */
 export function trendByQuarter(trend: readonly MetricSeriesPoint[]): Map<string, MetricSeriesPoint> {

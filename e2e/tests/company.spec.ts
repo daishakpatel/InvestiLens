@@ -242,12 +242,13 @@ test.describe("financials (§10.2-§10.8, §12)", () => {
     await expect(page.getByRole("region", { name: "Balance sheet", exact: true })).not.toContainText(/No fiscal quarters figures/);
   });
 
-  test("show growth adds a change strip under each chart", async ({ page }) => {
+  test("show growth caps each bar with what it added or lost, with a key", async ({ page }) => {
     await loaded(page, `${company}/financials`);
-    await expect(page.getByText("Change vs prior period").first()).toBeHidden();
+    const income = page.getByRole("region", { name: "Income", exact: true });
+    await expect(income.getByText("Added", { exact: true }).first()).toBeHidden();
     await page.getByRole("switch", { name: "Show growth" }).click();
-    await expect(page.getByText("Change vs prior period").first()).toBeVisible();
-    await expect(page.getByText("Change vs prior period, in points").first()).toBeVisible(); // margins
+    await expect(income.getByText("Added", { exact: true }).first()).toBeVisible();
+    await expect(income.getByText("Lost", { exact: true }).first()).toBeVisible();
   });
 
   test("statement figures show their lineage on hover, and by keyboard (DR-040, CIT-003)", async ({ page }) => {

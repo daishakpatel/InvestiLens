@@ -1,8 +1,6 @@
 import {
   Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
   ComposedChart,
   Line,
   ReferenceLine,
@@ -33,10 +31,19 @@ import {
   ZERO_LINE,
 } from "./chartTheme";
 import { ChartTooltip } from "./ChartTooltip";
-import { axisFor, formatTick, formatValue, pickScale, shortPeriod, toRows, trendByQuarter } from "./series";
-import type { Display, SeriesRow } from "./series";
+import {
+  axisFor,
+  formatTick,
+  formatValue,
+  growthSplit,
+  pickScale,
+  shortPeriod,
+  toRows,
+  trendByQuarter,
+} from "./series";
+import type { Display, GrowthSplit, SeriesRow } from "./series";
 
-interface PlotRow extends SeriesRow {
+interface PlotRow extends SeriesRow, GrowthSplit {
   label: string;
   trend: number | null; // the TTM ending with this quarter, when a trend is drawn
   trendSourceId: string | null;
@@ -60,9 +67,29 @@ function changeText(row: SeriesRow, display: Display): string | null {
   return `${sign}${size}${display === "percent" ? " pts" : "%"} vs prior period`;
 }
 
+/** The hover lines for a capped bar: where the prior period stood, and exactly what was added or
+ *  lost since, in the metric's own unit and as a change. */
+function capLines(row: PlotRow, display: Display): string[] {
+  if (row.prior === null || (row.added === null && row.lost === null)) return [];
+  const pct = changeText(row, display)?.replace(" vs prior period", "") ?? "";
+  return [
+    `Prior period ${formatValue(row.prior, display)}`,
+    row.added !== null
+      ? `Added ${formatValue(row.added, display)} (${pct})`
+      : `Lost ${formatValue(row.lost ?? 0, display)} (${pct})`,
+  ];
+}
+
+const LOST = { fill: "transparent", stroke: NEGATIVE, strokeWidth: 1.5, strokeDasharray: "3 2" } as const;
+
+function KeyMark({ className }: { className: string }) {
+  return <span aria-hidden className={`inline-block size-2.5 rounded-[2px] ${className}`} />;
+}
+
 /** One metric over fiscal periods: bars for amounts, a line for ratios, always a single series in
- *  neutral ink. `showChange` adds a strip of period-over-period changes beneath, on its own scale
- *  (two measures never share an axis) and coloured by direction, since that series *is* a change.
+ *  neutral ink. `showChange` caps each bar with its growth on the same axis: grey up to the prior
+ *  period's level, a green cap for what was added, a dashed outline for what was lost. A ratio's
+ *  line shows its latest change beside the title; every point's change is in the tooltip.
  *  `trend` (quarterly bars only) draws the trailing-twelve-month figure as a line over the bars:
  *  the same measure in the same unit, so it shares their axis (FR-QT-012). */
 export function MetricChart({
@@ -93,10 +120,11 @@ export function MetricChart({
   const display = metricDisplay(name, points[0]?.unit ?? "USD");
   const inPoints = display === "percent";
   const ttm = trend && kind === "bar" ? trendByQuarter(trend) : null;
-  const rows: PlotRow[] = toRows(points, display).map((row) => {
+  const rows: PlotRow[] = toRows(points, display).map((row, i, all) => {
     const point = ttm?.get(row.period);
     return {
       ...row,
+      ...growthSplit(row.value, i > 0 ? (all[i - 1]?.value ?? null) : null),
       label: shortPeriod(row.period),
       trend: point ? toNumber(point.value) : null,
       trendSourceId: point?.source_id ?? null,
@@ -108,8 +136,8 @@ export function MetricChart({
   const axis = axisFor(values, kind === "bar");
   const hasNegative = rows.some((row) => (row.value ?? 0) < 0);
   const latest = [...rows].reverse().find((row) => row.value !== null);
-  // The change strip is a second plot; a shared id keeps the two hovers in step.
-  const sync = showChange ? { syncId: `metric-${csvName}` } : {};
+  const growth = showChange && !compact;
+  const caps = growth && kind === "bar";
 
   const columns: Column<PlotRow>[] = [
     { key: "period", header: "Period", render: (row) => row.period },
@@ -152,7 +180,9 @@ export function MetricChart({
             value={valueText(row, display)}
             title={`${title} · ${fiscalCalendarLabel(row.period, row.periodEnd)}`}
             lines={[
-              changeText(row, display),
+              ...(caps && row.prior !== null && (row.added !== null || row.lost !== null)
+                ? capLines(row, display)
+                : [changeText(row, display)]),
               row.formula,
               sourceText(row.sourceId),
               row.trend !== null && `TTM ${formatValue(row.trend, display)} · ${sourceText(row.trendSourceId)}`,
@@ -163,34 +193,28 @@ export function MetricChart({
     />
   );
 
-  // Period-over-period changes, on their own scale beneath the plot (`showChange`).
-  const changeStrip = (
-    <div className="mt-1">
-      <div className="h-12 w-full" aria-hidden>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} margin={{ ...MARGIN, top: 2, left: 52 }} {...sync}>
-            <XAxis dataKey="label" hide />
-            <YAxis hide domain={["auto", "auto"]} />
-            <ReferenceLine y={0} {...ZERO_LINE} />
-            <Bar dataKey="change" maxBarSize={BAR.maxBarSize} isAnimationActive={false}>
-              {rows.map((row) => (
-                <Cell key={row.period} fill={(row.change ?? 0) < 0 ? NEGATIVE : POSITIVE} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <p className="pl-[52px] text-caption text-subtle">
-        Change vs prior period{inPoints ? ", in points" : ""}
-      </p>
-    </div>
+  const capKey = (
+    <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-subtle">
+      <span className="inline-flex items-center gap-1.5">
+        <KeyMark className="bg-(--chart-ink)" />
+        Prior period
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <KeyMark className="bg-positive" />
+        Added
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <KeyMark className="border-[1.5px] border-dashed border-negative" />
+        Lost
+      </span>
+    </p>
   );
 
   return (
     <ChartFrame
       title={title}
       {...(href ? { href } : {})}
-      description={`${title} by fiscal period${ttm ? ", with the trailing twelve months as a line" : ""}${latest ? `; latest ${latest.period}: ${valueText(latest, display)}` : ""}. The same figures are available as a table.`}
+      description={`${title} by fiscal period${ttm ? ", with the trailing twelve months as a line" : ""}${caps ? ", each bar split into the prior period's level and the amount added or lost" : ""}${latest ? `; latest ${latest.period}: ${valueText(latest, display)}` : ""}. The same figures are available as a table.`}
       heightClass={compact ? "h-36" : "h-56"}
       state={loading ? "loading" : hasData ? "ready" : "empty"}
       {...(emptyMessage ? { emptyMessage } : {})}
@@ -198,6 +222,11 @@ export function MetricChart({
         compact && latest ? (
           <span className="flex items-baseline gap-2 text-sm">
             <span className="text-muted">{valueText(latest, display)}</span>
+            <Delta value={latest.change} digits={1} points={inPoints} />
+          </span>
+        ) : growth && latest && latest.change !== null ? (
+          <span className="flex items-baseline gap-2 text-sm">
+            <span className="text-subtle">{latest.label}</span>
             <Delta value={latest.change} digits={1} points={inPoints} />
           </span>
         ) : undefined
@@ -217,7 +246,7 @@ export function MetricChart({
       }}
       footer={
         <>
-          {showChange && !compact && changeStrip}
+          {caps && capKey}
           {(ttm || note) && (
             <p className="mt-2 text-caption text-subtle">
               {[ttm && "Bars are quarters; the line is the trailing twelve months.", note]
@@ -229,7 +258,7 @@ export function MetricChart({
       }
     >
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={rows} margin={MARGIN} {...sync}>
+        <ComposedChart data={rows} margin={MARGIN}>
           {!compact && <CartesianGrid {...GRID} />}
           <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" minTickGap={12} />
           {!compact && (
@@ -253,6 +282,12 @@ export function MetricChart({
               activeDot={ACTIVE_DOT}
               isAnimationActive={false}
             />
+          ) : caps ? (
+            [
+              <Bar key="base" dataKey="base" stackId="growth" fill={INK} maxBarSize={BAR.maxBarSize} isAnimationActive={false} />,
+              <Bar key="added" dataKey="added" stackId="growth" fill={POSITIVE} {...BAR} isAnimationActive={false} />,
+              <Bar key="lost" dataKey="lost" stackId="growth" {...LOST} {...BAR} isAnimationActive={false} />,
+            ]
           ) : (
             <Bar
               dataKey="value"
