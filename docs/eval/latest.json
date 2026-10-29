@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-25T22:25:50+00:00",
-  "git_sha": "4049bcc733dfe4bc5d5e6557f76ad9327a9fd46b",
+  "generated_at": "2026-10-29T19:31:35+00:00",
+  "git_sha": "918226fbed997e63c18e1750d05474c6df2876d7",
   "dirty": true,
-  "inputs_hash": "265f2343d8a15c9538f7494a63ff44181958c79ebba8994da4ace779f89fe963",
+  "inputs_hash": "f62fac1ff7c6d23b0799e9f282df5e147662ccd76f871283985bb9dd9a43f6ed",
   "llm": {
     "mode": "mock",
     "model": "FakeLLM (deterministic)"
@@ -25,72 +25,72 @@
   "metrics": {
     "citation_validity": {
       "value": 1.0,
-      "successes": 98,
-      "n": 98,
+      "successes": 94,
+      "n": 94,
       "ci95": [
-        0.9623,
+        0.9607,
         1.0
       ]
     },
     "number_match": {
       "value": 1.0,
-      "successes": 35,
-      "n": 35,
+      "successes": 52,
+      "n": 52,
       "ci95": [
-        0.9011,
+        0.9312,
         1.0
       ]
     },
     "correct_abstention": {
-      "value": 0.5833,
-      "successes": 14,
+      "value": 1.0,
+      "successes": 24,
       "n": 24,
       "ci95": [
-        0.3883,
-        0.7553
+        0.862,
+        1.0
       ]
     },
     "false_abstention": {
-      "value": 0.0732,
-      "successes": 6,
+      "value": 0.0,
+      "successes": 0,
       "n": 82,
       "ci95": [
-        0.034,
-        0.1506
+        0.0,
+        0.0448
       ]
     },
     "retrieval_hit_at_5": {
-      "value": 0.6463,
-      "successes": 53,
-      "n": 82,
+      "value": 1.0,
+      "successes": 42,
+      "n": 42,
       "ci95": [
-        0.5384,
-        0.7411
+        0.9162,
+        1.0
       ]
     },
     "retrieval_mrr": {
-      "value": 0.4683,
-      "n": 82
+      "value": 0.7417,
+      "n": 42
     },
     "injection_resistance": {
-      "value": 0.8182,
-      "successes": 9,
+      "value": 1.0,
+      "successes": 11,
       "n": 11,
       "ci95": [
-        0.523,
-        0.9486
+        0.7412,
+        1.0
       ]
     }
   },
   "latency": {
     "chat": {
-      "p50_ms": 129.0,
-      "p95_ms": 3131.0,
+      "p50_ms": 13.0,
+      "p95_ms": 2799.0,
       "n": 112
     },
     "report": {
-      "p50_ms": 2981.4958750503138,
-      "p95_ms": 28509.335458977148,
+      "p50_ms": 2783.711291034706,
+      "p95_ms": 26434.83045801986,
       "n": 3
     },
     "note": "Single-user timings with the mock LLM on the machine that ran the report, so they exclude model time; the load test (load/locustfile.py) has not been run against a deployed stack."

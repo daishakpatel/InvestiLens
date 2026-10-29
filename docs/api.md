@@ -120,8 +120,8 @@ the frontend as a typed client (`frontend/src/services/api.d.ts`).
 | POST | `/research` | 202 + `job_id`; `Idempotency-Key` (API-003) |
 | GET | `/research/jobs/{job_id}` | Poll job state |
 | GET | `/research/jobs/{job_id}/events` | SSE progress (API-004) |
-| GET | `/research/{research_id}` | Completed report |
-| GET | `/companies/{ticker}/research/latest` | Latest report |
+| GET | `/research/{research_id}` | Completed report (409 if it no longer matches the current report schema) |
+| GET | `/companies/{ticker}/research/latest` | Latest report (404 if none; 409 if it no longer matches the current schema) |
 | GET | `/research/{research_id}/diff?against=` | Report diff (P2, 501) |
 | GET | `/research/{research_id}/export?format=pdf\|md` | Export (Phase 4d, 501) |
 
@@ -210,6 +210,8 @@ unit (ratios as decimals). Thesis text is private and never logged.
 **Alert rules (Phase 7a, ADR-0039).** `GET /alerts/event-types` returns the event-type registry:
 `{key, label, description, params_schema, default_enabled}` per type, where `params_schema` is
 the JSON Schema of that type's params, so a client renders the rule form with no hard-coded list.
+A number property marked `"x-unit": "ratio"` is stored as a fraction and shown and typed as a
+percent by the form (0.05 is entered as 5).
 Types today: `new_filing` (`form_types` ⊆ `10-K`/`10-Q`/`8-K`), `price_move` (`threshold`, a
 fraction: 0.05 = 5%), `new_risk_factor` (no params; fires when the newest parsed 10-K/10-Q adds a
 risk factor its predecessor did not, Phase 6b), `news_category` (optional `category`),

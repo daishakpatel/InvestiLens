@@ -100,11 +100,7 @@ line when it is fixed.
 
 | Issue | Status | Area |
 |---|---|---|
-| "Diluted EPS" chat questions are declined (metric phrase not mapped) | Open, found by the 7l eval | [15 — chat Q&A](../Instructions/15_phase3c_chat_qa.md) |
-| Off-topic and not-applicable questions answered instead of declined | Open, found by the 7l eval | [15 — chat Q&A](../Instructions/15_phase3c_chat_qa.md) |
 | Intel and JPMorgan filings parse into few or wrong sections | Open | [10 — parsing](../Instructions/10_phase2a_document_parsing_chunking.md) |
-| `GET /companies/{ticker}/research/latest` returns 500 on an invalid stored report | Open | [16 — API](../Instructions/16_phase4a_fastapi_endpoints.md) |
-| Table figures quoted "in millions" fail the number check | Open | [13 — citations](../Instructions/13_phase3a_citation_system.md) |
 | Live-model eval (Recall@5, judge faithfulness, cost) not published | Open: needs a paid run | [21 — evaluation](../Instructions/21_phase5b_evaluation_framework.md) |
 | Load test never run against a deployed stack | Open | [22 — observability](../Instructions/22_phase5c_observability_and_security.md) |
 | Public demo not yet deployed | Open: ready, needs the owner's Render account | [37 — this phase](../Instructions/37_phase7l_measured_results_and_polish.md) |

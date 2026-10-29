@@ -44,7 +44,7 @@ connection and two threads.
 Overlapping requests queue instead of deadlocking: 400 at once complete in about 1.4 seconds on
 a laptop, where 40 used to freeze the API. A slow query or LLM call no longer stalls unrelated
 requests. Database concurrency per API process is capped at 10; beyond that, requests wait in
-memory with no timeout of their own, so sustained overload shows up as latency and then as the
-proxy's timeout rather than as a fast 503. Revisit the slot count, and add a wait limit, when
-load testing gives numbers; revisit the whole arrangement if a second session per request ever
+memory for up to 10 seconds (`_SLOT_WAIT_S`, added 2026-10-29) and are then turned away with a
+logged 503 and `Retry-After: 1`, so sustained overload fails fast instead of reaching the proxy's
+timeout. Revisit the slot count and the wait when load testing gives numbers; revisit the whole arrangement if a second session per request ever
 becomes necessary, because the gate assumes one.
