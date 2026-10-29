@@ -6,13 +6,16 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useCitations } from "../../components/citations/CitationContext";
 import { BriefTitle, BriefView, PreviewView } from "../../components/earnings/BriefSections";
 import { Button } from "../../components/ui/Button";
+import { Section } from "../../components/ui/Section";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { Select } from "../../components/ui/Select";
 import { AsyncContent, EmptyState, ErrorState } from "../../components/ui/States";
 import { useAuth } from "../../lib/auth";
 import { dateSourceText, pickVersions, reportDateText, versionLabel } from "../../lib/earnings";
 import { useEarningsBriefs, useEarningsCalendar, useGenerateBrief } from "../../lib/queries";
+import { useScrollToHash } from "../../lib/useScrollToHash";
 import type { CalendarEvent, StoredBrief } from "../../types";
+import EarningsQualityTab from "./EarningsQualityTab";
 
 type Kind = StoredBrief["kind"];
 
@@ -58,6 +61,7 @@ export default function EarningsTab() {
   const linkedKind = briefs.data?.items.find((i) => i.id === linked)?.kind;
   const [kindChoice, setKind] = useState<Kind | null>(null);
   const kind: Kind = kindChoice ?? linkedKind ?? "brief";
+  useScrollToHash(!briefs.isPending); // #quality sits below the brief, so wait for it to take its height
 
   const select = (id: number) => {
     params.set("brief", String(id));
@@ -156,6 +160,14 @@ export default function EarningsTab() {
           );
         }}
       </AsyncContent>
+      {/* Earnings quality used to be its own tab; the old /quality URL redirects here. */}
+      <div className="pt-8 md:scroll-mt-14 print:hidden" id="quality">
+        <Section title="Earnings quality">
+          <div className="pt-4">
+            <EarningsQualityTab />
+          </div>
+        </Section>
+      </div>
     </div>
   );
 }
