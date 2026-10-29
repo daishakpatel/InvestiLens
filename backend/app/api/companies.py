@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.api._support import freshness_for, metric_to_result
 from app.api.filings import to_summary
 from app.api.pagination import NEXT_CURSOR_HEADER, clamp_limit, decode_cursor, encode_cursor
+from app.api.research import to_envelope
 from app.cache import cache
 from app.config import get_settings
 from app.db import get_db
@@ -64,7 +65,6 @@ from app.schemas.filings import (
 )
 from app.schemas.jobs import ResearchReportEnvelope
 from app.schemas.news import NewsItem, NewsResponse
-from app.schemas.research import ResearchReport
 from app.schemas.sources import MetricResult
 
 router = APIRouter(prefix="/companies", tags=["Company"])
@@ -572,12 +572,4 @@ def latest_research(ticker: str, db: Session = _DB) -> ResearchReportEnvelope:
     report = report_repo.get_latest_complete(db, company_id=company.id)
     if report is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no completed report for this company")
-    return ResearchReportEnvelope(
-        research_id=str(report.id),
-        ticker=company.ticker,
-        generated_at=report.generated_at.isoformat() if report.generated_at else None,
-        model=report.model,
-        prompt_version=report.prompt_version,
-        data_version=report.data_version,
-        report=ResearchReport.model_validate(report.report_json or {}),
-    )
+    return to_envelope(report, company.ticker)

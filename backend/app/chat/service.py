@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 
 from app.billing.budget import check_budget
-from app.billing.cost import estimate_blended_cost
+from app.billing.cost import estimate_cost
 from app.chat.suggestions import suggest
 from app.citation.evidence import EvidenceItem
 from app.citation.pipeline import verify_text
@@ -126,7 +126,7 @@ def _structured_answer_text(evidence: list[EvidenceItem]) -> str:
 
 def _synthesize(
     llm: LLMClient, question: str, evidence: list[EvidenceItem], *, model: str
-) -> tuple[str, int]:
+) -> tuple[str, tuple[int, int | None]]:
     parts = [UNTRUSTED_PREAMBLE, f"QUESTION: {question}", "EVIDENCE (cite by source_id):"]
     for item in evidence:
         parts.append(f"[source_id={item.source_id}]\n{wrap_untrusted(item.searchable_text())}")
@@ -134,7 +134,10 @@ def _synthesize(
     messages = [LLMMessage("system", _SYNTH_RULES), LLMMessage("user", user)]
     with otel_span("chat.synthesize", tracer_name=__name__, attributes={"model": model}):
         answer = _plain_text(asyncio.run(llm.complete(messages, model=model, max_tokens=800)))
-    return answer, estimate_tokens(user) + estimate_tokens(answer)
+    tokens = llm_repo.call_tokens(
+        llm, input_estimate=estimate_tokens(user), output_estimate=estimate_tokens(answer)
+    )
+    return answer, tokens
 
 
 def _label(labels: list[EvidenceLabel | None]) -> EvidenceLabel | None:
@@ -243,7 +246,7 @@ def _answer_question(
             company=company_row.ticker,
             intent=result.intent,
             started=started,
-            tokens=0,
+            tokens=(0, None),
             model=settings.llm_model_cheap,
         )
 
@@ -262,14 +265,15 @@ def _answer_question(
             company=company_row.ticker,
             intent=result.intent,
             started=started,
-            tokens=0,
+            tokens=(0, None),
             model=settings.llm_model_cheap,
         )
 
     # Metric questions answer deterministically from structured data (RAG-030, FR-027); qualitative
     # questions are synthesized by the LLM. Both are then citation-verified (Phase 3a).
+    tokens: tuple[int, int | None] = (0, None)
     if result.structured_source_ids:
-        draft, tokens, model = _structured_answer_text(evidence), 0, settings.llm_model_cheap
+        draft, model = _structured_answer_text(evidence), settings.llm_model_cheap
     else:
         # Only the LLM-cost-incurring path needs a budget check (NFR-008, ADR-0022); the
         # deterministic metric path above is free.
@@ -333,7 +337,7 @@ def _finish(
     company: str,
     intent: Intent,
     started: float,
-    tokens: int,
+    tokens: tuple[int, int | None],  # (input, output) of the model call; (0, None) when none
     model: str,
     verified_claims: Sequence[VerifiedClaim] = (),
 ) -> ChatTurn:
@@ -358,9 +362,10 @@ def _finish(
         session,
         purpose="chat",
         model=model,
-        input_tokens=tokens,
+        input_tokens=tokens[0],
+        output_tokens=tokens[1],
         latency_ms=latency_ms,
-        cost_usd=estimate_blended_cost(model=model, total_tokens=tokens),
+        cost_usd=estimate_cost(model=model, input_tokens=tokens[0], output_tokens=tokens[1] or 0),
         status="success",
         user_id=user_id,
     )

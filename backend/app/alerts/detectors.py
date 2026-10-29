@@ -99,6 +99,7 @@ class PriceMoveParams(BaseModel):
         le=1,
         title="Move threshold",
         description="Smallest one-day close-to-close move that fires, as a fraction (0.05 = 5%).",
+        json_schema_extra={"x-unit": "ratio"},  # the settings form shows and takes it as a percent
     )
 
 

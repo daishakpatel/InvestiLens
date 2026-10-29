@@ -8,6 +8,7 @@ entailer is pluggable, ADR-0015); it never calls an LLM itself.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 
@@ -25,6 +26,13 @@ from app.citation.extract import (
 )
 from app.config import Settings, get_settings
 from app.schemas.citations import EntailmentLabel, VerifiedClaim
+
+_TABLE_SCALE = re.compile(r"\bin (thousands|millions|billions)\b", re.IGNORECASE)
+_TABLE_SCALES = {
+    "thousands": Decimal(10) ** 3,
+    "millions": Decimal(10) ** 6,
+    "billions": Decimal(10) ** 9,
+}
 
 
 def number_matches(token: NumberToken, candidates: Sequence[Decimal], *, rel_tol: float) -> bool:
@@ -54,9 +62,12 @@ def _number_supported(token: NumberToken, cited: Sequence[EvidenceItem], *, rel_
     candidates: list[Decimal] = []
     for item in cited:
         candidates.extend(item.structured_values())
-        candidates.extend(
-            t.value for t in extract_numbers(item.searchable_text()) if t.value is not None
-        )
+        text = item.searchable_text()
+        tokens = [t for t in extract_numbers(text) if t.value is not None]
+        candidates.extend(t.value for t in tokens if t.value is not None)
+        # A table "(in millions)" holds 19,827 for a claim's "$19,827 million" or "$19.8 billion".
+        for scale in {_TABLE_SCALES[m.group(1).lower()] for m in _TABLE_SCALE.finditer(text)}:
+            candidates.extend(t.value * scale for t in tokens if t.value and t.kind != "percent")
     return number_matches(token, candidates, rel_tol=rel_tol)
 
 

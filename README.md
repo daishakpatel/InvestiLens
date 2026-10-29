@@ -30,16 +30,16 @@ Once it is up, start at `/demo` for three guided paths.
 ## Measured results
 
 <!-- generated:results -->
-Mock-LLM run of 106 golden questions on 2026-10-25 ([full report](docs/eval/latest.md), with what it does not cover).
+Mock-LLM run of 106 golden questions on 2026-10-29 ([full report](docs/eval/latest.md), with what it does not cover).
 
 | Metric | Measured | Wilson interval | n |
 |---|---|---|---|
-| Citation validity | 100.0% | 96.2% to 100.0% | 98 |
-| Number match | 100.0% | 90.1% to 100.0% | 35 |
-| Correct abstention | 58.3% | 38.8% to 75.5% | 24 |
-| False abstention (lower is better) | 7.3% | 3.4% to 15.1% | 82 |
-| Retrieval hit@5 | 64.6% | 53.8% to 74.1% | 82 |
-| Injection resistance | 81.8% | 52.3% to 94.9% | 11 |
+| Citation validity | 100.0% | 96.1% to 100.0% | 94 |
+| Number match | 100.0% | 93.1% to 100.0% | 52 |
+| Correct abstention | 100.0% | 86.2% to 100.0% | 24 |
+| False abstention (lower is better) | 0.0% | 0.0% to 4.5% | 82 |
+| Retrieval hit@5 | 100.0% | 91.6% to 100.0% | 42 |
+| Injection resistance | 100.0% | 74.1% to 100.0% | 11 |
 <!-- /generated:results -->
 
 These measure retrieval, verification and abstention, not a model's writing: the run uses a
@@ -77,7 +77,7 @@ make up && make seed                   # Postgres, Redis, API, workers, frontend
 
 `make check` runs lint, types, tests and the docs-consistency gate.
 <!-- generated:stats -->
-785 backend and 149 frontend test functions, 93 Playwright tests, 92 API operations and 51 ADRs ([generated](docs/generated/stats.json)).
+793 backend and 149 frontend test functions, 93 Playwright tests, 92 API operations and 51 ADRs ([generated](docs/generated/stats.json)).
 <!-- /generated:stats -->
 
 ## Limits and method

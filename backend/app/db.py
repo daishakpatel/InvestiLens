@@ -5,6 +5,7 @@ test that builds its own engine) never opens a connection as a side effect.
 """
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
 from functools import lru_cache
@@ -12,16 +13,22 @@ from weakref import WeakKeyDictionary
 
 import anyio
 import anyio.to_thread
+from fastapi import HTTPException, status
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
+from app.utils.logging import get_logger, log_event
+
+logger = get_logger(__name__)
 
 # How many requests may hold a session at once: the pool's permanent size, so a request that is
 # let through never has to wait for a connection (ADR-0029). The overflow is for sessions opened
 # outside a request.
 _REQUEST_SLOTS = 10
 _POOL_OVERFLOW = 5
+# How long a request waits for a slot before it is turned away with a 503, not queued forever.
+_SLOT_WAIT_S = 10.0
 
 
 @lru_cache
@@ -80,7 +87,17 @@ async def get_db() -> AsyncIterator[Session]:
     response is sent: a client that reads slowly then does not keep a slot. Handlers return
     schema objects, never ORM rows.
     """
-    async with _request_gate():
+    gate = _request_gate()
+    try:
+        await asyncio.wait_for(gate.acquire(), _SLOT_WAIT_S)
+    except TimeoutError:
+        log_event(logger, logging.WARNING, "db.slot_wait_timeout", wait_s=_SLOT_WAIT_S)
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "The service is busy; try again in a moment.",
+            headers={"Retry-After": "1"},
+        ) from None
+    try:
         session = _session_factory()()  # no I/O yet: the connection is taken by the first query
         try:
             yield session
@@ -89,3 +106,5 @@ async def get_db() -> AsyncIterator[Session]:
             # client hanging up must not leave the connection checked out.
             with anyio.CancelScope(shield=True):
                 await anyio.to_thread.run_sync(session.close)
+    finally:
+        gate.release()

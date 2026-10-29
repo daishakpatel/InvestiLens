@@ -42,13 +42,3 @@ def estimate_cost(
         Decimal(output_tokens) / million * out_rate
     )
     return cost.quantize(_CENTS)
-
-
-def estimate_blended_cost(
-    *, model: str, total_tokens: int, settings: Settings | None = None
-) -> Decimal:
-    """Estimate cost from a single combined token count, using the average of the in/out rates."""
-    settings = settings or get_settings()
-    in_rate, out_rate = _rates(model, settings)
-    blended = (in_rate + out_rate) / 2
-    return (Decimal(total_tokens) / Decimal(1_000_000) * blended).quantize(_CENTS)

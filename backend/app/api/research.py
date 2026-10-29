@@ -7,10 +7,12 @@ generation runs on the Phase 5d worker (ADR-0017); until then an enqueued job st
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
@@ -19,6 +21,7 @@ from app.billing.budget import check_budget
 from app.config import get_settings
 from app.db import get_db
 from app.models import Company, Job
+from app.models import ResearchReport as ResearchReportRow
 from app.repositories import companies as company_repo
 from app.repositories import jobs as job_repo
 from app.repositories import reports as report_repo
@@ -32,8 +35,10 @@ from app.schemas.jobs import (
     ResearchRequest,
 )
 from app.schemas.research import ResearchReport
+from app.utils.logging import get_logger, log_event
 
 router = APIRouter(prefix="/research", tags=["Research"])
+logger = get_logger(__name__)
 
 _DB = Depends(get_db, scope="function")
 _USER = Depends(get_current_user_id)
@@ -168,15 +173,36 @@ def get_research(research_id: int, db: Session = _DB) -> ResearchReportEnvelope:
     if report is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "report not found")
     company = db.get(Company, report.company_id)
+    return to_envelope(report, company.ticker if company else "")
+
+
+def to_envelope(report: ResearchReportRow, ticker: str) -> ResearchReportEnvelope:
+    """The API envelope for a stored report; one that no longer validates is a logged 409."""
     payload = report.report_json
+    try:
+        body = ResearchReport.model_validate(payload) if payload else _empty_report()
+    except ValidationError as exc:
+        # An older schema's report is unreadable, not a server error; the UI offers a new one.
+        log_event(
+            logger,
+            logging.WARNING,
+            "research.report_invalid",
+            research_id=report.id,
+            prompt_version=report.prompt_version,
+            errors=exc.error_count(),
+        )
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "the stored report no longer matches the current format; generate a new one",
+        ) from exc
     return ResearchReportEnvelope(
         research_id=str(report.id),
-        ticker=company.ticker if company else "",
+        ticker=ticker,
         generated_at=report.generated_at.isoformat() if report.generated_at else None,
         model=report.model,
         prompt_version=report.prompt_version,
         data_version=report.data_version,
-        report=ResearchReport.model_validate(payload) if payload else _empty_report(),
+        report=body,
     )
 
 
