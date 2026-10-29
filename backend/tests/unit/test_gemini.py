@@ -24,6 +24,7 @@ from app.providers.gemini import (
 )
 from app.providers.mocks.embeddings import MockEmbeddingClient
 from app.providers.mocks.llm import MockLLMClient
+from app.repositories import llm_calls
 from app.utils.http import HardenedHttpClient
 
 _MESSAGES = [
@@ -78,6 +79,18 @@ def test_complete_builds_the_request_and_skips_thoughts() -> None:  # SEC-001, R
     # Thinking shares the output cap, so a 20-token cap alone would leave no room for an answer.
     assert body["generationConfig"]["maxOutputTokens"] == 20 + THINKING_ALLOWANCE_TOKENS
     assert "responseMimeType" not in body["generationConfig"]
+
+
+def test_reported_usage_is_kept_for_the_cost_log() -> None:  # NFR-015, OBS-005
+    client = _client(_answer({"text": "Demand grew."}), [])
+    assert client.last_usage() is None  # no call yet: callers fall back to their estimate
+    asyncio.run(client.complete(_MESSAGES, model="gemini-3.8-flash", max_tokens=20))
+    assert client.last_usage() == (9, 3 + 5)  # thinking is billed as output
+    assert llm_calls.call_tokens(client, input_estimate=1, output_estimate=1) == (9, 8)
+    assert llm_calls.call_tokens(MockLLMClient(), input_estimate=4, output_estimate=None) == (
+        4,
+        None,
+    )
 
 
 def test_complete_rewrites_grouped_citations_to_one_marker_each() -> None:  # CIT-001

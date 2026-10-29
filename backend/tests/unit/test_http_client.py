@@ -62,6 +62,19 @@ def test_retries_then_succeeds() -> None:
     assert calls["n"] == 2  # one retry
 
 
+def test_client_error_is_not_retried() -> None:
+    """A 4xx other than 429 (a bad API key, a missing page) fails at once, not after retries."""
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(401)
+
+    with pytest.raises(HttpClientError, match="401"):
+        _client(handler).get_bytes("https://data.sec.gov/x.json", sleep=lambda _s: None)
+    assert calls["n"] == 1
+
+
 def test_ssrf_guard_blocks_disallowed_host() -> None:
     client = _client(lambda r: httpx.Response(200))
     with pytest.raises(HttpClientError, match="SSRF"):

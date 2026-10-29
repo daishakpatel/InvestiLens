@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
+from pathlib import Path
 
 import httpx
 import pytest
@@ -25,6 +26,7 @@ from app.providers.sec.base import FilingRef, is_press_release_exhibit
 from app.providers.sec.live import ALLOWED_HOSTS, LiveSecSource, parse_index_headers
 from app.providers.sec.mock import MockSecSource
 from app.utils.http import HardenedHttpClient
+from app.utils.storage import FilesystemObjectStorage, ObjectStorage
 
 NVDA = "0001045810"
 
@@ -164,7 +166,9 @@ def test_index_headers_list_each_document_type() -> None:
     assert not is_press_release_exhibit("EX-10.1") and not is_press_release_exhibit("EX-101.SCH")
 
 
-def _live(handler: httpx.MockTransport) -> tuple[LiveSecSource, list[httpx.Request]]:
+def _live(
+    handler: httpx.MockTransport, storage: ObjectStorage | None = None
+) -> tuple[LiveSecSource, list[httpx.Request]]:
     seen: list[httpx.Request] = []
 
     def record(request: httpx.Request) -> httpx.Response:
@@ -181,7 +185,7 @@ def _live(handler: httpx.MockTransport) -> tuple[LiveSecSource, list[httpx.Reque
             headers={"User-Agent": settings.sec_user_agent},
         ),
     )
-    return LiveSecSource(client=client), seen
+    return LiveSecSource(client=client, storage=storage), seen
 
 
 def _submissions(request: httpx.Request) -> httpx.Response:
@@ -213,6 +217,16 @@ def test_a_filing_only_in_an_older_shard_is_found() -> None:
 
     seen.clear()
     source.list_filings(NVDA, since=date(2021, 1, 1))  # shard ends 2020-09-15: not fetched
+    assert not any(r.url.path.endswith("-submissions-001.json") for r in seen)
+
+
+def test_an_older_shard_is_read_from_sec_once(tmp_path: Path) -> None:
+    # The pages behind `filings.files[]` are fixed history: a second ingest reads the stored copy.
+    source, seen = _live(httpx.MockTransport(_submissions), FilesystemObjectStorage(tmp_path))
+    first = source.list_filings(NVDA, since=date(2020, 1, 1))
+    seen.clear()
+    again = source.list_filings(NVDA, since=date(2020, 1, 1))
+    assert again == first
     assert not any(r.url.path.endswith("-submissions-001.json") for r in seen)
 
 

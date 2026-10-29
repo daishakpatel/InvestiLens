@@ -45,3 +45,13 @@ def test_hsts_sent_only_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "hsts_enabled", True)
     resp = TestClient(_app()).get("/thing")
     assert resp.headers["Strict-Transport-Security"] == "max-age=63072000; includeSubDomains"
+
+
+def test_large_api_responses_are_compressed() -> None:
+    """NFR (mobile Lighthouse): big JSON such as a price history travels gzipped."""
+    from app.main import app
+
+    resp = TestClient(app).get("/api/v1/openapi.json", headers={"Accept-Encoding": "gzip"})
+    assert resp.status_code == 200
+    assert resp.headers["content-encoding"] == "gzip"
+    assert resp.json()["openapi"]  # the client decompresses transparently
