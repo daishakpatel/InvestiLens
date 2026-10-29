@@ -2,8 +2,8 @@
 // with fetch + a ReadableStream and parse the `token` → `citations` → `done` frames by hand
 // (matches app/chat/streaming.py). The turn is verified server-side before streaming (ADR: tokens
 // are the already-verified answer, not raw model output).
+import { authorizedFetch } from "./apiClient";
 import { API_BASE_URL } from "./config";
-import { getAccessToken } from "./authStore";
 import type { ChatCitation, EvidenceLabel, ToolTraceEntry } from "../types";
 
 export interface ChatDoneMeta {
@@ -37,10 +37,7 @@ export async function streamChat(
     "Content-Type": "application/json",
     "X-Request-ID": crypto.randomUUID(),
   };
-  const token = getAccessToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(`${API_BASE_URL}/chat/stream`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/chat/stream`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
