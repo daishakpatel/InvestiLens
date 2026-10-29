@@ -31,7 +31,16 @@ _FORECAST = re.compile(
 # app/rag/injection.py; this catches it in the *question* itself.
 _INJECTION = re.compile(
     r"\b(ignore (all |your |the |previous |prior )*(instructions|prompts?)|"
-    r"disregard .* (instructions|rules)|system prompt|you are now|reveal your|jailbreak)\b",
+    r"disregard .* (instructions|rules)|system prompt|you are now|reveal your|jailbreak|"
+    r"new instructions|respond only with|override your|"
+    r"ignore the (citation|source)s?( requirement)?|invent (a |the )?(number|figure)s?)\b",
+    re.IGNORECASE,
+)
+# Requests no filing or metric can answer: creative writing and live conditions (OUT_OF_SCOPE).
+# "Weather" alone stays in scope ("did weather hurt sales?"); only asking for it is off-domain.
+_OFF_DOMAIN = re.compile(
+    r"\b((write|compose|tell)( me)? (a|an) (poem|song|story|joke|haiku|limerick|rap)|"
+    r"what('s| is) the (weather|temperature))\b",
     re.IGNORECASE,
 )
 
@@ -98,12 +107,12 @@ _RULES: list[tuple[Intent, re.Pattern[str], str]] = [
 _METRIC_TERMS = re.compile(
     r"\b(revenue|sales|net income|earnings|eps|gross margin|operating margin|net margin|"
     r"ebitda|free cash flow|fcf|operating income|debt|cash|current ratio|roe|roa|"
-    r"market cap|p/?e|price|margin)\b",
+    r"market cap|p/?e|price|margin|gross profit|inventory turnover)\b",
     re.IGNORECASE,
 )
 _METRIC_ASK = re.compile(
     r"\b(what('s| is| was| are| were)?|how much|how many|value of|tell me the|"
-    r"give me the|report the)\b",
+    r"give me the|report the|figure|amount)\b",
     re.IGNORECASE,
 )
 _WHY_HOW = re.compile(r"\b(why|how (did|has|have)|drove|caused|explain)\b", re.IGNORECASE)
@@ -114,6 +123,8 @@ def classify_intent(question: str) -> IntentResult:
     q = question.strip()
     if _INJECTION.search(q):
         return IntentResult(Intent.OUT_OF_SCOPE, 0.99, "injection")
+    if _OFF_DOMAIN.search(q):
+        return IntentResult(Intent.OUT_OF_SCOPE, 0.9, "off-domain")
     if _ADVICE.search(q):
         return IntentResult(Intent.OUT_OF_SCOPE_ADVICE, 0.95, "advice")
     if _FORECAST.search(q):

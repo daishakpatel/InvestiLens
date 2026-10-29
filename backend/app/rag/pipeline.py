@@ -31,11 +31,14 @@ _ABSTAIN_INTENTS = {Intent.OUT_OF_SCOPE, Intent.OUT_OF_SCOPE_ADVICE}
 # Map question phrasing → canonical `financial_metrics.metric_name` for routing (RAG-030).
 _METRIC_LEXICON: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bgross margin\b", re.I), "gross_margin"),
+    (re.compile(r"\bgross profit\b", re.I), "gross_profit"),
     (re.compile(r"\boperating margin\b", re.I), "operating_margin"),
     (re.compile(r"\bnet margin\b", re.I), "net_margin"),
     (re.compile(r"\boperating income\b", re.I), "operating_income"),
     (re.compile(r"\b(free cash flow|fcf)\b", re.I), "free_cash_flow"),
     (re.compile(r"\bebitda\b", re.I), "ebitda"),
+    # Before net income, which "earnings" in "earnings per share" would otherwise match.
+    (re.compile(r"\b((diluted )?eps|(diluted )?earnings per share)\b", re.I), "eps_diluted"),
     (re.compile(r"\b(net income|earnings|profit)\b", re.I), "net_income"),
     (re.compile(r"\b(revenue|sales|top line)\b", re.I), "revenue"),
 ]

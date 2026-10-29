@@ -19,6 +19,7 @@ from app.providers.sec.base import (
     is_press_release_exhibit,
 )
 from app.utils.http import HardenedHttpClient
+from app.utils.storage import ObjectStorage
 
 # SEC-015: ingestion only ever fetches from these hosts.
 ALLOWED_HOSTS = frozenset({"www.sec.gov", "data.sec.gov", "sec.gov"})
@@ -74,13 +75,16 @@ def _refs(cik: str, block: dict[str, Any]) -> list[FilingRef]:
 
 
 class LiveSecSource(SecSource):
-    def __init__(self, client: HardenedHttpClient | None = None) -> None:
+    def __init__(
+        self, client: HardenedHttpClient | None = None, storage: ObjectStorage | None = None
+    ) -> None:
         settings = get_settings()
         self._http = client or HardenedHttpClient(
             user_agent=settings.sec_user_agent,
             allowed_hosts=ALLOWED_HOSTS,
             rate_per_sec=settings.sec_rate_limit_per_sec,
         )
+        self._storage = storage  # older submission pages are kept here when given
 
     def _json(self, url: str) -> dict[str, Any]:
         result: dict[str, Any] = json.loads(self._http.get_bytes(url))
@@ -119,10 +123,27 @@ class LiveSecSource(SecSource):
             # block; older pages are fetched only while they reach back to `since` (FR-EX-011).
             for shard in filings.get("files") or []:
                 if date.fromisoformat(shard["filingTo"]) >= since:
-                    url = f"https://data.sec.gov/submissions/{shard['name']}"
-                    refs.extend(_refs(cik, self._json(url)))
+                    refs.extend(_refs(cik, self._shard(shard)))
         unique = {r.accession_number: r for r in refs}  # a shard may overlap the recent block
         return sorted(unique.values(), key=lambda r: r.filing_date, reverse=True)
+
+    def _shard(self, shard: dict[str, Any]) -> dict[str, Any]:
+        """One older submissions page. Its filings never change, so it is read from SEC once;
+        the key carries the page's range and count, so a page SEC re-cuts is fetched again."""
+        url = f"https://data.sec.gov/submissions/{shard['name']}"
+        if self._storage is None:
+            return self._json(url)
+        key = (
+            f"sec/submissions/{shard['name']}.{shard.get('filingFrom')}."
+            f"{shard.get('filingTo')}.{shard.get('filingCount')}"
+        )
+        if self._storage.exists(key):
+            cached: dict[str, Any] = json.loads(self._storage.get(key))
+            return cached
+        data = self._http.get_bytes(url)
+        page: dict[str, Any] = json.loads(data)  # parse before storing: never cache a bad page
+        self._storage.put(key, data)
+        return page
 
     def companyfacts(self, cik: str) -> dict[str, Any]:
         return self._json(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json")

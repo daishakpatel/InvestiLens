@@ -12,8 +12,9 @@ def get_sec_source() -> SecSource:
 
         return MockSecSource()
     from app.providers.sec.live import LiveSecSource
+    from app.utils.storage import get_object_storage
 
-    return LiveSecSource()
+    return LiveSecSource(storage=get_object_storage())
 
 
 __all__ = ["CompanyRef", "FilingRef", "SecSource", "get_sec_source"]

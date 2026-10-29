@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 from collections.abc import Sequence
 from typing import Any
@@ -88,6 +89,12 @@ class GeminiLLMClient(LLMClient):
                 "Content-Type": "application/json",
             },
         )
+        # Per thread: API requests share one client, and each reads back its own call's usage.
+        self._usage = threading.local()
+
+    def last_usage(self) -> tuple[int, int] | None:
+        usage: tuple[int, int] | None = getattr(self._usage, "last", None)
+        return usage
 
     async def complete(self, messages: Sequence[LLMMessage], *, model: str, max_tokens: int) -> str:
         return _source_markers(
@@ -134,9 +141,16 @@ class GeminiLLMClient(LLMClient):
         started = time.monotonic()
         outcome = "error"
         usage: dict[str, Any] = {}
+        self._usage.last = None
         try:
             data = json.loads(self._http.post_bytes(_ENDPOINT.format(model=model), json=payload))
             usage = data.get("usageMetadata", {})
+            if "promptTokenCount" in usage:
+                # Thinking tokens are billed as output.
+                billed_out = usage.get("candidatesTokenCount", 0) + usage.get(
+                    "thoughtsTokenCount", 0
+                )
+                self._usage.last = (int(usage["promptTokenCount"]), int(billed_out))
             text, outcome = _text(data)
             return text
         finally:
