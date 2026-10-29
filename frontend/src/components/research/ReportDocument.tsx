@@ -19,6 +19,7 @@ import { CitationChips } from "../citations/CitationChip";
 import { ReferenceList } from "../citations/ReferenceList";
 import { CHANGE_STATUS, isChangeStatus } from "../filings/changeStatus";
 import { LanguageTracker } from "../filings/LanguageTracker";
+import { RegenerateReport } from "./GenerateReport";
 import { AiMark } from "../ui/AiMark";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -296,7 +297,7 @@ export function ReportDocument({ envelope }: { envelope: ResearchReportEnvelope 
               <h2 className="text-heading font-semibold">AI research</h2>
               <AiMark />
             </div>
-            <div className="flex items-center gap-1 print:hidden">
+            <div className="flex flex-wrap items-center justify-end gap-1 print:hidden">
               <Button
                 variant="ghost"
                 size="sm"
@@ -309,6 +310,7 @@ export function ReportDocument({ envelope }: { envelope: ResearchReportEnvelope 
                 <Printer aria-hidden className="size-3.5" />
                 Print
               </Button>
+              <RegenerateReport ticker={ticker} />
             </div>
           </div>
           <p className="mt-2 max-w-xl text-sm text-muted">

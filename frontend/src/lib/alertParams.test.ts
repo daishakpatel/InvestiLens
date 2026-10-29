@@ -7,8 +7,19 @@ import type { JsonSchema } from "./alertParams";
 const PRICE: JsonSchema = {
   type: "object",
   properties: {
-    threshold: { type: "number", title: "Move threshold", default: 0.05, exclusiveMinimum: 0, maximum: 1 },
+    threshold: {
+      type: "number",
+      title: "Move threshold",
+      default: 0.05,
+      exclusiveMinimum: 0,
+      maximum: 1,
+      "x-unit": "ratio",
+    },
   },
+};
+const PLAIN: JsonSchema = {
+  type: "object",
+  properties: { limit: { type: "integer", title: "Limit", default: 3, minimum: 1, maximum: 10 } },
 };
 const FILING: JsonSchema = {
   type: "object",
@@ -29,7 +40,9 @@ const NEWS: JsonSchema = {
 
 describe("alert params form (FR-AL-016)", () => {
   it("derives typed fields with the schema defaults", () => {
-    expect(initialValues(paramFields(PRICE))).toEqual({ threshold: "0.05" });
+    expect(initialValues(paramFields(PRICE))).toEqual({ threshold: "5" }); // a ratio, typed as %
+    expect(paramFields(PRICE)[0]).toMatchObject({ label: "Move threshold (%)" });
+    expect(initialValues(paramFields(PLAIN))).toEqual({ limit: "3" });
     expect(initialValues(paramFields(FILING))).toEqual({ form_types: ["10-K", "10-Q", "8-K"] });
     const [category] = paramFields(NEWS);
     expect(category).toMatchObject({ kind: "text", label: "Category", initial: "" });
@@ -37,12 +50,14 @@ describe("alert params form (FR-AL-016)", () => {
   });
 
   it("sends numbers as numbers and leaves blanks to the server default", () => {
-    expect(parseParams(paramFields(PRICE), { threshold: "0.1" })).toEqual({ ok: true, params: { threshold: 0.1 } });
+    expect(parseParams(paramFields(PRICE), { threshold: "7" })).toEqual({ ok: true, params: { threshold: 0.07 } });
+    expect(parseParams(paramFields(PLAIN), { limit: "4" })).toEqual({ ok: true, params: { limit: 4 } });
     expect(parseParams(paramFields(NEWS), { category: "" })).toEqual({ ok: true, params: {} });
   });
 
   it("rejects values outside the schema's bounds, per field", () => {
-    const tooBig = parseParams(paramFields(PRICE), { threshold: "5" });
+    expect(parseParams(paramFields(PRICE), { threshold: "100" }).ok).toBe(true); // bounds in %
+    const tooBig = parseParams(paramFields(PRICE), { threshold: "101" });
     expect(tooBig.ok).toBe(false);
     expect(!tooBig.ok && tooBig.errors.threshold).toBeTruthy();
     const none = parseParams(paramFields(FILING), { form_types: [] });
@@ -52,5 +67,6 @@ describe("alert params form (FR-AL-016)", () => {
   it("describes stored params in one line", () => {
     expect(describeParams(paramFields(FILING), { form_types: ["10-K", "8-K"] })).toBe("Forms: 10-K, 8-K");
     expect(describeParams(paramFields(NEWS), { category: null })).toBe("");
+    expect(describeParams(paramFields(PRICE), { threshold: 0.07 })).toBe("Move threshold: 7%");
   });
 });

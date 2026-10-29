@@ -132,6 +132,17 @@ def test_number_supported_returns_false_when_no_candidate_matches() -> None:
     assert verify._number_supported(token, ev, rel_tol=0.01) is False
 
 
+def test_number_supported_reads_a_table_scale_header() -> None:
+    """A "$19,827 million" or "$19.8 billion" claim matches a cell of 19,827 "(in millions)"."""
+    ev = [_text_ev("a", "Net revenue for the year (in millions): 19,827")]
+    for raw in ("$19,827 million", "$19.8 billion"):
+        (token,) = extract.extract_numbers(raw)
+        assert verify._number_supported(token, ev, rel_tol=0.01) is True
+    unscaled = [_text_ev("a", "Net revenue for the year: 19,827")]
+    (token,) = extract.extract_numbers("$19,827 million")
+    assert verify._number_supported(token, unscaled, rel_tol=0.01) is False
+
+
 def test_number_supported_accepts_within_relative_tolerance() -> None:
     # A near-match (not exact) that is inside the relative tolerance still counts (CIT-005 L2).
     ev = [

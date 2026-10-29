@@ -17,6 +17,7 @@ export interface JsonSchema {
   exclusiveMaximum?: number;
   minItems?: number;
   maxLength?: number;
+  "x-unit"?: string; // "ratio": stored as 0.05, shown and typed as 5 (%)
 }
 
 interface FieldBase {
@@ -28,7 +29,7 @@ interface FieldBase {
 
 /** One form input, derived from one params property. No per-event-type code (FR-AL-016). */
 export type ParamField =
-  | (FieldBase & { kind: "number"; schema: JsonSchema; initial: string })
+  | (FieldBase & { kind: "number"; schema: JsonSchema; initial: string; percent: boolean })
   | (FieldBase & { kind: "text"; schema: JsonSchema; initial: string })
   | (FieldBase & { kind: "boolean"; initial: boolean })
   | (FieldBase & { kind: "choice"; options: string[]; initial: string })
@@ -58,7 +59,9 @@ export function paramFields(schema: JsonSchema | null | undefined): ParamField[]
     }
     if (s.enum) return [{ ...base, kind: "choice", options: s.enum, initial: String(s.default ?? s.enum[0]) }];
     if (s.type === "number" || s.type === "integer") {
-      return [{ ...base, kind: "number", schema: s, initial: s.default == null ? "" : String(s.default) }];
+      const percent = s["x-unit"] === "ratio";
+      const initial = typeof s.default === "number" ? String(percent ? toPercent(s.default) : s.default) : "";
+      return [{ ...base, label: percent ? `${base.label} (%)` : base.label, kind: "number", schema: s, initial, percent }];
     }
     if (s.type === "boolean") return [{ ...base, kind: "boolean", initial: s.default === true }];
     if (s.type === "string") return [{ ...base, kind: "text", schema: s, initial: s.default == null ? "" : String(s.default) }];
@@ -71,17 +74,21 @@ export function initialValues(fields: ParamField[]): ParamValues {
 }
 
 const blankToUndefined = (v: unknown) => (v === "" ? undefined : v);
+// Rounded so 0.07 reads 7, not 7.000000000000001.
+const toPercent = (ratio: number) => Math.round(ratio * 100 * 1e6) / 1e6;
 
 function fieldValidator(field: ParamField): z.ZodType {
   switch (field.kind) {
     case "number": {
       const s = field.schema;
+      const bound = (b: number) => (field.percent ? toPercent(b) : b); // typed in %, bounded in %
       let n = s.type === "integer" ? z.coerce.number().int() : z.coerce.number();
-      if (s.minimum !== undefined) n = n.gte(s.minimum);
-      if (s.exclusiveMinimum !== undefined) n = n.gt(s.exclusiveMinimum);
-      if (s.maximum !== undefined) n = n.lte(s.maximum);
-      if (s.exclusiveMaximum !== undefined) n = n.lt(s.exclusiveMaximum);
-      return z.preprocess(blankToUndefined, field.required ? n : n.optional());
+      if (s.minimum !== undefined) n = n.gte(bound(s.minimum));
+      if (s.exclusiveMinimum !== undefined) n = n.gt(bound(s.exclusiveMinimum));
+      if (s.maximum !== undefined) n = n.lte(bound(s.maximum));
+      if (s.exclusiveMaximum !== undefined) n = n.lt(bound(s.exclusiveMaximum));
+      const value = field.percent ? n.transform((pct) => pct / 100) : n;
+      return z.preprocess(blankToUndefined, field.required ? value : value.optional());
     }
     case "text": {
       let t = z.string().trim();
@@ -123,6 +130,9 @@ export function describeParams(fields: ParamField[], params: Record<string, unkn
     .filter((f) => params[f.name] !== undefined && params[f.name] !== null && params[f.name] !== "")
     .map((f) => {
       const value = params[f.name];
+      if (f.kind === "number" && f.percent && typeof value === "number") {
+        return `${f.label.replace(/ \(%\)$/, "")}: ${toPercent(value)}%`;
+      }
       return `${f.label}: ${Array.isArray(value) ? value.join(", ") : String(value)}`;
     })
     .join(" · ");
