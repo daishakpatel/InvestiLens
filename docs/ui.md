@@ -278,6 +278,11 @@ if they match the release's words):
   asking the server, which would answer 404 and log a console error.
 - **Session restore.** The silent refresh runs only when this browser has signed in before (a
   non-secret `il-session` flag), so an anonymous first visit makes no failing request.
+- **Token renewal.** A signed-in request answered `401` renews the access token from the refresh
+  cookie and retries once (`authorizedFetch` in `lib/apiClient.ts`, used by the chat stream too).
+  Requests that expire together share one refresh, since a second would present a rotated token
+  and revoke the session as reuse (ADR-0005). If the refresh itself is refused, the user is signed
+  out and the header shows "Sign in".
 
 ## Adding a screen
 

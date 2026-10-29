@@ -2,8 +2,10 @@
 // - Attaches the in-memory Bearer token (ADR-0005) and an X-Request-ID for correlation (API-007).
 // - Parses RFC 7807 `application/problem+json` errors into a typed `ApiError` (API-001).
 // - Exposes response headers so callers can read `X-Next-Cursor` pagination (API-002, ADR-0016).
+// - Renews an expired access token from the refresh cookie and retries the request once (AUTH-002).
 import { API_BASE_URL } from "./config";
-import { getAccessToken } from "./authStore";
+import { getAccessToken, setAccessToken, setSessionHint } from "./authStore";
+import { parse } from "./schemas";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -46,17 +48,56 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
   return qs ? `${url}?${qs}` : url;
 }
 
+// One refresh at a time, shared by every request that finds its token expired. The refresh token
+// rotates on use, so a second concurrent refresh would present a spent token, which the server
+// treats as token reuse and answers by revoking the whole session (AUTH-002).
+let refreshing: Promise<boolean> | null = null;
+
+function refreshAccessToken(): Promise<boolean> {
+  refreshing ??= fetch(`${API_BASE_URL}/auth/refresh`, { method: "POST", headers: { "X-Request-ID": requestId() } })
+    .then(async (response) => {
+      if (response.ok) {
+        setAccessToken(parse.token(await response.json()).access_token);
+        return true;
+      }
+      if (response.status === 401) {
+        // The session itself has ended: sign out here so the UI shows it, not a stale account.
+        setAccessToken(null);
+        setSessionHint(false);
+      }
+      return false;
+    }, () => false) // network failure: keep the session and let the original error surface
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
+/** `fetch` with the in-memory Bearer token. A 401 on a signed-in request renews the token once
+ *  and retries, so an access token expiring mid-session does not break the page. */
+export async function authorizedFetch(
+  url: string,
+  init: RequestInit & { headers: Record<string, string> },
+): Promise<Response> {
+  const send = (token: string | null) =>
+    fetch(url, { ...init, headers: token ? { ...init.headers, Authorization: `Bearer ${token}` } : init.headers });
+  const token = getAccessToken();
+  const response = await send(token);
+  if (response.status !== 401 || !token) return response;
+  // Another request may already have renewed it while this one was in flight.
+  const renewed = getAccessToken() !== token || (await refreshAccessToken());
+  return renewed ? send(getAccessToken()) : response;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
   const headers: Record<string, string> = { "X-Request-ID": requestId() };
-  const token = getAccessToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
-  const init: RequestInit = { method: options.method ?? "GET", headers };
+  const init: RequestInit & { headers: Record<string, string> } = { method: options.method ?? "GET", headers };
   if (options.body !== undefined) init.body = JSON.stringify(options.body);
   if (options.signal) init.signal = options.signal;
 
-  const response = await fetch(buildUrl(path, options.query), init);
+  const response = await authorizedFetch(buildUrl(path, options.query), init);
 
   if (!response.ok) throw await toApiError(response);
 
