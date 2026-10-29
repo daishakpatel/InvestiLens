@@ -6,7 +6,7 @@ from collections.abc import Collection
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, literal, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -21,14 +21,24 @@ def list_filings(
     limit: int,
     after_id: int | None,
 ) -> list[Filing]:
-    """A company's filings, newest first, keyset-paginated by descending id (API-002)."""
+    """A company's filings, newest filing date first (undated last), keyset-paginated (API-002).
+
+    The cursor stays the last-seen id; its filing date is looked up to continue the order.
+    """
+    filed = func.coalesce(Filing.filing_date, date.min)
     conditions = [Filing.company_id == company_id]
     if filing_type is not None:
         conditions.append(Filing.filing_type == filing_type)
     if after_id is not None:
-        conditions.append(Filing.id < after_id)
+        anchor = session.get(Filing, after_id)
+        anchor_date = (anchor.filing_date if anchor else None) or date.min
+        conditions.append(
+            tuple_(filed, Filing.id) < tuple_(literal(anchor_date), literal(after_id))
+        )
     return list(
-        session.scalars(select(Filing).where(*conditions).order_by(Filing.id.desc()).limit(limit))
+        session.scalars(
+            select(Filing).where(*conditions).order_by(filed.desc(), Filing.id.desc()).limit(limit)
+        )
     )
 
 

@@ -143,6 +143,12 @@ class HardenedHttpClient:
                 self._breaker.record_success()
                 return response.content
             except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+                status = (
+                    exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+                )
+                if status is not None and status not in RETRYABLE_STATUS:
+                    # A bad key or a missing page fails the same way every time; the host is fine.
+                    raise HttpClientError(f"{method} {url} returned {status}") from exc
                 last_exc = exc
                 self._breaker.record_failure()
                 if attempt < self._max_retries:

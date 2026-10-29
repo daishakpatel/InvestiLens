@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from app.billing.cost import estimate_blended_cost, estimate_cost
+from app.billing.cost import estimate_cost
 from app.config import get_settings
 
 
@@ -26,7 +26,6 @@ def test_cost_is_decimal_never_float() -> None:
 def test_zero_tokens_cost_zero() -> None:
     settings = get_settings()
     assert estimate_cost(model=settings.llm_model_strong, input_tokens=0, output_tokens=0) == 0
-    assert estimate_blended_cost(model=settings.llm_model_strong, total_tokens=0) == 0
 
 
 def test_unknown_model_falls_back_to_cheap_rate() -> None:

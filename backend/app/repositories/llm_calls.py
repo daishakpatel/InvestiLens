@@ -17,6 +17,15 @@ from sqlalchemy.orm import Session
 
 from app.models import LlmCall
 from app.observability.metrics import record_llm_call
+from app.providers.base import LLMClient
+
+
+def call_tokens(
+    llm: LLMClient, *, input_estimate: int, output_estimate: int | None
+) -> tuple[int, int | None]:
+    """The (input, output) tokens of the call just made: the provider's own count when it gives
+    one (Gemini), else the caller's estimate."""
+    return llm.last_usage() or (input_estimate, output_estimate)
 
 
 def record_call(

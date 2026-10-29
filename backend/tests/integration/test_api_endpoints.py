@@ -34,6 +34,7 @@ from app.models import (
     IngestionRun,
     News,
     PriceHistory,
+    ResearchReport,
     User,
 )
 from tests.fakes import auth_headers
@@ -298,6 +299,8 @@ def test_filings_pagination_cursor(client: TestClient, seed: dict[str, int]) -> 
     second = client.get(f"{_P}/companies/TST/filings", params={"limit": 1, "cursor": cursor})
     assert len(second.json()) == 1
     assert first.json()[0]["filing_id"] != second.json()[0]["filing_id"]
+    # Seeded ids rise as filing dates fall, so this checks date order, not id order.
+    assert first.json()[0]["filing_date"] > second.json()[0]["filing_date"]
     assert client.get(f"{_P}/companies/TST/filings", params={"cursor": "@@bad"}).status_code == 422
 
 
@@ -394,6 +397,24 @@ def test_research_single_flight(client: TestClient, seed: dict[str, int]) -> Non
     assert report.status_code == 200 and report.json()["report"]["executive_summary"] == []
     assert client.get(f"{_P}/companies/TST/research/latest").status_code == 404
     assert client.post(f"{_P}/research", json={"ticker": "ZZZZ"}, headers=h).status_code == 404
+
+
+def test_invalid_stored_report_is_409_not_500(
+    client: TestClient, session: Session, seed: dict[str, int]
+) -> None:
+    """A stored report from an older schema is unreadable, not a server error (API-001)."""
+    stale = ResearchReport(
+        company_id=seed["company"],
+        status="complete",
+        generated_at=datetime(2026, 1, 1, tzinfo=UTC),
+        report_json={"executive_summary": "not a list"},
+    )
+    session.add(stale)
+    session.flush()
+    for path in (f"{_P}/companies/TST/research/latest", f"{_P}/research/{stale.id}"):
+        resp = client.get(path)
+        assert resp.status_code == 409
+        assert "generate a new one" in resp.json()["title"]
 
 
 def test_watchlist_and_alert_crud_requires_auth(client: TestClient, seed: dict[str, int]) -> None:

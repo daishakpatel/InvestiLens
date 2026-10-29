@@ -23,7 +23,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.billing.cost import estimate_blended_cost
+from app.billing.cost import estimate_cost
 from app.citation.advice import contains_advice, judges_thesis, predicts
 from app.config import Settings, get_settings
 from app.ingestion.documents.tokens import estimate_tokens
@@ -154,25 +154,29 @@ def draft(
         log_event(logger, logging.WARNING, "thesis.draft_injection_suspected", user_id=user_id)
     model = settings.llm_model_strong
     input_tokens = sum(estimate_tokens(m.content) for m in messages)
+    client = llm or get_llm_client()
     started, status, raw = time.monotonic(), "success", None
     try:
         raw = asyncio.run(
-            (llm or get_llm_client()).complete_json(
-                messages, model=model, schema=SCHEMA, max_tokens=_MAX_TOKENS
-            )
+            client.complete_json(messages, model=model, schema=SCHEMA, max_tokens=_MAX_TOKENS)
         )
     except Exception as exc:
         status = "error"
         # The exception type only: a provider error can echo the request (SEC-TH-002).
         log_event(logger, logging.WARNING, "thesis.draft_failed", error=type(exc).__name__)
+    tokens_in, tokens_out = llm_repo.call_tokens(
+        client,
+        input_estimate=input_tokens,
+        output_estimate=estimate_tokens(json.dumps(raw)) if raw is not None else None,
+    )
     llm_repo.record_call(
         session,
         purpose=PURPOSE,
         model=model,
-        input_tokens=input_tokens,
-        output_tokens=estimate_tokens(json.dumps(raw)) if raw is not None else None,
+        input_tokens=tokens_in,
+        output_tokens=tokens_out,
         latency_ms=int((time.monotonic() - started) * 1000),
-        cost_usd=estimate_blended_cost(model=model, total_tokens=input_tokens),
+        cost_usd=estimate_cost(model=model, input_tokens=tokens_in, output_tokens=tokens_out or 0),
         status=status,
         prompt_version=PROMPT_VERSION,
         user_id=user_id,
